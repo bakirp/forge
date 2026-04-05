@@ -139,6 +139,14 @@ Review medium-risk changes? (y/n/select numbers)
 ### Auto-Apply Low-Risk
 
 For each approved low-risk change:
+
+**Test-harness gate**: After applying each low-risk change, run the test harness to validate skill integrity:
+```bash
+bash tests/test-routing.sh && bash tests/test-blocking.sh && bash tests/test-artifacts.sh
+```
+If any test fails, revert the change and escalate to medium-risk (requires explicit approval).
+
+For each approved low-risk change:
 1. Read the target SKILL.md
 2. Apply the edit using the Edit tool
 3. Verify the file is still valid (frontmatter intact, markdown well-formed)
@@ -217,7 +225,7 @@ Next: Run /retro after your next /ship cycle to continue the feedback loop.
 
 ## Rules
 
-- **Low-risk changes only auto-apply** — everything else needs explicit user approval
+- **Low-risk changes auto-apply with test-harness validation** — after each low-risk edit, the test harness must pass; if it fails, the change is reverted and escalated to medium-risk
 - **Never remove safety guardrails** without the user explicitly approving (TDD enforcement, /verify blocking /ship, etc.)
 - **Never modify the memory schema** without high-risk approval — other skills depend on it
 - **Always validate** skill files after editing — broken frontmatter breaks the skill

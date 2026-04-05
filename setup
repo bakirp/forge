@@ -52,6 +52,37 @@ elif [ "$RUNTIME" = "bun" ] && ! command -v node &> /dev/null; then
     warn "Bun found but Node.js/npm not detected. /verify uses npx for Playwright — install Node.js for full /verify support."
 fi
 
+# Detect AI host environment
+HOST="unknown"
+if [ -d "$HOME/.claude" ] || [ -n "${CLAUDE_CODE:-}" ]; then
+    HOST="claude-code"
+    info "Detected host: Claude Code"
+elif command -v codex &>/dev/null || [ -n "${CODEX:-}" ]; then
+    HOST="codex"
+    info "Detected host: Codex CLI"
+elif [ -d ".cursor" ] || [ -n "${CURSOR:-}" ]; then
+    HOST="cursor"
+    info "Detected host: Cursor"
+else
+    warn "Could not detect AI host. Defaulting to Claude Code install paths."
+    HOST="claude-code"
+fi
+
+# Set skills directory based on host
+case "$HOST" in
+    claude-code)
+        CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
+        ;;
+    codex)
+        CLAUDE_SKILLS_DIR="$HOME/.codex/skills"
+        warn "Codex support is experimental. Skills installed to $CLAUDE_SKILLS_DIR"
+        ;;
+    cursor)
+        CLAUDE_SKILLS_DIR="$HOME/.cursor/skills"
+        warn "Cursor support is experimental. Skills installed to $CLAUDE_SKILLS_DIR"
+        ;;
+esac
+
 # Create FORGE home directory
 info "Creating FORGE home at ${FORGE_HOME}..."
 mkdir -p "$FORGE_HOME/sessions"
@@ -65,8 +96,7 @@ else
     info "Memory bank already exists ($(wc -l < "$FORGE_HOME/memory.jsonl" | tr -d ' ') entries)"
 fi
 
-# Install skills to user's global Claude Code skills directory
-CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
+# Install skills to user's global skills directory
 info "Installing FORGE skills to ${CLAUDE_SKILLS_DIR}..."
 
 # Install root bootstrap skill

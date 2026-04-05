@@ -1,0 +1,231 @@
+---
+name: review
+description: "Code review gate between /build and /verify. Reads build output and architecture doc, checks spec compliance, code quality, and security surface. Produces a review report that /ship consumes."
+argument-hint: "[optional: specific files or focus area]"
+allowed-tools: Read Grep Glob Write Edit Bash Agent
+---
+
+# /review — Code Review Gate
+
+You review what `/build` produced before `/verify` runs. You never modify code — you observe, judge, and report. Your review report is consumed by `/ship`, so the format matters.
+
+## Step 1: Load Context
+
+Find the architecture doc:
+
+```bash
+ls .forge/architecture/*.md
+```
+
+If `$ARGUMENTS` specifies files or a focus area, narrow the review scope accordingly.
+
+If an architecture doc exists, read it — this is the contract the implementation must satisfy.
+
+If no architecture doc exists:
+- Check if this was a **tiny** task (no arch doc expected) — review anyway using the git diff as the sole source of truth
+- If there is no arch doc AND no git diff, there is nothing to review:
+
+```
+FORGE /review — ERROR
+
+No architecture doc and no code changes found. Nothing to review.
+```
+
+Read the git diff to see what was actually changed:
+
+```bash
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+git diff ${DEFAULT_BRANCH}...HEAD
+git diff --name-only ${DEFAULT_BRANCH}...HEAD
+```
+
+Collect the list of changed files and their contents. This is what you are reviewing.
+
+## Step 2: Spec Compliance Review
+
+Compare the implementation against every section of the architecture doc. For each section, determine PASS or note the deviation:
+
+**API Contracts**
+- Do function signatures, inputs, outputs, and error types match what the doc specifies?
+- Are all declared endpoints present with the correct methods and response shapes?
+
+**Component Boundaries**
+- Is each file responsible for what the architecture doc assigns to it?
+- Is there logic leaking across boundaries (e.g., a route handler doing database queries directly)?
+
+**Edge Cases**
+- Is every edge case listed in the architecture doc handled in the implementation?
+- Are the handling strategies correct (not just present but correct)?
+
+**Test Strategy**
+- Are the tests specified in the architecture doc present?
+- Do they cover the cases the doc requires (happy path, errors, edge cases)?
+
+**Security Considerations**
+- Are the security measures noted in the architecture doc addressed?
+
+Flag every deviation as an issue with a severity level.
+
+For **tiny tasks** without an architecture doc, skip this step and note "N/A (tiny task)" in the report.
+
+## Step 3: Code Quality Review
+
+Review all changed files for:
+
+**Readability**
+- Are names descriptive and consistent with the codebase?
+- Is the structure logical — can a new reader follow the flow?
+- Are comments present where the "why" is non-obvious (not everywhere)?
+
+**Duplication**
+- Are there copy-paste patterns that should be extracted into shared functions?
+- Is the same logic implemented in multiple places?
+
+**Complexity**
+- Are there deeply nested conditionals or loops that should be flattened?
+- Are there god functions doing too many things?
+- Can any complex logic be broken into named steps?
+
+**Error Handling**
+- Are errors handled at system boundaries (API layer, file I/O, network calls)?
+- Is error handling proportional — not paranoid internally, not absent at edges?
+- Are errors swallowed silently anywhere?
+
+**Types and Contracts**
+- Are types consistent with declared interfaces?
+- Are there `any` types, unchecked casts, or missing validations at entry points?
+
+## Step 4: Security Surface Review
+
+This is a lightweight pre-check — not the full OWASP audit that `/ship` performs. Flag anything obvious:
+
+**Injection Risks**
+- String concatenation in SQL queries, shell commands, or template rendering
+- User input passed directly to `eval()`, `exec()`, `Function()`, or similar
+
+**Auth/Authz Gaps**
+- Routes or endpoints missing authentication checks
+- Authorization logic that can be bypassed
+- Privilege escalation paths
+
+**Sensitive Data Exposure**
+- Secrets, tokens, or credentials in code or config files committed to the repo
+- PII or sensitive data in log statements or error responses
+- Verbose error messages that leak internals
+
+**Input Validation**
+- User input at system boundaries that is not validated or sanitized
+- Missing length limits, type checks, or format validation on external input
+
+## Step 5: Cross-Model Second Opinion (Optional)
+
+When working on complex or security-critical code, a second opinion from a different model can catch blind spots.
+
+If the review scope is large (>10 files) or touches security-critical code (auth, payments, encryption):
+
+```
+FORGE /review — Recommending cross-model review
+
+This change is [large | security-critical]. A second-opinion review from a different model may catch additional issues.
+
+Request cross-model review? (y/n)
+```
+
+If approved, spawn a subagent with `model: "sonnet"` (if the primary review ran on Opus) or `model: "opus"` (if primary ran on Sonnet):
+
+```
+You are a FORGE cross-model reviewer. Review this code independently:
+
+Changed files: [list]
+Architecture doc: [path or summary]
+
+Focus on:
+1. Logic errors the primary reviewer may have missed
+2. Security vulnerabilities
+3. Edge cases not covered by tests
+
+Report your findings as a numbered list of issues with severity.
+```
+
+Merge findings with the primary review. Deduplicate — if both models flag the same issue, note it with extra confidence. If the secondary model finds something the primary missed, include it with a note: "Flagged by cross-model review."
+
+## Step 6: Write Review Report
+
+Create the report directory and write the report:
+
+```bash
+mkdir -p .forge/review
+```
+
+Write to `.forge/review/report.md`:
+
+```markdown
+# FORGE Review Report
+
+## Status: [PASS | FAIL | NEEDS_CHANGES]
+## Date: [YYYY-MM-DD HH:MM]
+## Reviewer: FORGE /review
+## Architecture: [path to arch doc or "N/A (tiny task)"]
+
+## Summary
+- Files reviewed: [count]
+- Issues found: [count]
+- Critical: [count]
+- Major: [count]
+- Minor: [count]
+- Suggestions: [count]
+
+## Spec Compliance
+[For each architecture doc section, note PASS or describe the deviation]
+
+## Code Quality
+[Findings organized by category: readability, duplication, complexity, error handling, types]
+
+## Security Surface
+[Pre-check findings or "No issues found"]
+
+## Issues
+
+### Issue 1: [title]
+- **Severity**: critical | major | minor | suggestion
+- **File**: [path:line]
+- **Description**: [what is wrong]
+- **Suggested fix**: [brief recommendation]
+
+### Issue 2: [title]
+...
+
+## Verdict
+[PASS: No critical or major issues. Ready for /verify.]
+[NEEDS_CHANGES: N major issues must be fixed. Fix them, then run /review again.]
+[FAIL: Fundamental problems found. May need to revisit /architect.]
+```
+
+## Step 7: Report Result
+
+```
+FORGE /review — [PASS | NEEDS_CHANGES | FAIL]
+
+Files reviewed: [N]
+Issues: [N] (critical: [N], major: [N], minor: [N], suggestions: [N])
+Report: .forge/review/report.md
+
+[If PASS]: Ready for /verify.
+[If NEEDS_CHANGES]: Fix [N] issues, then run /review again.
+[If FAIL]: Fundamental problems found. May need to revisit /architect.
+```
+
+## Rules
+
+- Any **critical** issue makes the review automatically **FAIL**
+- Any **major** issue (with no criticals) makes the review **NEEDS_CHANGES**
+- Only **minor** issues and **suggestions** allow a **PASS**
+- Never modify code — review is read-only observation
+- Always check against the architecture doc when one exists
+- If no architecture doc and no git diff, report an error — do not fabricate a review
+- The report status line format must be parseable by `/ship` — do not deviate from it
+- Do not rubber-stamp — if you find nothing wrong, say so explicitly, but verify you actually checked every category
+- Severity must be honest: do not inflate minor issues to major, do not downgrade major issues to minor
+- When `$ARGUMENTS` specifies a focus area, still do a full review but give extra depth to the requested area
+- **Evidence before claims** — every finding must cite the specific file, line, and code. Never report "no issues" without showing what was checked.
+- **Cross-model review is optional** — only recommended for large or security-critical changes, never forced

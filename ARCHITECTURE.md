@@ -83,3 +83,36 @@ For epic-complexity tasks, `/think` spawns Claude Code Agent Teams with FORGE-sp
 - An exit gate (the output format they must produce)
 
 This is different from generic parallel agents because each agent has domain expertise encoded in its prompt, not just "help with this task."
+
+## Artifact Schema (Phase 1)
+
+Phase 1 introduces a formal artifact schema at `docs/artifact-schema.md`. Every skill that produces output writes to a well-defined path under `.forge/`:
+
+- `/architect` → `.forge/architecture/[task-name].md`
+- `/review` → `.forge/review/report.md`
+- `/verify` → `.forge/verify/report.md`
+- `/debug` → `.forge/debug/report.md`
+- Run manifests → `.forge/runs/<run-id>/manifest.json`
+
+This schema enables:
+- **Blocking gates**: `/ship` reads `.forge/review/report.md` and `.forge/verify/report.md` status lines
+- **Run tracking**: The manifest records which phases completed and where artifacts are
+- **Test validation**: The test harness can verify artifacts exist and are well-formed
+
+The schema is the contract between skills. Skills produce artifacts; downstream skills consume them. Adding a new skill means defining its artifact path and format in the schema.
+
+## Evidence-Before-Claims (Phase 2)
+
+Every success or failure claim in FORGE must cite evidence: the command run, its output, and what was asserted. This prevents hallucinated results — a persistent risk with AI-generated verification claims.
+
+## Browser Skill Extraction (Phase 3)
+
+/verify was doing two jobs: deciding what to test and executing browser tests. Phase 3 extracts execution into /browse, making /verify a pure report-and-gate layer. This separation means /browse can also be used standalone for browser tasks unrelated to verification.
+
+## Guard Skills (Phase 3)
+
+/careful and /freeze are opt-in, session-scoped guardrails. They don't persist across sessions by design — persistent file locks would break collaborative workflows. They're advisory: the user can always override.
+
+## Multi-Host Support (Phase 3)
+
+FORGE skills are pure Markdown, portable to any AI host. The setup script detects the environment (Claude Code, Codex, Cursor) and installs to the appropriate skills directory. Claude Code is the primary host; others are experimental.

@@ -12,8 +12,18 @@ Thumbs.db
 # FORGE local data
 .forge/sessions/
 .forge/retros/
-.forge/architecture/
+
+# FORGE runtime artifacts (generated during workflow)
+.forge/runs/
 .forge/verify/
+.forge/review/
+.forge/debug/
+.forge/browse/
+.forge/brainstorm/
+.forge/design/
+.forge/benchmark/
+.forge/releases/
+.forge/worktrees/
 
 # Dependencies
 node_modules/

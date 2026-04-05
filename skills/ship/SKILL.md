@@ -11,6 +11,38 @@ You are the final gate. Nothing ships without passing security review and verifi
 
 ## Step 1: Read Verification Report
 
+### Check Review Report
+
+Find and read the `/review` report:
+
+```bash
+cat .forge/review/report.md
+```
+
+Parse the status line. If **Status: FAIL** or **Status: NEEDS_CHANGES**:
+
+```
+FORGE /ship — BLOCKED
+
+/review reported issues. Shipping is not allowed until review passes.
+
+Issues:
+- [list from report]
+
+Fix the issues, run /review again, then /ship.
+```
+
+**Stop here. Do not proceed.**
+
+If no review report exists:
+```
+FORGE /ship — BLOCKED
+
+No review report found. Run /review first.
+```
+
+### Check Verification Report
+
 Find and read the `/verify` report:
 
 ```bash
@@ -41,7 +73,52 @@ No verification report found. Run /verify first.
 
 If **Status: PASS**, proceed.
 
-## Step 2: Security Audit
+## Step 2: Version and Release Preparation
+
+### Detect Version File
+
+Look for version declarations in the project:
+```bash
+# Check common locations
+grep -r '"version"' package.json Cargo.toml pyproject.toml setup.py 2>/dev/null | head -5
+```
+
+### Bump Version
+
+If a version file is found, suggest a bump based on the changes:
+- **Patch** (x.x.X): Bug fixes, minor changes, no new features
+- **Minor** (x.X.0): New features, backwards-compatible changes
+- **Major** (X.0.0): Breaking changes, API changes
+
+```
+FORGE /ship — Version bump
+
+Current version: [version]
+Changes suggest: [patch | minor | major]
+Reasoning: [1-line explanation]
+
+New version: [bumped version]
+Apply? (y/n, or specify version)
+```
+
+Apply the version bump to the detected file(s).
+
+### Generate Changelog Entry
+
+If `CHANGELOG.md` exists, prepend a new entry:
+
+```markdown
+## v[new-version] — [YYYY-MM-DD]
+
+[1-2 sentence summary of the release]
+
+### [Features | Fixes | Security | Changes]
+- [entries from git log, grouped by type]
+```
+
+If no CHANGELOG.md, skip — don't create one uninvited.
+
+## Step 3: Security Audit
 
 Scan all files created or modified during this build cycle. Detect the base branch and use `git diff --name-only` to identify changed files:
 
@@ -80,6 +157,29 @@ For the architecture as a whole:
 | **Denial of Service** | Are there unbounded operations, missing rate limits, or resource exhaustion paths? |
 | **Elevation of Privilege** | Can a regular user access admin functionality? |
 
+### Secrets Archaeology
+
+Scan git history for accidentally committed credentials:
+```bash
+# Check recent commits for secret patterns
+git log -p --diff-filter=A HEAD~20..HEAD 2>/dev/null | grep -iE '(password|secret|api_key|api.key|token|private.key|credentials)\s*[:=]' | head -20
+```
+
+If secrets are found in git history:
+```
+FORGE /ship — CRITICAL: Secrets found in git history
+
+The following patterns were found in recent commits:
+- [file:commit] [matched pattern]
+
+These are in the git history even if removed from current code.
+Recommendation: Rotate the exposed credentials immediately.
+
+Consider using git-filter-repo or BFG to clean history (destructive — requires force push).
+```
+
+Flag secrets in history as CRITICAL — they may already be exposed.
+
 ### Report Findings
 
 ```
@@ -101,7 +201,7 @@ Warning: [count] — recommend fixing
 Info: [count] — noted for future
 ```
 
-## Step 3: Auto-Fix Critical Issues
+## Step 4: Auto-Fix Critical Issues
 
 For each **critical** finding:
 - If it's a clear fix (remove hardcoded secret, add input sanitization, escape output), fix it automatically
@@ -126,9 +226,9 @@ After all critical fixes:
 
 If tests fail after security fixes, stop and ask the user.
 
-**Important:** If any code was modified in this step, the existing `/verify` report is now stale. Re-run `/verify` before proceeding to Step 4. The verification report must reflect the code that is actually being shipped.
+**Important:** If any code was modified in this step, the existing `/verify` report is now stale. Re-run `/verify` before proceeding to Step 5. The verification report must reflect the code that is actually being shipped.
 
-## Step 4: Create PR
+## Step 5: Create PR
 
 ### Parse Arguments
 
@@ -186,7 +286,30 @@ gh pr create \
   [--draft if --draft flag]
 ```
 
-## Step 5: Report
+### Generate Release Artifacts
+
+Write a release summary:
+```bash
+mkdir -p .forge/releases/v[version]
+```
+
+Write to `.forge/releases/v[version]/summary.md`:
+```markdown
+# Release v[version]
+
+## Date: [YYYY-MM-DD]
+## PR: [URL]
+## Changes
+[Same grouped summary as PR description]
+## Security
+[Audit results summary]
+## Artifacts
+- Architecture doc: [path or N/A]
+- Review report: [path]
+- Verify report: [path]
+```
+
+## Step 6: Report
 
 ```
 FORGE /ship — Complete ✓
@@ -199,8 +322,19 @@ PR: [URL]
 Full cycle complete: /think → /architect → /build → /verify → /ship ✓
 ```
 
+### Documentation Sync
+
+After PR creation, check if documentation needs updating:
+```
+If API contracts changed, README examples may be stale, or docs/ references outdated:
+
+FORGE /ship — Documentation may need updating.
+Run /document-release to sync docs with this release.
+```
+
 ## Rules
 
+- **Blocks on /review failures** — NEEDS_CHANGES or FAIL in the review report blocks shipping, same as /verify FAIL
 - **Never ship with /verify failures** — no override, no flag, no exception
 - **Never commit secrets** — if a hardcoded secret is found, it's always critical
 - Auto-fix only clear, unambiguous security issues — ask for approval on anything complex
@@ -208,3 +342,7 @@ Full cycle complete: /think → /architect → /build → /verify → /ship ✓
 - If `--skip-security` is used, add a prominent warning to the PR description
 - Re-run tests after every auto-fix — security fixes that break functionality are not fixes
 - Report the PR URL so the user can review it immediately
+- **Evidence before claims** — every security finding must cite the specific file, line, and pattern. Never claim "no issues" without listing what was scanned.
+- **Version bump is optional** — skip if no version file detected or user declines
+- **Secrets in git history are always critical** — even if removed from current code, they may be exposed
+- **Suggest /document-release** after shipping if docs may be stale — don't auto-run it

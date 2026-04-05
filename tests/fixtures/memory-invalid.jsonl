@@ -1,0 +1,5 @@
+{"id":"20250101_120000_ok1","project":"webapp","date":"2025-01-01","category":"architecture","decision":"Valid entry one","rationale":"This is fine","anti_patterns":[],"tags":["test"],"confidence":0.8}
+not valid json at all
+{"id":"20250115_090000_ok2","project":"webapp","date":"2025-01-15","category":"stack-choice","decision":"Valid entry two","rationale":"Also fine","anti_patterns":[],"tags":["test"],"confidence":0.8}
+{broken json "missing": colon}
+{"id":"20250201_140000_ok3","project":"cli-tool","date":"2025-02-01","category":"security","decision":"Valid entry three","rationale":"Still fine","anti_patterns":[],"tags":["test"],"confidence":0.9}

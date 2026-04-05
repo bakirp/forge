@@ -22,26 +22,56 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 
 ## Skills
 
+### Core Workflow
+
 | Command | What it does | Phase |
 |---------|-------------|-------|
 | `/think` | Classifies task complexity (tiny/feature/epic), routes to right depth | Planning |
 | `/architect` | Locks architecture — data flow, API contracts, test strategy | Planning |
 | `/build` | TDD-enforced implementation with subagents and model routing | Build |
+| `/review` | Code review gate — spec compliance, quality, security surface | Review |
 | `/verify` | Cross-platform QA — web (Playwright), API, data pipeline | QA |
 | `/ship` | OWASP + STRIDE security audit, auto-fix, PR creation | Ship |
+| `/debug` | Root-cause-first debugging with evidence collection | Debug |
 | `/memory` | Cross-project decision memory (`/remember`, `/recall`, `/forget`) | All |
 | `/retro` | Post-ship retrospective — structured feedback for `/evolve` | Retro |
 | `/evolve` | Self-rewriting skills based on retro data | Meta |
 
+### Extensions
+
+| Command | What it does | Phase |
+|---------|-------------|-------|
+| `/brainstorm` | Ideation and alternative exploration before /architect | Ideation |
+| `/worktree` | Isolated git worktree setup for tasks | Lifecycle |
+| `/finish` | Branch completion, merge, and cleanup | Lifecycle |
+| `/browse` | Playwright-based browser automation (standalone or from /verify) | Browser |
+| `/design` | Design consultation, exploration, and review | Design |
+| `/benchmark` | Performance benchmarking and regression detection | Performance |
+| `/canary` | Canary deployment with monitoring and rollback | Deploy |
+| `/deploy` | Post-merge deployment and health verification | Deploy |
+| `/document-release` | Post-ship documentation sync | Docs |
+| `/careful` | Warns before destructive operations | Guard |
+| `/freeze` | Scoped edit locks on files/directories | Guard |
+
 ## Workflow
 
 ```
-/think ── tiny ────────────────── /build ── /verify ── /ship ── /retro
-  |                                  ^                             |
-  ├── feature ── /architect ─────────┘                          /evolve
-  |                  |                                             |
-  └── epic ── Agent Teams ── /architect                    improved skills
-              (product, arch, security)
+User task
+  │
+  ▼
+/think ── tiny ───────── /build ── /review ── /verify ── /ship ── /retro ── /evolve
+  │                         ▲
+  ├── needs ideation ── /brainstorm ── /architect ── /build ...
+  │
+  ├── feature ── /architect ┘
+  │
+  ├── debug task ── /debug
+  │
+  └── epic ── Agent Teams ── /architect ── /build ── /review ── /verify ── /ship ...
+
+Standalone: /worktree, /finish, /browse, /design, /benchmark, /canary, /deploy
+Guards:     /careful, /freeze, /document-release
+Memory:     /memory (remember/recall/forget)
 ```
 
 ## How It Works

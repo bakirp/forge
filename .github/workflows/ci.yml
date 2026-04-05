@@ -93,7 +93,17 @@ jobs:
           echo ""
           echo "Total: $FOUND skills"
 
-          if [ $FOUND -lt 10 ]; then
-            echo "WARNING: Expected at least 10 skills, found $FOUND"
+          if [ $FOUND -lt 25 ]; then
+            echo "WARNING: Expected at least 25 skills, found $FOUND"
             exit 1
           fi
+
+      - name: Run test harness
+        run: |
+          bash tests/test-routing.sh
+          bash tests/test-blocking.sh
+          bash tests/test-artifacts.sh
+          bash tests/test-memory.sh
+          bash tests/test-browser.sh
+          bash tests/test-setup.sh
+          bash tests/test-evolution.sh

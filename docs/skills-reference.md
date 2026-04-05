@@ -5,9 +5,15 @@ Complete reference for all FORGE skills. Each skill is a Markdown file with YAML
 ## Skill Chain
 
 ```
-/think → /architect → /build → /verify → /ship → /retro → /evolve
-                ↕                                    ↕
-             /memory                              /memory
+/think → /architect → /build → /review → /verify → /ship → /retro → /evolve
+                ↕                                      ↕
+             /memory                                /memory
+
+Standalone: /debug, /browse, /design, /benchmark
+Lifecycle:  /worktree, /finish, /document-release
+Guards:     /careful, /freeze
+Deploy:     /canary, /deploy
+Ideation:   /brainstorm → /architect
 ```
 
 ---
@@ -127,6 +133,49 @@ Final gate. Security audit, then PR creation.
 
 ---
 
+## /review — Code Review Gate
+
+**Phase**: Review  
+**Usage**: `/review [optional: specific files or focus area]`
+
+Code review gate between `/build` and `/verify`. Checks spec compliance, code quality, and security surface.
+
+**Steps**:
+1. Loads architecture doc and git diff
+2. Spec compliance review (API contracts, component boundaries, edge cases, test strategy)
+3. Code quality review (readability, duplication, complexity, error handling)
+4. Security surface review (lightweight pre-check — not the full /ship audit)
+5. Writes report to `.forge/review/report.md`
+
+**Verdicts**:
+- **PASS**: Only minor issues or suggestions. Ready for `/verify`.
+- **NEEDS_CHANGES**: Major issues found. Fix and re-run `/review`.
+- **FAIL**: Critical issues or fundamental problems. May need `/architect` revisit.
+
+**Rules**: Critical issues = automatic FAIL. Never modifies code. Report must be machine-parseable by `/ship`.
+
+---
+
+## /debug — Root-Cause Debugging
+
+**Phase**: Any  
+**Usage**: `/debug [bug description, error message, or failing test]`
+
+Root-cause-first debugging. Invoked by `/think` for debug tasks, or directly by user.
+
+**Steps**:
+1. Understand the bug from arguments or user input
+2. Reproduce the error
+3. Collect evidence (source files, git log, grep)
+4. Form hypotheses ranked by likelihood
+5. Test hypotheses systematically
+6. Apply minimal fix, verify with tests
+7. Write report to `.forge/debug/report.md`
+
+**Rules**: Evidence before claims. Test hypotheses systematically. Minimal fix only. Never fabricate root cause.
+
+---
+
 ## /memory — Decision Memory
 
 **Phase**: All
@@ -189,3 +238,213 @@ Reads retrospective data and rewrites FORGE skills to improve them.
 **Output**: Evolution log at `~/.forge/retros/evolve_[date].json`. Key changes stored to memory.
 
 **Rules**: Never removes safety guardrails without explicit approval. Needs at least 2 retros for meaningful proposals.
+
+---
+
+## /brainstorm — Ideation Before Architecture
+
+**Phase**: Ideation
+**Usage**: `/brainstorm [task description]`
+
+Generates 3-5 alternative approaches before committing to architecture. Invoked by `/think` when a task has ambiguous solution paths, or directly by the user.
+
+**Steps**:
+1. Analyzes the task and existing codebase for constraints
+2. Generates 3-5 distinct approaches with trade-offs
+3. Scores each on effort, risk, maintainability, and performance
+4. Recommends one approach with rationale
+5. Produces artifact for `/architect` to consume
+
+**Output**: Brainstorm doc at `.forge/brainstorm/[task-name].md`.
+
+**Rules**: Never commits to a single approach without showing alternatives. Each approach must have clear trade-offs. Recommended approach must cite evidence from the codebase.
+
+---
+
+## /worktree — Isolated Workspace Setup
+
+**Phase**: Lifecycle
+**Usage**: `/worktree [branch-name]`
+
+Creates an isolated git worktree for a task. Used by `/build` for subagent isolation, or directly by the user for parallel work.
+
+**Steps**:
+1. Creates a new branch from the current HEAD
+2. Sets up a git worktree at `.forge/worktrees/[branch-name]`
+3. Copies necessary configuration files
+4. Reports the worktree path for use
+
+**Output**: Worktree ready at `.forge/worktrees/[branch-name]`.
+
+**Rules**: Always checks for existing worktrees before creating. Warns if uncommitted changes exist on the current branch. Pairs with `/finish` for cleanup.
+
+---
+
+## /finish — Branch Completion and Merge
+
+**Phase**: Lifecycle
+**Usage**: `/finish [branch-name]`
+
+Completes work in a worktree: merges the branch back, runs tests, and cleans up the worktree.
+
+**Steps**:
+1. Switches to the worktree and verifies all tests pass
+2. Merges the branch into the parent branch
+3. Resolves conflicts if any (prompts user for ambiguous cases)
+4. Removes the worktree and prunes the branch
+5. Runs the full test suite on the merged result
+
+**Output**: Merged branch, cleaned up worktree.
+
+**Rules**: Never merges with failing tests. Always cleans up the worktree after merge. Warns before deleting branches with unmerged commits.
+
+---
+
+## /browse — Playwright Browser Automation
+
+**Phase**: Browser
+**Usage**: `/browse [url or flow description]`
+
+Dedicated Playwright browser automation. Extracted from `/verify` in Phase 3 to separate test execution from test orchestration. Also usable standalone for any browser task.
+
+**Steps**:
+1. Launches Playwright in headless mode (or headed if requested)
+2. Navigates to the target URL or executes the described flow
+3. Captures screenshots at key steps
+4. Reports results with evidence (screenshots, console output, network requests)
+
+**Output**: Screenshots and logs at `.forge/browse/`.
+
+**Rules**: Always captures screenshots on failure. Never modifies application state unless explicitly instructed. Headless by default for CI compatibility.
+
+---
+
+## /design — Design Consultation Suite
+
+**Phase**: Design
+**Usage**: `/design [consult|explore|review] [context]`
+
+Design hub with three sub-skills for different design needs.
+
+### /design consult
+Open-ended design consultation. Analyzes requirements, proposes design directions, discusses trade-offs. Good for early-stage "how should we approach this?" questions.
+
+### /design explore
+Generates design variants. Given a design direction, produces 2-4 concrete alternatives with mockup descriptions, component breakdowns, and interaction flows.
+
+### /design review
+Reviews existing design artifacts (mockups, component trees, style guides) against usability heuristics and consistency criteria. Produces actionable feedback.
+
+**Output**: Design artifacts at `.forge/design/`.
+
+**Rules**: Always cites design rationale. Explore mode must produce at least 2 variants. Review mode must reference specific heuristics.
+
+---
+
+## /document-release — Post-Ship Documentation Sync
+
+**Phase**: Post-ship
+**Usage**: `/document-release [PR number or version]`
+
+Synchronizes documentation after shipping. Reads the PR diff and release summary, then updates relevant docs.
+
+**Steps**:
+1. Reads the shipped PR diff and release notes
+2. Identifies docs that need updating (README, API docs, guides)
+3. Proposes documentation changes
+4. Applies approved changes
+5. Creates a follow-up PR if needed
+
+**Output**: Updated documentation, optional follow-up PR.
+
+**Rules**: Never overwrites docs without showing the diff first. Focuses on user-facing documentation. Skips internal-only changes.
+
+---
+
+## /careful — Destructive Operation Guard
+
+**Phase**: Guard
+**Usage**: `/careful [on|off]`
+
+Session-scoped guardrail that warns before destructive operations. When enabled, intercepts commands like `git reset --hard`, `rm -rf`, `DROP TABLE`, force pushes, and similar.
+
+**Behavior**: When `/careful on` is active, any destructive operation triggers a warning with the specific risk and asks for confirmation before proceeding.
+
+**Rules**: Session-scoped only — does not persist across sessions. Advisory — the user can always override. Does not block non-destructive operations.
+
+---
+
+## /freeze — Scoped Edit Locks
+
+**Phase**: Guard
+**Usage**: `/freeze [patterns|off|list]`
+
+Prevents edits to specified files or directories during a session. Useful for protecting stable code while working on related changes.
+
+**Examples**:
+- `/freeze src/core/**` — locks all files under src/core/
+- `/freeze *.config.js` — locks all config files
+- `/freeze list` — shows current locks
+- `/freeze off` — removes all locks
+
+**Rules**: Session-scoped only. Pattern-based using glob syntax. Shows a warning and refuses the edit when a frozen file is targeted. User can `/freeze off` at any time.
+
+---
+
+## /benchmark — Performance Benchmarking
+
+**Phase**: Performance
+**Usage**: `/benchmark [target function, endpoint, or module]`
+
+Runs performance benchmarks and compares against baselines. Detects regressions before they ship.
+
+**Steps**:
+1. Identifies the target (function, endpoint, or module)
+2. Runs baseline measurement (or loads saved baseline)
+3. Runs current measurement with statistical rigor (multiple iterations)
+4. Compares against baseline with threshold detection
+5. Reports results with flamegraph-style analysis if regression detected
+
+**Output**: Benchmark report at `.forge/benchmark/`.
+
+**Rules**: Always runs multiple iterations for statistical significance. Regression threshold is configurable (default: 10% degradation). Saves baselines for future comparison.
+
+---
+
+## /canary — Canary Deployment
+
+**Phase**: Deploy
+**Usage**: `/canary [percentage]`
+
+Gradual rollout with monitoring. Deploys to a small percentage of traffic, monitors for errors, and either promotes or rolls back.
+
+**Steps**:
+1. Deploys the build to canary infrastructure (configurable percentage, default 5%)
+2. Monitors error rates, latency, and key metrics for a configurable window
+3. Compares canary metrics against baseline
+4. Promotes to full deployment if healthy, or rolls back if degraded
+5. Reports deployment outcome
+
+**Output**: Canary report at `.forge/releases/`.
+
+**Rules**: Always monitors before promoting. Automatic rollback on error rate spike. Never promotes without baseline comparison.
+
+---
+
+## /deploy — Post-Merge Deployment
+
+**Phase**: Deploy
+**Usage**: `/deploy [environment]`
+
+Post-merge deployment and health verification. Runs after a PR is merged to deploy and verify the release in the target environment.
+
+**Steps**:
+1. Verifies the PR is merged and CI is green
+2. Triggers deployment to the target environment
+3. Runs health checks against the deployed service
+4. Verifies key functionality with smoke tests
+5. Reports deployment status
+
+**Output**: Deploy report at `.forge/releases/`.
+
+**Rules**: Never deploys from an unmerged branch. Health checks must pass before marking deployment as successful. Supports rollback if health checks fail.

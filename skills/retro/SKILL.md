@@ -86,6 +86,7 @@ Rate each skill used in this cycle (1-5, or skip):
   /think     — Did it classify correctly?        [1-5 or skip]
   /architect — Was the architecture doc useful?   [1-5 or skip]
   /build     — Did TDD flow work smoothly?       [1-5 or skip]
+  /review    — Was the code review useful?          [1-5 or skip]
   /verify    — Did verification catch real issues? [1-5 or skip]
   /ship      — Did security audit + PR work well? [1-5 or skip]
 
@@ -97,7 +98,44 @@ Parse the ratings. For any skill rated 1-2, ask a follow-up:
 /[skill] rated [score] — What went wrong specifically?
 ```
 
-## Step 4: Build Retro Document
+## Step 4: Trend Analysis
+
+If previous retros exist, surface trends:
+
+```bash
+ls ~/.forge/retros/*.json 2>/dev/null | wc -l
+```
+
+If 3+ retros exist, analyze patterns:
+
+### Project Trends
+- Read retros for the current project
+- Identify recurring themes in "what_slowed_us" and "what_differently"
+- Surface patterns: "This is the 3rd time X was mentioned"
+
+### Cross-Project Trends
+- Read retros across all projects
+- Identify skills that are consistently low-rated
+- Surface anti-patterns that appear across projects
+
+### Present Trends
+```
+FORGE /retro — Trend Analysis
+
+Project trends (from [N] retros for [project]):
+  - [recurring theme 1] (mentioned [N] times)
+  - [recurring theme 2]
+
+Cross-project trends (from [N] total retros):
+  - /[skill] consistently rated [score] — [pattern]
+  - Anti-pattern: [description] (seen in [N] projects)
+
+These trends inform /evolve's improvement priorities.
+```
+
+If fewer than 3 retros exist, skip trend analysis silently.
+
+## Step 5: Build Retro Document
 
 Compile everything into a structured JSON document:
 
@@ -115,6 +153,8 @@ Compile everything into a structured JSON document:
     "think": { "score": 4, "feedback": null },
     "architect": { "score": 5, "feedback": null },
     "build": { "score": 2, "feedback": "TDD loop was too strict for config changes" },
+    "review": { "score": null, "feedback": null },
+    "debug": null,
     "verify": null,
     "ship": { "score": 4, "feedback": null }
   },
@@ -127,7 +167,7 @@ Compile everything into a structured JSON document:
 }
 ```
 
-## Step 5: Save Retro
+## Step 6: Save Retro
 
 ```bash
 # Ensure retros directory exists
@@ -151,11 +191,11 @@ done
 
 Write the JSON document to `$TARGET`.
 
-## Step 6: Store Memories
+## Step 7: Store Memories
 
 If the user provided answers to Question 3 ("what should FORGE remember"), invoke `/memory-remember` with those decisions. This ensures retro insights feed directly into the memory bank.
 
-## Step 7: Summary
+## Step 8: Summary
 
 ```
 FORGE /retro — Complete

@@ -1,5 +1,78 @@
 # Changelog
 
+## v2.1.0 — 2026-04-05
+
+Complete roadmap test plan coverage.
+
+### Test Suites Added
+- **test-memory.sh** — Memory append, dedup, ranking, prune safety, invalid JSON handling (12 tests)
+- **test-browser.sh** — /browse and /verify web mode skill contract validation (9 tests)
+- **test-setup.sh** — Claude/Codex/Cursor host detection, directory creation, skill installation (13 tests)
+- **test-evolution.sh** — /evolve risk classification, test harness gate, revert safety, guardrail protection (10 tests)
+
+### Test Fixtures Added
+- `tests/fixtures/memory-valid.jsonl` — Valid memory entries
+- `tests/fixtures/memory-duplicates.jsonl` — Entries with intentional duplicates for dedup testing
+- `tests/fixtures/memory-invalid.jsonl` — Malformed JSON lines for error handling
+- `tests/fixtures/retro-sample.json` — Sample retrospective data for evolve testing
+
+### CI Updated
+- All 7 test suites now run in GitHub Actions
+
+## v2.0.0 — 2026-04-05
+
+Full 4-phase roadmap implementation. FORGE now has 29 skills across the complete workflow.
+
+### Phase 2: Superpowers-Style Execution
+- **/brainstorm** — Ideation and alternative exploration before /architect
+- **/worktree** — Isolated git worktree setup for tasks
+- **/finish** — Branch completion, merge, and cleanup
+- **/review-request** + **/review-response** — Dedicated review request/response sub-flows
+- Evidence-before-claims rules enforced across /build, /review, /verify, /ship
+- Context-pruned subagent dispatch in /build
+- Run manifest tracking at `.forge/runs/`
+
+### Phase 3: Operational Substrate
+- **/browse** — Dedicated Playwright browser automation (extracted from /verify)
+- **/document-release** — Post-ship documentation sync
+- **/careful** — Destructive operation guardrails
+- **/freeze** — Scoped edit locks
+- Strengthened /ship: version bump, changelog generation, release artifacts, secrets archaeology
+- Multi-host setup: Claude Code (primary), Codex, Cursor
+- Helper scripts: memory-rank, memory-dedup, host-detect, artifact-discover
+
+### Phase 4: Specialist Workflows
+- **/design** suite — consult, explore, review sub-skills
+- **/benchmark** — Performance testing with baseline comparison
+- **/canary** — Canary deployment with monitoring and rollback
+- **/deploy** — Post-merge deployment and health verification
+- Cross-model second-opinion review in /review
+- Trend analysis in /retro (project and cross-project)
+- /evolve re-enabled with test-harness validation gate
+
+## v1.1.0 — 2026-04-05
+
+Phase 1: Make the core workflow trustworthy.
+
+### New Skills
+
+- **/review** — Code review gate between /build and /verify. Checks spec compliance against architecture doc, code quality, and security surface. Produces PASS/NEEDS_CHANGES/FAIL report at `.forge/review/report.md`.
+- **/debug** — Root-cause-first debugging. Structured reproduction, evidence collection, hypothesis testing, targeted fix. Produces report at `.forge/debug/report.md`.
+
+### Changes
+
+- **/ship** now blocks on both `/review` AND `/verify` (previously only /verify)
+- **/think** now detects debugging tasks and routes to `/debug`
+- **/evolve** frozen to proposal-only mode until test harness validates skill integrity
+- Root dispatcher upgraded to prefer skill invocation over ad-hoc action
+
+### Infrastructure
+
+- Artifact schema doc defining all `.forge/` contracts (`docs/artifact-schema.md`)
+- Run manifest tracking at `.forge/runs/<run-id>/manifest.json`
+- Test harness: `tests/test-routing.sh`, `tests/test-blocking.sh`, `tests/test-artifacts.sh`
+- Helper scripts: `scripts/manifest.sh`, `scripts/artifact-check.sh`
+
 ## v1.0.0 — 2026-04-05
 
 First public release. All 7 core skills implemented.

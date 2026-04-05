@@ -172,6 +172,14 @@ Rules:
 Report back: tests written, tests passing, files created/modified."
 ```
 
+**Context Pruning**: Each subagent receives ONLY:
+- Its specific task description from the architecture doc
+- The relevant API contracts and test strategy for that task
+- Project conventions (test runner, framework, file patterns)
+- Dependencies it needs to install
+
+Do NOT include: full session history, other tasks' details, memory bank contents, or the complete architecture doc. Less context = faster, more focused execution.
+
 Use `isolation: "worktree"` for each subagent to prevent conflicts.
 
 After all subagents complete:
@@ -199,6 +207,12 @@ Files modified: [list]
 All tests passing. Ready for /verify.
 ```
 
+Update the run manifest:
+```bash
+scripts/manifest.sh phase "$(cat .forge/runs/latest)" build
+scripts/manifest.sh status "$(cat .forge/runs/latest)" completed
+```
+
 If any tests fail, fix them before declaring complete.
 
 ## Rules
@@ -210,3 +224,4 @@ If any tests fail, fix them before declaring complete.
 - If a task reveals an architecture gap, stop and ask the user — don't improvise
 - Subagents work in isolated worktrees — never modify shared state directly
 - Report progress after each task, not just at the end
+- **Evidence before claims** — never claim "tests passing" without showing the actual test output. Every success claim must cite the command run and its output.

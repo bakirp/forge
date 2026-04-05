@@ -67,7 +67,15 @@ FORGE implements the architecture with TDD:
 - Implements until tests pass
 - Runs 2-stage review (spec compliance + code quality)
 
-### 4. Verify
+### 4. Review
+
+```
+/review
+```
+
+FORGE reviews the build output against the architecture doc. Checks spec compliance, code quality, and security surface. Produces a report at `.forge/review/report.md`.
+
+### 5. Verify
 
 ```
 /verify
@@ -75,7 +83,7 @@ FORGE implements the architecture with TDD:
 
 FORGE detects your project type (web/API/pipeline) and runs appropriate tests. Produces a pass/fail report.
 
-### 5. Ship
+### 6. Ship
 
 ```
 /ship
@@ -83,7 +91,7 @@ FORGE detects your project type (web/API/pipeline) and runs appropriate tests. P
 
 FORGE runs a security audit (OWASP + STRIDE), auto-fixes critical issues, and creates a PR.
 
-### 6. Retro
+### 7. Retro
 
 ```
 /retro
@@ -91,7 +99,7 @@ FORGE runs a security audit (OWASP + STRIDE), auto-fixes critical issues, and cr
 
 After shipping, FORGE asks three questions about what went well and what didn't. Stores structured data for `/evolve`.
 
-### 7. Evolve
+### 8. Evolve
 
 ```
 /evolve

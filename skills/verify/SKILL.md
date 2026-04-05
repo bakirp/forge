@@ -54,56 +54,28 @@ Verification strategy:
 Proceed? (y/n, or override with: /verify web|api|pipeline)
 ```
 
-## Step 3: Ensure Playwright
+## Step 3: Delegate Browser Testing
 
-If verification needs browser testing (web domain):
+If verification needs browser testing (web domain), delegate to `/browse`:
 
-```bash
-# Check if Playwright is available (use npx or bunx depending on runtime)
-npx playwright --version 2>/dev/null || bunx playwright --version 2>/dev/null || echo "NOT_INSTALLED"
+```
+Invoke /browse with the key user flows from the architecture doc.
+/browse handles Playwright setup, test execution, and screenshot capture.
 ```
 
-If not installed:
-```bash
-# Install @playwright/test (not just playwright) — the test specs import from it
-npm install --save-dev @playwright/test
-npx playwright install chromium
-```
+/browse writes its report to `.forge/browse/report.md`. Read that report and incorporate its results into the verification report.
 
-For API and pipeline domains, Playwright is not required — skip this step.
+For API and pipeline domains, /browse is not needed — skip this step.
 
 ## Step 4: Run Verification
 
 ### Web App Verification
 
-Create a Playwright test file for the key user flows from the architecture doc:
+Delegated to `/browse`. The browse report at `.forge/browse/report.md` contains:
+- Each flow tested with PASS/FAIL status
+- Screenshots for any failures at `.forge/browse/screenshots/`
 
-```javascript
-// .forge/verify/web-flows.spec.js
-const { test, expect } = require('@playwright/test');
-
-test.describe('FORGE Verification', () => {
-  // Generate tests based on:
-  // 1. Key user flows from the architecture doc
-  // 2. Edge cases that affect UI
-  // 3. Error states and their display
-});
-```
-
-Run with (use `npx` if Node is available, `bunx` if only Bun is installed):
-```bash
-npx playwright test .forge/verify/ --reporter=list
-```
-
-On failure, capture screenshots:
-```bash
-npx playwright test .forge/verify/ --reporter=list --screenshot=on
-```
-
-Screenshots save to `.forge/verify/screenshots/`. For each failure, note:
-- What was expected
-- What happened
-- Screenshot path
+Incorporate the browse results into the verification report below.
 
 ### API Verification
 
@@ -140,6 +112,8 @@ diff <(actual_output) <(expected_output)
 ```
 
 ## Step 5: Compile Report
+
+Create `.forge/verify/` if it doesn't exist.
 
 Write the verification report to `.forge/verify/report.md`:
 
@@ -206,3 +180,5 @@ Report: .forge/verify/report.md
 - If Playwright install fails, report it clearly — don't fall back to curl for web testing
 - The report must be machine-readable enough for /ship to parse the status
 - Do not modify application code — verification is read-only observation
+- **Evidence before claims** — never claim PASS without showing actual test output. Every verification must cite the command run, its output, and what was asserted.
+- Web domain browser testing is delegated to /browse — /verify is the report-and-gate layer, not the execution layer

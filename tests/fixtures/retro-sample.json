@@ -1,0 +1,27 @@
+{
+  "date": "2025-03-01",
+  "project": "webapp",
+  "task": "Add user notification preferences",
+  "skill_ratings": {
+    "think": 4,
+    "architect": 3,
+    "build": 2,
+    "review": 4,
+    "verify": 3,
+    "ship": 4,
+    "memory": 5
+  },
+  "what_went_well": [
+    "Architecture doc caught edge cases early",
+    "Memory bank surfaced relevant past decision about event-driven notifications"
+  ],
+  "what_differently": [
+    "Build step was confusing — TDD requirement unclear for config-only changes",
+    "Verify step took too long to set up Playwright"
+  ],
+  "improvements_suggested": [
+    "Add TDD exception for config-only changes in /build",
+    "Pre-check Playwright installation at start of /verify"
+  ],
+  "overall_rating": 3.5
+}

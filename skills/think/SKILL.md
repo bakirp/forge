@@ -18,7 +18,27 @@ Gather context:
 - Check recent git history: `git log --oneline -10`
 - Scan the codebase structure to understand scope
 
-## Step 2: Classify Complexity
+## Step 2: Check for Debug Task
+
+Before classifying complexity, check if this is a debugging task. Look for these signals in `$ARGUMENTS`:
+
+**Debug signals**: error, bug, broken, failing, crash, investigate, root cause, regression, stack trace, exception, not working, "why does", "why is", fix (when describing a bug, not a feature)
+
+If debug signals are strong:
+
+```
+FORGE /think → DEBUG
+
+Reasoning: [1-2 sentences explaining why this looks like a debugging task]
+
+Route: /debug [original arguments]
+```
+
+Route directly to `/debug` with the original arguments. Skip complexity classification.
+
+If the signals are ambiguous (e.g., "fix the auth flow" could be a bug or a feature), proceed to complexity classification and let the user decide.
+
+## Step 3: Classify Complexity
 
 Evaluate the task against these criteria:
 
@@ -45,7 +65,7 @@ Signals:
 - User says "redesign", "migrate", "new system", "overhaul"
 - Requires coordinated changes across modules
 
-## Step 3: Present Classification
+## Step 4: Present Classification
 
 Tell the user:
 
@@ -59,7 +79,7 @@ Route: [what happens next]
 
 Wait for user confirmation. If they disagree, reclassify immediately.
 
-## Step 4: Route
+## Step 5: Route
 
 ### TINY → Direct Build
 - Skip /architect entirely
@@ -168,3 +188,4 @@ Required output format:
 - If uncertain between two levels, pick the higher one
 - Always show reasoning so the user can override
 - Respect user overrides immediately
+- If the task looks like debugging, route to /debug — don't force it through complexity classification
