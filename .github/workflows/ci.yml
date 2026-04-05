@@ -1,0 +1,99 @@
+name: FORGE CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-skills:
+    name: Validate SKILL.md files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find all SKILL.md files
+        id: find-skills
+        run: |
+          echo "Found SKILL.md files:"
+          find . -name "SKILL.md" | sort
+          echo "count=$(find . -name "SKILL.md" | wc -l)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate frontmatter fields
+        run: |
+          ERRORS=0
+          for f in $(find . -name "SKILL.md" | sort); do
+            echo "Checking $f..."
+
+            # Check frontmatter delimiters
+            if ! head -1 "$f" | grep -q "^---$"; then
+              echo "  ERROR: Missing opening frontmatter delimiter"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Extract frontmatter (between first and second ---)
+            FRONTMATTER=$(sed -n '2,/^---$/p' "$f" | head -n -1)
+
+            # Check required fields
+            for field in name description allowed-tools argument-hint; do
+              if ! echo "$FRONTMATTER" | grep -q "^${field}:"; then
+                echo "  ERROR: Missing required field '$field'"
+                ERRORS=$((ERRORS + 1))
+              else
+                echo "  OK: $field"
+              fi
+            done
+          done
+
+          echo ""
+          if [ $ERRORS -gt 0 ]; then
+            echo "FAILED: $ERRORS error(s) found"
+            exit 1
+          else
+            echo "PASSED: All SKILL.md files valid"
+          fi
+
+      - name: Check setup script syntax
+        run: bash -n setup
+
+      - name: Validate setup discovers all skills
+        run: |
+          echo "Skills that setup would install:"
+          FOUND=0
+
+          # Root bootstrap
+          if [ -f "SKILL.md" ]; then
+            echo "  /forge (bootstrap)"
+            FOUND=$((FOUND + 1))
+          fi
+
+          # Skills directory
+          for skill_dir in skills/*/; do
+            skill_name=$(basename "$skill_dir")
+
+            # Parent skill
+            if [ -f "${skill_dir}SKILL.md" ]; then
+              echo "  /$skill_name"
+              FOUND=$((FOUND + 1))
+            fi
+
+            # Nested skills
+            for nested_dir in "${skill_dir}"*/; do
+              [ -d "$nested_dir" ] || continue
+              if [ -f "${nested_dir}SKILL.md" ]; then
+                nested_name=$(basename "$nested_dir")
+                echo "  /${skill_name}-${nested_name}"
+                FOUND=$((FOUND + 1))
+              fi
+            done
+          done
+
+          echo ""
+          echo "Total: $FOUND skills"
+
+          if [ $FOUND -lt 10 ]; then
+            echo "WARNING: Expected at least 10 skills, found $FOUND"
+            exit 1
+          fi
