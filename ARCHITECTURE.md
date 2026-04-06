@@ -101,6 +101,15 @@ This schema enables:
 
 The schema is the contract between skills. Skills produce artifacts; downstream skills consume them. Adding a new skill means defining its artifact path and format in the schema.
 
+### Artifact Freshness
+
+Review and verify reports include two freshness fields written at report time:
+
+- `commit_sha` — `git rev-parse HEAD`
+- `tree_hash` — `git rev-parse HEAD^{tree}`
+
+Before shipping, `/ship` validates these against the current HEAD. If the working tree has advanced since the report was written, `/ship` rejects the artifacts as stale and requires `/review` and `/verify` to be re-run. `scripts/artifact-check.sh` performs the same check and can be run manually at any point.
+
 ## Evidence-Before-Claims (Phase 2)
 
 Every success or failure claim in FORGE must cite evidence: the command run, its output, and what was asserted. This prevents hallucinated results — a persistent risk with AI-generated verification claims.

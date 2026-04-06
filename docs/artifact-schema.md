@@ -126,6 +126,8 @@ Input -> [Step 1] -> [Step 2] -> Output
 ## Status: [PASS | FAIL | NEEDS_CHANGES]
 ## Date: [ISO 8601 timestamp]
 ## Reviewer: FORGE /review
+## commit_sha: [output of `git rev-parse HEAD`]
+## tree_hash: [output of `git rev-parse HEAD^{tree}`]
 
 ## Summary
 - Files reviewed: [count]
@@ -153,6 +155,13 @@ Input -> [Step 1] -> [Step 2] -> Output
 ## Verdict
 [PASS: ready for /verify | NEEDS_CHANGES: list what to fix | FAIL: fundamental problems]
 ```
+
+### Required Fields
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `commit_sha` | Yes | `git rev-parse HEAD` at write time |
+| `tree_hash` | Yes | `git rev-parse HEAD^{tree}` at write time |
 
 ### Status Values
 
@@ -186,6 +195,8 @@ Input -> [Step 1] -> [Step 2] -> Output
 ## Status: [PASS | FAIL]
 ## Date: [ISO 8601 timestamp]
 ## Domain: [WEB | API | PIPELINE]
+## commit_sha: [output of `git rev-parse HEAD`]
+## tree_hash: [output of `git rev-parse HEAD^{tree}`]
 
 ## Summary
 - Tests run: [count]
@@ -216,6 +227,13 @@ Input -> [Step 1] -> [Step 2] -> Output
 - Components NOT verified: [list, with reason]
 - Edge cases tested: [count from architecture doc]
 ```
+
+### Required Fields
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `commit_sha` | Yes | `git rev-parse HEAD` at write time |
+| `tree_hash` | Yes | `git rev-parse HEAD^{tree}` at write time |
 
 ### Status Rules
 

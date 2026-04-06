@@ -88,6 +88,12 @@ Memory:     /memory (remember/recall/forget)
 - Memory compounds — decisions from project A inform project B
 - Process scales down for tiny tasks and up for epics
 
+## Quality and Reliability
+
+- **Artifact freshness protocol** — `/review` and `/verify` stamp `commit_sha` + `tree_hash` into their reports. `/ship` validates both against current HEAD before shipping, blocking with `STALE:` on mismatch. After any auto-fix, both reports must be regenerated.
+- **Subagent checkpoints in `/build`** — explicit checkpoint after each subagent verifies output against the architecture doc before the next subagent starts. Final verification is two-stage: architecture compliance first, then the test suite. Tests alone are not sufficient to pass the gate.
+- **Evidence-before-claims** — `/ship`, `/architect`, and `/review` require showing actual output as evidence before claiming work is complete.
+
 ## Testing
 
 FORGE includes 9 test suites with 57+ tests covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, and manifest tracking.

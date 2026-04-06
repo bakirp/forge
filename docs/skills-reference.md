@@ -83,7 +83,9 @@ Implements the architecture doc with strict TDD enforcement.
 3. Run tests — all must pass
 4. 2-stage review: spec compliance, then code quality
 
-**Subagents**: For 3+ independent tasks, spawns agents in isolated worktrees. Merges and runs full test suite after all complete.
+**Subagents**: For 3+ independent tasks, spawns agents in isolated worktrees. After each subagent completes, a checkpoint pauses execution to verify output against the architecture doc (API contracts, component boundaries, data flow) and logs PASS/FAIL — the next subagent only starts on PASS. Merges and runs full test suite after all complete.
+
+**Final Verification**: Two-stage gate before declaring done. Stage 1: architecture compliance check (BLOCK merge on failure). Stage 2: full test suite (BLOCK merge on failure). Passing tests alone is not sufficient — both stages must pass.
 
 **Rules**: Architecture doc is law. Tests must fail before implementation. Never skips review. Reports progress per task.
 
@@ -104,7 +106,7 @@ Verifies build output actually works. Produces a pass/fail report for `/ship`.
 
 **On Failure**: Captures annotated screenshots (web), detailed error info. Each failure includes expected vs actual.
 
-**Output**: Report at `.forge/verify/report.md` with status (PASS/FAIL), test counts, failure details.
+**Output**: Report at `.forge/verify/report.md` with status (PASS/FAIL), test counts, failure details. `commit_sha` and `tree_hash` are stamped into the report at write time for freshness tracking by `/ship`.
 
 **Rules**: Never marks FAIL as PASS. Never modifies application code. Screenshots mandatory on web failures.
 
@@ -118,6 +120,8 @@ Verifies build output actually works. Produces a pass/fail report for `/ship`.
 Final gate. Security audit, then PR creation.
 
 **Blocks on**: `/review` and `/verify` failures — no override, no exceptions.
+
+**Freshness Validation**: Extracts `commit_sha` from each report and compares it to the current `HEAD`. If either report was produced against a different commit, ship halts with a `STALE:` error and requires re-running `/review` and `/verify`. Auto-fix (see below) always invalidates both reports — they must be regenerated before proceeding even when the fix is minor.
 
 **OWASP Top 10 Check**: Scans all changed files for injection, broken auth, data exposure, XXE, access control issues, misconfig, XSS, insecure deserialization, known vulnerabilities, insufficient logging.
 
@@ -145,7 +149,7 @@ Code review gate between `/build` and `/verify`. Checks spec compliance, code qu
 2. Spec compliance review (API contracts, component boundaries, edge cases, test strategy)
 3. Code quality review (readability, duplication, complexity, error handling)
 4. Security surface review (lightweight pre-check — not the full /ship audit)
-5. Writes report to `.forge/review/report.md`
+5. Writes report to `.forge/review/report.md`, stamping `commit_sha` (`git rev-parse HEAD`) and `tree_hash` (`git rev-parse HEAD^{tree}`) into the report at write time
 
 **Verdicts**:
 - **PASS**: Only minor issues or suggestions. Ready for `/verify`.
@@ -468,4 +472,4 @@ Post-merge deployment and health verification. Runs after a PR is merged to depl
 **Phase**: Any
 **Usage**: `/forge`
 
-FORGE workflow overview and help. Lists all available skills, routing rules, and phase dependencies. Use as a quick reference or starting point.
+FORGE workflow overview and help. Lists all available skills, routing rules, and phase dependencies. Use as a quick reference or starting point. Includes a **Red Flags** table of rationalization patterns agents use to skip ceremony (e.g. "I'll skip `/verify`, it looks fine") — agents and reviewers should treat any such pattern as a process violation.

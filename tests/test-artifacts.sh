@@ -209,6 +209,72 @@ else
   skip "/browse or /verify not found — skipping browse report path cross-check"
 fi
 
+# ── 12. /review SKILL.md stamps commit_sha into report artifact ──
+
+if require_skill review; then
+  if grep -q 'commit_sha' "$REVIEW_FILE"; then
+    pass "/review SKILL.md stamps commit_sha into report artifact"
+  else
+    fail "/review SKILL.md does not stamp commit_sha into report artifact"
+  fi
+fi
+
+# ── 13. /verify SKILL.md stamps commit_sha into report artifact ──
+
+if require_skill verify; then
+  if grep -q 'commit_sha' "$VERIFY_FILE"; then
+    pass "/verify SKILL.md stamps commit_sha into report artifact"
+  else
+    fail "/verify SKILL.md does not stamp commit_sha into report artifact"
+  fi
+fi
+
+# ── 14. artifact schema defines commit_sha field ──
+
+SCHEMA_FILE="$ROOT/docs/artifact-schema.md"
+if [[ -f "$SCHEMA_FILE" ]]; then
+  if grep -q 'commit_sha' "$SCHEMA_FILE"; then
+    pass "artifact schema defines commit_sha field"
+  else
+    fail "artifact schema does not define commit_sha field"
+  fi
+else
+  skip "docs/artifact-schema.md not found — skipping commit_sha schema check"
+fi
+
+# ── 15. artifact-check.sh validates commit_sha freshness against HEAD ──
+
+ARTIFACT_CHECK="$ROOT/scripts/artifact-check.sh"
+if [[ -f "$ARTIFACT_CHECK" ]]; then
+  if grep -q 'commit_sha' "$ARTIFACT_CHECK" && grep -q 'STALE' "$ARTIFACT_CHECK"; then
+    pass "artifact-check.sh validates commit_sha freshness against HEAD"
+  else
+    fail "artifact-check.sh does not validate commit_sha freshness (missing commit_sha or STALE)"
+  fi
+else
+  skip "scripts/artifact-check.sh not found — skipping commit_sha freshness check"
+fi
+
+# ── 16. /review stamps both commit_sha and tree_hash into report ──
+
+if require_skill review; then
+  if grep -q 'commit_sha' "$REVIEW_FILE" && grep -q 'tree_hash' "$REVIEW_FILE"; then
+    pass "/review stamps both commit_sha and tree_hash into report"
+  else
+    fail "/review SKILL.md missing commit_sha or tree_hash stamp"
+  fi
+fi
+
+# ── 17. /verify stamps both commit_sha and tree_hash into report ──
+
+if require_skill verify; then
+  if grep -q 'commit_sha' "$VERIFY_FILE" && grep -q 'tree_hash' "$VERIFY_FILE"; then
+    pass "/verify stamps both commit_sha and tree_hash into report"
+  else
+    fail "/verify SKILL.md missing commit_sha or tree_hash stamp"
+  fi
+fi
+
 # ── Summary ──
 
 echo ""

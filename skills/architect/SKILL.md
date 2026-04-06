@@ -96,6 +96,12 @@ Create the directory if it doesn't exist.
 
 ## Step 5: Present and Lock
 
+Before claiming the architecture doc is complete, show evidence it was written:
+```bash
+head -5 .forge/architecture/[task-name-slugified].md
+```
+Output must include the file path and the `## Status: LOCKED` line. Do not claim the architecture is complete without showing this output.
+
 Show the user the full architecture doc. Say:
 
 ```

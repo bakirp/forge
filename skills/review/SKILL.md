@@ -180,6 +180,12 @@ mkdir -p .forge/review
 
 Write to `.forge/review/report.md`:
 
+Before writing, capture the current commit identity:
+```bash
+git rev-parse HEAD
+git rev-parse HEAD^{tree}
+```
+
 ```markdown
 # FORGE Review Report
 
@@ -187,6 +193,8 @@ Write to `.forge/review/report.md`:
 ## Date: [YYYY-MM-DD HH:MM]
 ## Reviewer: FORGE /review
 ## Architecture: [path to arch doc or "N/A (tiny task)"]
+## commit_sha: [output of `git rev-parse HEAD`]
+## tree_hash: [output of `git rev-parse HEAD^{tree}`]
 
 ## Summary
 - Files reviewed: [count]
@@ -223,6 +231,12 @@ Write to `.forge/review/report.md`:
 ```
 
 ## Step 7: Report Result
+
+Before claiming the review is complete, show evidence it was written:
+```bash
+head -6 .forge/review/report.md
+```
+Output must include the `## Status:` line and the `## commit_sha:` line. Do not claim the review is complete without showing this output.
 
 ```
 FORGE /review — [PASS | NEEDS_CHANGES | FAIL]

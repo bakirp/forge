@@ -26,6 +26,29 @@ check_report() {
   check_exists "$1" || return
   has_line "$1" "^## Status:" "Status header"
   has_line "$1" "## Summary" "Summary section"
+  has_line "$1" "^## commit_sha:" "commit_sha field"
+  has_line "$1" "^## tree_hash:" "tree_hash field"
+
+  # Freshness check: verify report was written against current HEAD
+  local current_sha current_tree
+  current_sha=$(git rev-parse HEAD 2>/dev/null) || { fail "cannot determine current HEAD"; return; }
+  current_tree=$(git rev-parse "HEAD^{tree}" 2>/dev/null) || { fail "cannot determine current tree hash"; return; }
+
+  local report_sha report_tree
+  report_sha=$(grep "^## commit_sha:" "$1" | awk '{print $NF}')
+  report_tree=$(grep "^## tree_hash:" "$1" | awk '{print $NF}')
+
+  if [[ "$report_sha" == "$current_sha" ]]; then
+    pass "commit_sha matches HEAD ($current_sha)"
+  else
+    fail "STALE: $2 report commit_sha ($report_sha) does not match HEAD ($current_sha) — re-run /$2"
+  fi
+
+  if [[ "$report_tree" == "$current_tree" ]]; then
+    pass "tree_hash matches HEAD^{tree} ($current_tree)"
+  else
+    fail "STALE: $2 report tree_hash ($report_tree) does not match HEAD^{tree} ($current_tree) — re-run /$2"
+  fi
 }
 
 check_manifest() {

@@ -1,5 +1,33 @@
 # Changelog
 
+## v2.2.0 — 2026-04-06
+
+Adopted superpowers execution discipline: artifact freshness, evidence-before-claims, and stronger subagent gates.
+
+### Artifact Freshness Protocol
+- `/review` and `/verify` now stamp `commit_sha` + `tree_hash` into their reports
+- `/ship` validates both reports against current HEAD before shipping; blocks with `STALE:` on mismatch
+- After any auto-fix, both `/review` and `/verify` reports must be regenerated before `/ship` proceeds
+
+### Evidence-Before-Claims Consistency
+- `/ship` requires PR URL as evidence before claiming ship is complete
+- `/architect` requires doc header as evidence before claiming architecture is locked
+- `/review` requires report header as evidence before claiming review is complete
+
+### Subagent Checkpoints in `/build`
+- Explicit checkpoint after each subagent: output verified against architecture doc before next subagent starts
+- Prevents cascading failures from undetected contract violations mid-build
+
+### Two-Stage Final Verification in `/build`
+- Stage 1: architecture compliance (API contracts, component boundaries, data flow)
+- Stage 2: test suite
+- Both stages must pass; tests alone are not sufficient to complete the build gate
+
+### Red Flags Table in `/forge`
+- Added explicit rationalization-pattern table to the root dispatcher
+- Lists patterns agents use to skip ceremony (e.g., "tests pass so it must be fine", "I'll verify later")
+- Agents must check themselves against this table before claiming any phase complete
+
 ## v2.1.0 — 2026-04-06
 
 Complete roadmap test plan coverage. Version bumped across plugin manifests.

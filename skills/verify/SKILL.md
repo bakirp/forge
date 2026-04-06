@@ -136,6 +136,12 @@ For pipeline projects:
 
 Create `.forge/verify/` if it doesn't exist.
 
+Before writing, capture the current commit identity:
+```bash
+git rev-parse HEAD
+git rev-parse HEAD^{tree}
+```
+
 Write the verification report to `.forge/verify/report.md`:
 
 ```markdown
@@ -144,6 +150,8 @@ Write the verification report to `.forge/verify/report.md`:
 ## Status: [PASS | FAIL]
 ## Date: [timestamp]
 ## Domain: [WEB | API | PIPELINE]
+## commit_sha: [output of `git rev-parse HEAD`]
+## tree_hash: [output of `git rev-parse HEAD^{tree}`]
 
 ## Summary
 - Tests run: [count]

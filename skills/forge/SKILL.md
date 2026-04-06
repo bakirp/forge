@@ -75,6 +75,20 @@ When a user describes a task, PREFER routing to a skill over ad-hoc action.
 - **Build/feature/change signals** → route to `/think`
 - **Explicit skill invocation** (e.g., "/verify") → execute it directly
 
+## Red Flags
+
+These thoughts are rationalizations — if you catch yourself thinking one, that's the signal to stop and run the skipped skill.
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a tiny task, I'll skip /think" | /think classifies complexity — skipping it means guessing. Use it. |
+| "I know the architecture, I don't need /architect" | Architecture decisions must be locked in a doc. Memory is not a contract. |
+| "I'll just build this quickly without a worktree" | Worktrees prevent polluting main. No exceptions for "quick" work. |
+| "The tests pass, I don't need /review" | Tests prove behavior, not correctness or spec compliance. |
+| "I'll skip /verify, it looks fine" | Looking fine is not evidence. /verify produces the artifact /ship requires. |
+| "I already reviewed this, /ship can trust the old report" | Reports are only valid for the exact commit they were generated against. |
+| "I'll remember this decision for next time" | Memory is session-scoped. Use /memory to persist it. |
+
 ## Proactive Mode
 
 When a task is in progress, FORGE proactively:

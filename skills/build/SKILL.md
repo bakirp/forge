@@ -189,6 +189,16 @@ Do NOT include: full session history, other tasks' details, memory bank contents
 
 Use `isolation: "worktree"` for each subagent to prevent conflicts.
 
+**Checkpoint after each subagent (before starting the next one):**
+
+When a subagent reports back, pause and do not start the next subagent until this checkpoint passes:
+
+1. Review the subagent's output — read the files it created or modified and its reported test results.
+2. Verify against the architecture doc: does the output match the API contracts (types, inputs, outputs, error cases), respect the component boundaries, and implement the data flow as specified?
+3. Log the result:
+   - **PASS** — output matches the architecture contract and tests pass. Proceed to the next subagent.
+   - **FAIL** — output deviates from the contract or tests do not pass. Stop. Fix the issue (inline or by re-running the subagent) before starting any subsequent subagent. Errors must not compound across subagents.
+
 After all subagents complete:
 - Merge worktree changes
 - Run the full test suite to catch integration issues
@@ -207,22 +217,36 @@ Never silently skip a task because a subagent failed.
 
 ## Step 6: Final Verification
 
-After all tasks complete:
+After all tasks complete, both stages below must pass before the build is considered done. Passing tests alone is not sufficient — architecture compliance must be verified first.
+
+**Stage 1 — Architecture Compliance (BLOCK merge if this fails)**
+
+Compare the implemented code against the architecture doc:
+- **API contracts**: For every function, endpoint, or interface defined in the architecture doc, confirm the actual implementation matches exactly — parameter names, types, return types, and error cases. Any deviation blocks merge.
+- **Component boundaries**: Each component owns only what the architecture doc assigns to it. No component reaches into another's scope or imports across defined boundaries.
+- **Data flow**: Trace the end-to-end data flow as specified in the architecture doc. Confirm that data enters, transforms, and exits at the points the doc defines.
+
+If Stage 1 fails, fix the non-compliant code before running Stage 2.
+
+**Stage 2 — Test Suite (BLOCK merge if this fails)**
 
 ```bash
 # Run full test suite
 [project test command]
 ```
 
+If any tests fail, fix them before proceeding.
+
 ```
 FORGE /build — Complete
 
 Tasks: [completed]/[total]
+Architecture compliance: PASS
 Tests: [total passing] / [total written]
 Files created: [list]
 Files modified: [list]
 
-All tests passing. Ready for /verify.
+Ready for /verify.
 ```
 
 Update the run manifest:
@@ -230,8 +254,6 @@ Update the run manifest:
 scripts/manifest.sh phase "$(cat .forge/runs/latest)" build
 scripts/manifest.sh status "$(cat .forge/runs/latest)" completed
 ```
-
-If any tests fail, fix them before declaring complete.
 
 ## Rules
 

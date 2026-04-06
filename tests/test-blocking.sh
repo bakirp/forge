@@ -139,6 +139,66 @@ else
   skip "/debug not yet created — skipping debug blocking tests"
 fi
 
+# ── 9. /ship STALE blocking for review report ──
+
+if require_skill ship; then
+  if grep -q 'STALE' "$SHIP"; then
+    pass "/ship blocks with STALE when review report commit_sha is outdated"
+  else
+    fail "/ship missing STALE blocking logic for review report commit_sha"
+  fi
+fi
+
+# ── 10. /ship STALE blocking for verify report ──
+
+if require_skill ship; then
+  if grep -q 'STALE' "$SHIP" && grep -q 'review/report\.md' "$SHIP" && grep -q 'verify/report\.md' "$SHIP"; then
+    pass "/ship blocks with STALE when verify report commit_sha is outdated"
+  else
+    fail "/ship missing STALE blocking for verify report (or missing report.md references)"
+  fi
+fi
+
+# ── 11. /ship marks reports stale after auto-fix and requires re-run ──
+
+if require_skill ship; then
+  if grep -qiE 'auto.fix' "$SHIP" && grep -qiE 'stale' "$SHIP"; then
+    pass "/ship marks reports stale after auto-fix and requires re-run"
+  else
+    fail "/ship missing auto-fix staleness requirement (re-run /review and /verify after auto-fix)"
+  fi
+fi
+
+# ── 12. /build contains checkpoint after each subagent ──
+
+if require_skill build; then
+  if grep -qi 'checkpoint' "$BUILD"; then
+    pass "/build contains checkpoint after each subagent before proceeding"
+  else
+    fail "/build missing checkpoint after each subagent"
+  fi
+fi
+
+# ── 13. /build Stage 1 architecture compliance blocks merge ──
+
+if require_skill build; then
+  if grep -q 'Architecture Compliance' "$BUILD" && grep -q 'BLOCK merge' "$BUILD"; then
+    pass "/build blocks merge on architecture compliance failure (Stage 1)"
+  else
+    fail "/build missing Architecture Compliance block-merge gate (Stage 1)"
+  fi
+fi
+
+# ── 14. /build two-stage verification requires both stages to pass ──
+
+if require_skill build; then
+  if grep -q 'Stage 1' "$BUILD" && grep -q 'Stage 2' "$BUILD" && grep -q 'BLOCK merge' "$BUILD"; then
+    pass "/build requires both architecture compliance and test suite to pass"
+  else
+    fail "/build missing two-stage verification (Stage 1 + Stage 2 with BLOCK merge)"
+  fi
+fi
+
 # ── Summary ──
 
 echo ""

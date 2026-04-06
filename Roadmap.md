@@ -101,7 +101,7 @@ These exist as prompt-level workflow intent, but are not yet backed by robust to
   - plan execution
   - subagent-driven implementation
   - progress marking
-- Enforce fresh verification evidence before claiming success in `/build`, `/review`, `/verify`, and `/ship`.
+- [x] Enforce fresh verification evidence before claiming success in `/build`, `/review`, `/verify`, and `/ship`.
 - Rework subagent prompts so each task gets only the required context, not the full session.
 - Add dedicated review workflows:
   - request review
@@ -112,7 +112,7 @@ These exist as prompt-level workflow intent, but are not yet backed by robust to
 - `/brainstorm`
 - `/worktree`
 - `/finish`
-- evidence-before-claims rules
+- [x] evidence-before-claims rules
 - context-pruned subagent pattern
 - dedicated review request/response flows
 

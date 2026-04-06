@@ -83,6 +83,18 @@ Required fields:
 
 Docs live in `docs/`. Follow the existing style: practical, example-driven, no unnecessary prose.
 
+## Artifact Freshness Requirements
+
+`/review` and `/verify` reports must include `commit_sha` and `tree_hash` fields (see `docs/artifact-schema.md` for the exact format). These fields record the commit the report was written against. `/ship` validates them against the current HEAD and rejects stale reports.
+
+If you are writing or modifying a skill that produces a review or verify report, make sure the report writes both fields. Before submitting a PR that touches the artifact pipeline, run:
+
+```sh
+scripts/artifact-check.sh
+```
+
+This validates `commit_sha` freshness against HEAD and will surface staleness errors before CI does.
+
 ## CI Validation
 
 Every push runs CI that validates:

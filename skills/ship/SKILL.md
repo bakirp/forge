@@ -41,6 +41,30 @@ FORGE /ship — BLOCKED
 No review report found. Run /review first.
 ```
 
+**Freshness check — review report:** After confirming the review report exists and passes, verify it was written against the current commit:
+
+```bash
+CURRENT_SHA=$(git rev-parse HEAD)
+REVIEW_SHA=$(grep "^## commit_sha:" .forge/review/report.md | awk '{print $NF}')
+if [[ "$REVIEW_SHA" != "$CURRENT_SHA" ]]; then
+  echo "STALE: review report is from $REVIEW_SHA, current HEAD is $CURRENT_SHA"
+fi
+```
+
+If the `commit_sha` in the review report does not match `git rev-parse HEAD`, block shipping:
+
+```
+FORGE /ship — BLOCKED
+
+The review report is stale (written against a different commit).
+Report commit: [report commit_sha]
+Current HEAD:  [git rev-parse HEAD]
+
+Re-run /review, then /ship.
+```
+
+**Stop here. Do not proceed.**
+
 ### Check Verification Report
 
 Find and read the `/verify` report:
@@ -71,7 +95,33 @@ FORGE /ship — BLOCKED
 No verification report found. Run /verify first.
 ```
 
-If **Status: PASS**, proceed.
+**Freshness check — verify report:** After confirming the verify report exists and passes, verify it was written against the current commit:
+
+```bash
+CURRENT_SHA=$(git rev-parse HEAD)
+VERIFY_SHA=$(grep "^## commit_sha:" .forge/verify/report.md | awk '{print $NF}')
+if [[ "$VERIFY_SHA" != "$CURRENT_SHA" ]]; then
+  echo "STALE: verify report is from $VERIFY_SHA, current HEAD is $CURRENT_SHA"
+fi
+```
+
+If the `commit_sha` in the verify report does not match `git rev-parse HEAD`, block shipping:
+
+```
+FORGE /ship — BLOCKED
+
+The verify report is stale (written against a different commit).
+Report commit: [report commit_sha]
+Current HEAD:  [git rev-parse HEAD]
+
+Re-run /verify, then /ship.
+```
+
+**Stop here. Do not proceed.**
+
+**Note on auto-fix staleness:** Step 4 (Auto-Fix Critical Issues) modifies source files, which changes the working tree but does not automatically update the commit SHA. After any auto-fix is applied, treat both the review and verify reports as stale — their `commit_sha` fields will no longer reflect the fixed state. You must re-run /review and /verify before proceeding to PR creation. Do not skip this requirement.
+
+If **Status: PASS** and freshness checks pass, proceed.
 
 ## Step 2: Version and Release Preparation
 
@@ -258,6 +308,12 @@ Write to `.forge/releases/v[version]/summary.md`:
 ```
 
 ## Step 6: Report
+
+Before claiming the ship is complete, show evidence the PR was created:
+```bash
+gh pr view --json url,state,title
+```
+Output must include the PR URL. Do not claim "shipped" or "PR created" without showing the actual PR URL returned by `gh pr create` or confirmed by `gh pr view`.
 
 ```
 FORGE /ship — Complete ✓
