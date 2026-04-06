@@ -63,16 +63,19 @@ Order by dependency — implement foundations first:
 4. Integration points
 5. Edge case handling
 
-Present the plan:
+Present the plan with section identifiers for context pruning:
 ```
 FORGE /build — Implementation plan
 
 [N] tasks from architecture doc:
-  1. [task] — [model: haiku|sonnet|opus] — [estimated complexity]
-  2. ...
+  1. [task] — [model: haiku|sonnet|opus] — sections: [API Contracts::functionName, Edge Cases::1,3, Test Strategy::unit]
+  2. [task] — [model: ...] — sections: [Component Boundaries::ServiceName, Edge Cases::2,4]
+  ...
 
 Order respects dependencies. Start? (y/n, or adjust)
 ```
+
+The `sections:` field identifies which architecture doc sections are relevant to each task. These are used by context pruning (Step 3.5) to build minimal context bundles for subagents.
 
 ### Model Routing
 
@@ -82,6 +85,33 @@ Assign models based on task complexity — use the fastest capable model for sim
 - **Most capable model** (e.g., Opus): Complex algorithms, security-critical code, architectural decisions, edge cases
 
 Model routing is advisory, not mandatory. If the preferred model is unavailable, use whatever model IS available and log the fallback. Never skip a task because a preferred model isn't available.
+
+## Step 3.5: Context Pruning (For Multi-Task Builds)
+
+When Step 3 identifies **3 or more independent tasks**, build minimal context bundles for each subagent before starting work. This reduces token waste and ensures consistent context across subagents.
+
+If fewer than 3 tasks, skip this step entirely — use the architecture doc directly.
+
+```bash
+# Clean stale context from any previous build
+bash scripts/context-prune.sh clean
+
+# For each task, extract its context bundle using the section identifiers from Step 3
+bash scripts/context-prune.sh extract .forge/architecture/[task].md .forge/context/task-1.md "API Contracts::createTask" "Edge Cases::1,3" "Test Strategy::unit"
+bash scripts/context-prune.sh extract .forge/architecture/[task].md .forge/context/task-2.md "Component Boundaries::ServiceName" "Edge Cases::2,4"
+
+# Append project conventions to each bundle
+bash scripts/context-prune.sh conventions >> .forge/context/task-1.md
+bash scripts/context-prune.sh conventions >> .forge/context/task-2.md
+
+# Check token estimates (warns if any bundle exceeds 8000 tokens)
+bash scripts/context-prune.sh estimate .forge/context/task-1.md
+bash scripts/context-prune.sh estimate .forge/context/task-2.md
+```
+
+Each bundle follows the context bundle schema and is stored at `.forge/context/task-{n}.md`. Bundles are **not** auto-cleaned after build — they persist for debugging if a build fails. They are cleaned at the start of the **next** build.
+
+If context pruning fails for any reason, fall back to the current approach (extract relevant sections inline when spawning subagents in Step 5).
 
 ## Step 4: TDD Loop (Per Task)
 
@@ -161,7 +191,29 @@ If issues found, fix them. Do not flag style opinions — only real problems.
 
 When there are 3+ independent tasks, use subagents for parallel execution:
 
-For each independent task group, spawn an Agent:
+For each independent task group, spawn an Agent.
+
+**Context Pruning**: If `.forge/context/task-{n}.md` exists (created in Step 3.5), use it as the subagent's full context. If no bundle exists (pruning was skipped or failed), fall back to extracting the relevant architecture doc sections inline.
+
+When using a context bundle:
+```
+Prompt: "You are a FORGE build agent. Implement this task in an isolated worktree.
+
+Your full context is below:
+
+[contents of .forge/context/task-{n}.md]
+
+Rules:
+1. Write failing tests FIRST — run them, confirm they fail
+2. Implement minimum code to pass tests
+3. Run tests — all must pass
+4. Review: check spec compliance and code quality
+5. Do not modify files outside your task scope
+
+Report back: tests written, tests passing, files created/modified."
+```
+
+When falling back (no bundle):
 ```
 Prompt: "You are a FORGE build agent. Implement this task in an isolated worktree:
 
@@ -179,13 +231,7 @@ Rules:
 Report back: tests written, tests passing, files created/modified."
 ```
 
-**Context Pruning**: Each subagent receives ONLY:
-- Its specific task description from the architecture doc
-- The relevant API contracts and test strategy for that task
-- Project conventions (test runner, framework, file patterns)
-- Dependencies it needs to install
-
-Do NOT include: full session history, other tasks' details, memory bank contents, or the complete architecture doc. Less context = faster, more focused execution.
+In both cases, do NOT include: full session history, other tasks' details, memory bank contents, or the complete architecture doc. Less context = faster, more focused execution.
 
 Use `isolation: "worktree"` for each subagent to prevent conflicts.
 

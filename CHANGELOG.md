@@ -1,5 +1,27 @@
 # Changelog
 
+## v2.4.0 — 2026-04-06
+
+Context pruning for build subagents — reduces token waste and ensures consistent context when spawning parallel subagents.
+
+### Context Pruning in `/build`
+- Added `scripts/context-prune.sh` with subcommands: `extract`, `conventions`, `estimate`, `clean`
+- Section extraction uses state machine with code block immunity and case-insensitive header matching
+- Falls back to full architecture doc when sections not found (never produces empty bundles)
+- Token warning when a bundle exceeds 8,000 tokens (per-task budget)
+- New Step 3 output: section identifiers per task (e.g., `sections: [API Contracts::createTask, Edge Cases::1,3]`)
+- New Step 3.5: builds `.forge/context/task-{n}.md` bundles from section identifiers
+- Step 5 subagent prompt reads from context bundles when available, falls back to inline extraction
+- Bundles persist between builds for debugging; cleaned at start of next build
+
+### Test Coverage
+- Added `tests/test-context-prune.sh` with 10 tests covering extraction, case-insensitivity, code block immunity, missing sections, conventions detection, token estimation, and cleanup
+- Added `tests/fixtures/sample-architecture.md` test fixture
+- Updated `tests/test-artifacts.sh` to recognize `.forge/context/` as a known artifact path
+
+### Documentation
+- Updated `docs/artifact-schema.md` with context bundle schema and lifecycle
+
 ## v2.3.0 — 2026-04-06
 
 Competitive analysis-driven improvements: SessionStart hook, local telemetry, anti-sycophancy review, problem-framing brainstorm, and workflow automation.

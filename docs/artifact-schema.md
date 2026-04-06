@@ -26,6 +26,8 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
     [artifact].md                   <- /design (consult/explore/review)
   benchmark/
     report.md                       <- /benchmark
+  context/
+    task-{n}.md                     <- /build Step 3.5 (ephemeral)
   runs/
     [run-id]/
       manifest.json                 <- root dispatcher
@@ -283,6 +285,50 @@ No `NEEDS_CHANGES` status exists for verify. It either passes or it does not.
 | Reproduction | Yes | Numbered steps preferred |
 | Fix | Yes | State "proposed" or "applied" |
 | Verification | Yes | How correctness was confirmed |
+
+---
+
+## Context Bundle
+
+**Produced by:** `/build` Step 3.5 (Context Pruning)
+**Consumed by:** `/build` Step 5 (Subagent Execution)
+**Path:** `.forge/context/task-{n}.md`
+**Lifecycle:** Ephemeral — created during `/build` when 3+ tasks exist, cleaned at the start of the next `/build` run. Persists between builds for debugging failed builds.
+
+```markdown
+# Context Bundle: [Task Name]
+> Source: [architecture doc path] | Task: [n]/[total]
+
+## Task
+[Task description]
+
+## API Contracts
+[Only the contracts this task implements]
+
+## Component Boundaries
+[Only the rows relevant to this task]
+
+## Edge Cases
+[Only the edge cases this task must handle]
+
+## Test Strategy
+[Only the tests this task must write]
+
+## Dependencies
+[Only the deps this task needs]
+
+## Security Considerations
+[Only security items relevant to this task's scope]
+
+## Project Conventions
+- Test runner: [command]
+- Framework: [name/version]
+- File naming: [pattern]
+
+## Estimated Tokens: [count]
+```
+
+**Assembly:** `scripts/context-prune.sh extract` produces the raw section content. `/build` Step 3.5 assembles the full bundle by: (1) writing the header and task description, (2) appending extracted sections, (3) appending `scripts/context-prune.sh conventions` output, (4) appending the token estimate. The schema above shows the final assembled output, not the raw script output.
 
 ---
 
