@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-003",
+  "input": "Improve the API response times",
+  "category": "ambiguous",
+  "acceptable_routes": ["/debug", "/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature", "debug"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without profiling first", "assumed the bottleneck without evidence"],
+  "notes": "Could be a config tweak (tiny), a caching layer (feature), or investigating a performance regression (debug). Scope is unclear."
+}

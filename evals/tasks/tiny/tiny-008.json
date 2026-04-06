@@ -1,0 +1,10 @@
+{
+  "id": "tiny-008",
+  "input": "Change log level from 'debug' to 'info' for the database connection message in src/db/connect.ts",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "modified logging infrastructure"],
+  "notes": "Change a single string argument in a log call."
+}

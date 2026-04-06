@@ -1,6 +1,6 @@
 ---
 name: freeze
-description: "Scoped edit locks. Restricts modifications to specified files or directories. Prevents accidental changes to critical code during focused work. Use /freeze to lock, /freeze off to unlock."
+description: "Scoped edit locks. Restricts modifications to specified files or directories. Prevents accidental changes to critical code during focused work. Use /freeze to lock, /freeze off to unlock. Use to protect files — triggered by 'freeze these files', 'lock files', 'don't edit these', 'protect this file', 'edit lock'."
 argument-hint: "[file or directory patterns to freeze, or 'off' to unfreeze]"
 allowed-tools: Read Grep Glob Bash
 ---
@@ -106,6 +106,7 @@ All edit locks removed. The following patterns were unfrozen:
   - src/auth/*.ts (locked for 23 minutes)
   - src/core/database.ts (locked for 23 minutes)
 
+Blocked this session: [N] modification attempts
 All files are now editable.
 ```
 

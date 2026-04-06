@@ -1,6 +1,6 @@
 ---
 name: review-response
-description: "Process review feedback from /review or a human reviewer. Extracts action items, prioritizes fixes, and tracks resolution. The counterpart to /review-request."
+description: "Process and act on review feedback from /review or human reviewers. Extracts action items, prioritizes fixes (blocking/recommended/suggestions), and tracks resolution. Use when review feedback needs triaging and systematic resolution — triggered by 'fix review comments', 'address feedback', 'process review findings', 'respond to review', 'triage review items'."
 argument-hint: "[optional: path to review feedback or PR comment URL]"
 allowed-tools: Read Grep Glob Write Edit Bash
 ---

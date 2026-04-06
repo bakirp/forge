@@ -1,0 +1,10 @@
+{
+  "id": "debug-006",
+  "input": "Regression: user signup test suite started failing after the last merge. Error: 'expected 201 but got 422'. All other tests pass.",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "did not check recent git changes"],
+  "notes": "Regression after merge. Should diff recent changes against the affected endpoint."
+}

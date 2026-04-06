@@ -1,6 +1,6 @@
 ---
 name: finish
-description: "Completes a feature branch lifecycle. Runs final checks, merges the worktree back, and cleans up. The counterpart to /worktree."
+description: "Completes a feature branch lifecycle. Runs final checks, merges the worktree back, and cleans up. The counterpart to /worktree. Use when done with a feature branch — triggered by 'finish the branch', 'merge back', 'done with this worktree', 'close the feature'."
 argument-hint: "[optional: branch-name to finish]"
 allowed-tools: Read Grep Glob Write Bash
 ---

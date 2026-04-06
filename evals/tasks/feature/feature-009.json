@@ -1,0 +1,10 @@
+{
+  "id": "feature-009",
+  "input": "Build an in-app notification system with real-time delivery via WebSocket and a REST endpoint for notification history",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no WebSocket auth", "no read/unread state"],
+  "notes": "Dual-transport feature (REST + WebSocket). Architecture must cover connection lifecycle and data model."
+}

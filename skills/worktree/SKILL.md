@@ -1,6 +1,6 @@
 ---
 name: worktree
-description: "Creates an isolated git worktree for a task. Sets up a feature branch, configures the environment, and provides a clean workspace that /finish will complete."
+description: "Creates an isolated git worktree for a task. Sets up a feature branch, configures the environment, and provides a clean workspace that /finish will complete. Use when starting isolated work — triggered by 'create a worktree', 'isolated workspace', 'new feature branch', 'work in isolation'."
 argument-hint: "[branch-name or task description]"
 allowed-tools: Read Grep Glob Write Bash
 ---

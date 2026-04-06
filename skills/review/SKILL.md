@@ -1,13 +1,34 @@
 ---
 name: review
-description: "Code review gate between /build and /verify. Reads build output and architecture doc, checks spec compliance, code quality, and security surface. Produces a review report that /ship consumes."
+description: "Code review gate between /build and /verify. Reads build output and architecture doc, checks spec compliance, code quality, and security surface. Produces a review report that /ship consumes. Routes to /review-request and /review-response sub-commands. Use when code needs reviewing — triggered by 'review the code', 'check the implementation', 'code review'."
 argument-hint: "[optional: specific files or focus area]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
 
+## Quick Routing
+
+Default (no arguments, or "review the code", "code review", "check the implementation"):
+→ Run the full review below.
+
+If argument starts with "request", or user says "prepare a review", "scope the review":
+→ Delegate to `/review-request`
+
+If argument starts with "response", or user says "fix review comments", "address feedback", "respond to review":
+→ Delegate to `/review-response`
+
 # /review — Code Review Gate
 
 You review what `/build` produced before `/verify` runs. You never modify code — you observe, judge, and report. Your review report is consumed by `/ship`, so the format matters.
+
+## Routing
+
+If `$ARGUMENTS` starts with a sub-command, delegate:
+
+| Argument | Action |
+|----------|--------|
+| `request [context]` | Invoke `/review-request` with the remaining arguments |
+| `response [context]` | Invoke `/review-response` with the remaining arguments |
+| *(anything else or no argument)* | Proceed to Step 1 below (run code review) |
 
 ## Step 1: Load Context
 
@@ -229,3 +250,6 @@ Report: .forge/review/report.md
 - When `$ARGUMENTS` specifies a focus area, still do a full review but give extra depth to the requested area
 - **Evidence before claims** — every finding must cite the specific file, line, and code. Never report "no issues" without showing what was checked.
 - **Cross-model review is optional** — only recommended for large or security-critical changes, never forced
+
+### Error Handling
+If a file cannot be read or a check cannot be completed: note it in the review report as "NOT REVIEWED: [reason]" and continue reviewing other areas. The report must reflect actual coverage — never claim full review if areas were skipped.

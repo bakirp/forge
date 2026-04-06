@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Cross-platform QA using Playwright. Detects project domain (web app, API, data pipeline) and runs appropriate verification: browser flows, contract validation, or output diffing. Produces a pass/fail report that /ship consumes."
+description: "Cross-platform QA using Playwright. Detects project domain (web app, API, data pipeline) and runs appropriate verification: browser flows, contract validation, or output diffing. Produces a pass/fail report that /ship consumes. Use when testing the build output — triggered by 'verify it works', 'run QA', 'test the endpoints', 'check if it works'."
 argument-hint: "[optional: web|api|pipeline to override domain detection]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
@@ -97,19 +97,40 @@ Verify for each endpoint:
 
 If an OpenAPI/Swagger spec exists, validate responses against it.
 
+### Auth Token Handling
+
+Before testing authenticated endpoints, detect the auth mechanism from the codebase:
+
+1. **JWT/Bearer tokens**: Look for auth middleware, token generation in tests or seed scripts. Generate a test token or extract one from the test setup.
+2. **API keys**: Check `.env.example` or test config for test API keys.
+3. **Session/Cookie auth**: Start by hitting the login endpoint with test credentials to obtain a session.
+
+Include the auth header in curl commands for protected endpoints:
+```bash
+# Bearer token
+curl -s -w "\n%{http_code}" -X [METHOD] [URL] \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '[request body]'
+```
+
+If no test credentials or token generation mechanism can be found, flag it:
+```
+FORGE /verify — Warning: Cannot obtain auth tokens for protected endpoints.
+Skipping auth-required endpoint tests. Provide test credentials or a token generation script.
+```
+
 ### Data Pipeline Verification
 
 For pipeline projects:
-- Run the pipeline with test input data
-- Diff the output against expected output
-- Check row counts, schema, and data types
-- Verify error handling for malformed input
-
-```bash
-# Run pipeline with test data
-# Diff output
-diff <(actual_output) <(expected_output)
-```
+1. Locate test data: check tests/fixtures/, test/data/, or data/test/ directories
+2. Check the architecture doc "Test Strategy" section for specified test inputs and expected outputs
+3. If the pipeline has a --dry-run or --test flag, use it
+4. If no test data exists: ask the user for a test input file and expected output. Do not fabricate test data.
+5. Run the pipeline with test input
+6. Diff actual output against expected output
+7. Check row counts, schema, and data types match
+8. Verify error handling for malformed input
 
 ## Step 5: Compile Report
 
@@ -180,5 +201,8 @@ Report: .forge/verify/report.md
 - If Playwright install fails, report it clearly — don't fall back to curl for web testing
 - The report must be machine-readable enough for /ship to parse the status
 - Do not modify application code — verification is read-only observation
-- **Evidence before claims** — never claim PASS without showing actual test output. Every verification must cite the command run, its output, and what was asserted.
+- **Evidence before claims** — after running any test command, your response MUST include: (1) the exact command run, (2) the terminal output (last 30 lines minimum), (3) the exit code or pass/fail summary line. Do NOT write "Tests: N/N passing" — show the actual runner output. If a command failed to run or timed out, state that explicitly.
 - Web domain browser testing is delegated to /browse — /verify is the report-and-gate layer, not the execution layer
+
+### Error Handling
+If a verification step fails to execute (server won't start, Playwright fails, curl times out): mark that check as FAIL with error details in the report. Do not skip silently. Continue with other checks. The report must distinguish "tested and failed" from "could not test."

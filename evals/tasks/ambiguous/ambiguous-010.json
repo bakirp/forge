@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-010",
+  "input": "Clean up the codebase",
+  "category": "ambiguous",
+  "acceptable_routes": ["/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without defining cleanup scope", "touched too many files without a plan"],
+  "notes": "Could mean remove dead code (tiny), restructure directories (feature), or full tech debt sprint (epic). Needs scoping."
+}

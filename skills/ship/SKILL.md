@@ -1,6 +1,6 @@
 ---
 name: ship
-description: "Security audit + PR creation + deploy. Reads /verify report (blocks on failure), runs OWASP Top 10 and STRIDE threat model checks, auto-fixes critical security issues, creates a PR with release summary, and optionally supports canary deploys."
+description: "Security audit + PR creation + deploy. Reads /verify report (blocks on failure), runs OWASP Top 10 and STRIDE threat model checks, auto-fixes critical security issues, creates a PR with release summary, and optionally supports canary deploys. Use when ready to ship — triggered by 'ship it', 'create a PR', 'deploy', 'release this'."
 argument-hint: "[optional: --canary | --draft]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
@@ -127,58 +127,11 @@ DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@
 git diff --name-only ${DEFAULT_BRANCH}...HEAD
 ```
 
-### OWASP Top 10 Check
+### Security Checks
 
-For each changed file, check for:
+Run the OWASP Top 10 and STRIDE threat model checks. See `references/security-checks.md` for the full checklists.
 
-| # | Vulnerability | What to look for |
-|---|--------------|-----------------|
-| 1 | **Injection** | String concatenation in SQL/shell/OS commands, unsanitized user input in queries |
-| 2 | **Broken Auth** | Hardcoded credentials, missing auth checks on routes, weak token generation |
-| 3 | **Sensitive Data Exposure** | Secrets in code, unencrypted PII, verbose error messages leaking internals |
-| 4 | **XXE** | XML parsing without disabling external entities |
-| 5 | **Broken Access Control** | Missing authorization checks, IDOR patterns, privilege escalation paths |
-| 6 | **Security Misconfiguration** | Debug mode in prod, default credentials, unnecessary features enabled |
-| 7 | **XSS** | Unescaped user input in HTML/templates, `dangerouslySetInnerHTML`, `innerHTML` |
-| 8 | **Insecure Deserialization** | `eval()`, `pickle.loads()`, `JSON.parse` on untrusted input without validation |
-| 9 | **Known Vulnerabilities** | Outdated dependencies with known CVEs |
-| 10 | **Insufficient Logging** | Auth events not logged, no audit trail for sensitive operations |
-
-### STRIDE Threat Model
-
-For the architecture as a whole:
-
-| Threat | Question |
-|--------|----------|
-| **Spoofing** | Can an attacker impersonate a user or service? |
-| **Tampering** | Can data be modified in transit or at rest without detection? |
-| **Repudiation** | Can actions be performed without an audit trail? |
-| **Info Disclosure** | Can sensitive data leak through errors, logs, or side channels? |
-| **Denial of Service** | Are there unbounded operations, missing rate limits, or resource exhaustion paths? |
-| **Elevation of Privilege** | Can a regular user access admin functionality? |
-
-### Secrets Archaeology
-
-Scan git history for accidentally committed credentials:
-```bash
-# Check recent commits for secret patterns
-git log -p --diff-filter=A HEAD~20..HEAD 2>/dev/null | grep -iE '(password|secret|api_key|api.key|token|private.key|credentials)\s*[:=]' | head -20
-```
-
-If secrets are found in git history:
-```
-FORGE /ship — CRITICAL: Secrets found in git history
-
-The following patterns were found in recent commits:
-- [file:commit] [matched pattern]
-
-These are in the git history even if removed from current code.
-Recommendation: Rotate the exposed credentials immediately.
-
-Consider using git-filter-repo or BFG to clean history (destructive — requires force push).
-```
-
-Flag secrets in history as CRITICAL — they may already be exposed.
+Read `skills/ship/references/security-checks.md` for the detailed OWASP Top 10 checklist, STRIDE threat model questions, and secrets archaeology process. Apply each check to the changed files.
 
 ### Report Findings
 
@@ -203,30 +156,24 @@ Info: [count] — noted for future
 
 ## Step 4: Auto-Fix Critical Issues
 
-For each **critical** finding:
-- If it's a clear fix (remove hardcoded secret, add input sanitization, escape output), fix it automatically
-- Run the tests again after each fix to ensure nothing breaks
-- If the fix is ambiguous or risky, present it to the user:
+For each **critical** finding, determine the fix category:
 
-```
-FORGE /ship — Critical fix requires approval
+**Auto-fix** (no user approval needed):
+- Remove a hardcoded credential and replace with environment variable reference
+- Replace SQL string concatenation with parameterized queries
+- Add HTML output escaping where raw user input is rendered
 
-Issue: [description]
-File: [path:line]
-Proposed fix: [description]
+**Require user approval:**
+- Anything that changes business logic or control flow
+- Anything that modifies API contracts (inputs, outputs, status codes)
+- Anything that could change test behavior or assertions
+- Fixes where there are multiple possible fix locations
+- Anything involving cryptographic code
+- Adding new middleware or interceptors
 
-Apply? (y/n)
-```
+When in doubt: require user approval.
 
-After all critical fixes:
-```bash
-# Re-run tests to confirm fixes don't break anything
-[project test command]
-```
-
-If tests fail after security fixes, stop and ask the user.
-
-**Important:** If any code was modified in this step, the existing `/verify` report is now stale. Re-run `/verify` before proceeding to Step 5. The verification report must reflect the code that is actually being shipped.
+**Important:** After any auto-fix, both the /review and /verify reports are stale. Re-run /review and /verify before proceeding to PR creation.
 
 ## Step 5: Create PR
 
@@ -274,7 +221,8 @@ Produce a human-readable summary grouped by type:
 
 ```bash
 # Stage only files modified during this build cycle — never use git add -A
-git diff --name-only main...HEAD | xargs git add
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+git diff --name-only ${DEFAULT_BRANCH}...HEAD | xargs git add
 # Also stage any security fixes made in Step 3
 git add [files modified by security fixes]
 git commit -m "[summary of changes]"
@@ -346,3 +294,6 @@ Run /document-release to sync docs with this release.
 - **Version bump is optional** — skip if no version file detected or user declines
 - **Secrets in git history are always critical** — even if removed from current code, they may be exposed
 - **Suggest /document-release** after shipping if docs may be stale — don't auto-run it
+
+### Error Handling
+If any step fails unexpectedly: (1) state what failed and show the error output, (2) state what has been completed so far, (3) state what remains, (4) ask the user: retry this step, skip it, or abort. Never silently continue past a failed step. If a security fix breaks tests, always stop and ask.

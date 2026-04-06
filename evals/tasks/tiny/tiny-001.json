@@ -1,0 +1,10 @@
+{
+  "id": "tiny-001",
+  "input": "Add .env to .gitignore",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents"],
+  "notes": "Single-file config change. No architecture doc needed."
+}

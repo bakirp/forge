@@ -103,7 +103,7 @@ cd ~/.forge && git init && git add memory.jsonl && git commit -m "memory snapsho
 cat your-memory.jsonl >> ~/.forge/memory.jsonl
 ```
 
-Note: shared/team memory banks are planned for v2.
+Note: shared/team memory banks are planned for a future release.
 
 ## Limits
 
@@ -113,4 +113,4 @@ Note: shared/team memory banks are planned for v2.
 | /architect recall | Top 5 entries | More context for design |
 | Read cap | Last 200 entries | Bound context usage |
 | Auto-prune threshold | 6 months + confidence < 0.5 | Both must be true |
-| Recall method | Keyword + tag matching | Vector search deferred to v2 |
+| Recall method | Keyword + tag matching | Vector search deferred to a future release |

@@ -1,0 +1,10 @@
+{
+  "id": "debug-007",
+  "input": "Unhandled promise rejection crashing the Node process: 'Error: connect ECONNREFUSED 127.0.0.1:6379' when Redis is temporarily unavailable",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "just added a try-catch without reconnection logic"],
+  "notes": "Missing error handling for external dependency failure. Should check connection retry and graceful degradation."
+}

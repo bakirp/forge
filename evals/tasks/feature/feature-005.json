@@ -1,0 +1,10 @@
+{
+  "id": "feature-005",
+  "input": "Add a webhook system that sends POST notifications to registered URLs when a project status changes",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no retry logic", "no signature verification"],
+  "notes": "Event-driven feature with external HTTP calls. Needs architecture for reliability, retries, and payload schema."
+}

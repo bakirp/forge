@@ -1,6 +1,6 @@
 ---
 name: think
-description: "Adaptive entry point for FORGE. Classifies task complexity as tiny, feature, or epic and routes to the appropriate workflow depth. Use /think to start any task."
+description: "Adaptive entry point for FORGE. Classifies task complexity as tiny, feature, or epic and routes to the appropriate workflow depth. Use /think to start any task. Use this to start any task — triggered by 'new task', 'I want to build', 'let's start', 'work on', 'implement', 'create'."
 argument-hint: "[task description]"
 allowed-tools: Read Grep Glob Bash Agent
 ---
@@ -36,7 +36,15 @@ Route: /debug [original arguments]
 
 Route directly to `/debug` with the original arguments. Skip complexity classification.
 
-If the signals are ambiguous (e.g., "fix the auth flow" could be a bug or a feature), proceed to complexity classification and let the user decide.
+If debug signals are ambiguous (e.g., "fix the auth flow" could be a bug or a feature):
+
+**Tiebreaker rules:**
+1. "fix [X]" where X matches a task listed in .forge/architecture/*.md → this is the active build's TDD loop. Route: continue `/build`
+2. "fix [X]" where X refers to existing/deployed code and no .forge/architecture/*.md exists → Route: `/debug`
+3. "fix [X]" where context is unclear → Do NOT guess. Ask the user: "This could be (A) debugging an existing bug in [X], or (B) building/improving [X] as a feature. Which is it?"
+
+**Always route to /debug when:** user explicitly says "debug", "investigate", "root cause", "regression", or describes a stack trace/error message.
+**Always route to /build when:** user explicitly says "continue", "next task", "keep building", or references the architecture doc.
 
 ## Step 3: Classify Complexity
 
@@ -83,8 +91,8 @@ Wait for user confirmation. If they disagree, reclassify immediately.
 
 ### TINY → Direct Build
 - Skip /architect entirely
-- Proceed directly to implementation
-- Write the code, run tests, done
+- Invoke `/build` with the task description — /build will detect the tiny classification and skip the architecture doc requirement
+- /build still enforces TDD and the 2-stage review, even for tiny tasks
 
 ### FEATURE → /architect first
 - Invoke `/architect $ARGUMENTS`
@@ -93,94 +101,11 @@ Wait for user confirmation. If they disagree, reclassify immediately.
 
 ### EPIC → Agent Teams with Roles
 
-Spawn three specialized agents using the Agent tool. Each agent has a defined role, a FORGE checklist, and a required output format.
+Spawn three specialized agents (Product, Architecture, Security) using the Agent tool. Each agent has a defined role, a FORGE checklist, and a required output format.
 
-**Product Agent** — Scope boundaries and acceptance criteria.
+Read `skills/think/references/epic-agent-prompts.md` for the full agent prompts and synthesis instructions.
 
-Spawn with `subagent_type: "general-purpose"`:
-```
-You are the FORGE Product Agent. Your job is to define what ships and what doesn't.
-
-Task: [task description]
-Codebase context: [summary from Step 1]
-
-FORGE Checklist:
-- [ ] Define exactly what's in scope for this implementation
-- [ ] List what's explicitly deferred (and why)
-- [ ] Write acceptance criteria as testable statements ("Given X, when Y, then Z")
-- [ ] Identify user-facing vs internal changes
-- [ ] Flag any dependency on external systems or teams
-
-Required output format:
-## Scope
-[bullet list of what ships]
-
-## Deferred
-[bullet list of what doesn't ship, with reason]
-
-## Acceptance Criteria
-[numbered list of testable criteria]
-```
-
-**Architecture Agent** — Data flow, contracts, component boundaries.
-
-Spawn with `subagent_type: "general-purpose"` after Product Agent completes (needs scope):
-```
-You are the FORGE Architecture Agent. Design the system from the Product Agent's scope.
-
-Task: [task description]
-Scope: [Product Agent output]
-Existing codebase: [structure summary]
-
-FORGE Checklist:
-- [ ] Map the data flow end-to-end (input → processing → output)
-- [ ] Define every API contract with exact types, inputs, outputs, and error cases
-- [ ] Draw component boundaries — what owns what
-- [ ] List every edge case with a handling strategy
-- [ ] Specify the test strategy (unit, integration, e2e)
-- [ ] Note all new dependencies required
-- [ ] Check: does this design respect existing project patterns?
-
-Required output format:
-Use the /architect architecture doc format (data flow, API contracts, component boundaries, edge cases, test strategy, dependencies, security considerations, deferred items).
-```
-
-**Security Agent** — Threat model and security checklist.
-
-Spawn in parallel with Architecture Agent (only needs scope, not architecture):
-```
-You are the FORGE Security Agent. Identify every threat surface before code is written.
-
-Task: [task description]
-Scope: [Product Agent output]
-
-FORGE Checklist:
-- [ ] Run STRIDE analysis (Spoofing, Tampering, Repudiation, Info Disclosure, DoS, Elevation of Privilege)
-- [ ] Map OWASP Top 10 relevance to this specific task
-- [ ] Identify auth and authorization requirements
-- [ ] Flag sensitive data handling (PII, secrets, tokens)
-- [ ] Note input validation requirements at every system boundary
-- [ ] Check for rate limiting, resource exhaustion, and abuse vectors
-
-Required output format:
-## STRIDE Analysis
-[one section per threat category]
-
-## OWASP Relevance
-[which of the Top 10 apply and why]
-
-## Security Requirements
-[numbered checklist for /build to follow]
-
-## Data Handling
-[what sensitive data exists and how it must be handled]
-```
-
-**Synthesis** — After all agents complete:
-1. Merge Product scope + Architecture design + Security requirements into a single plan
-2. Resolve any conflicts (e.g., security requirements that constrain architecture)
-3. Write the unified architecture doc to `.forge/architecture/[task-name].md`
-4. Present to user for approval before proceeding to /build
+After all agents complete, merge their outputs into a unified architecture doc at `.forge/architecture/[task-name].md` and present to user for approval before proceeding to /build.
 
 ## Rules
 
@@ -189,3 +114,8 @@ Required output format:
 - Always show reasoning so the user can override
 - Respect user overrides immediately
 - If the task looks like debugging, route to /debug — don't force it through complexity classification
+- If signals are ambiguous between two skills, do NOT default to the simpler option — present the ambiguity to the user with concrete options
+- If a routed skill fails or the user aborts, return control to /think — do not retry automatically without user confirmation
+
+### Error Handling
+If classification is unclear after gathering context: present the ambiguity to the user with options. Never default to a lower complexity tier when uncertain — pick the higher one.

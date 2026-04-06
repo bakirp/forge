@@ -1,0 +1,10 @@
+{
+  "id": "debug-003",
+  "input": "Memory leak in WebSocket handler: RSS grows by ~50MB per hour under sustained connections. No leak without WebSocket clients.",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "restarted server as fix", "no heap analysis"],
+  "notes": "Resource leak investigation. Should check event listener cleanup and connection lifecycle."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "feature-003",
+  "input": "Create a database migration to add a 'teams' table with id, name, created_at, and a join table 'team_members' linking users to teams",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no rollback migration", "no foreign key constraints"],
+  "notes": "Schema change with relational constraints. Architecture doc should specify indexes and constraints."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "debug-008",
+  "input": "Infinite redirect loop on /dashboard when the user's session cookie exists but the session has expired in the store",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "cleared all sessions as fix"],
+  "notes": "Session lifecycle bug. Should trace redirect logic when session validation returns expired."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "tiny-010",
+  "input": "Fix broken link in README.md: change /docs/setup to /docs/getting-started",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents"],
+  "notes": "Single URL replacement in README. Documentation-only change."
+}

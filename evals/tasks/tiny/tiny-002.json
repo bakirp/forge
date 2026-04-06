@@ -1,0 +1,10 @@
+{
+  "id": "tiny-002",
+  "input": "Fix typo in the welcome message: 'Welocme' should be 'Welcome'",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "ran full test suite"],
+  "notes": "Single string replacement in one file. Trivial fix."
+}

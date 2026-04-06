@@ -1,0 +1,10 @@
+{
+  "id": "tiny-012",
+  "input": "Update the TODO comment in src/auth/validate.ts to reference ticket PROJ-452 instead of PROJ-301",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "changed code logic"],
+  "notes": "Comment-only change. Zero behavior impact."
+}

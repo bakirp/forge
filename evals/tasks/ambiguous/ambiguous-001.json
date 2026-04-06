@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-001",
+  "input": "Fix the auth flow",
+  "category": "ambiguous",
+  "acceptable_routes": ["/debug", "/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature", "debug"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without asking for clarification", "assumed scope without evidence"],
+  "notes": "Deliberately vague. Could be a bug fix, a small tweak, or a feature rework. FORGE should ask the user to clarify or present the ambiguity."
+}

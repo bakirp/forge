@@ -1,0 +1,10 @@
+{
+  "id": "tiny-004",
+  "input": "Add DATABASE_URL to the .env.example file",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents"],
+  "notes": "Single line addition to an env template file."
+}

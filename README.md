@@ -11,8 +11,8 @@ FORGE is a Claude Code skill framework with three capabilities no existing tool 
 ## Quick Start
 
 ```bash
-git clone https://github.com/yourusername/forge.git
-cd forge
+git clone https://github.com/bakir/Forge.git
+cd Forge
 ./setup
 ```
 
@@ -88,12 +88,25 @@ Memory:     /memory (remember/recall/forget)
 - Memory compounds — decisions from project A inform project B
 - Process scales down for tiny tasks and up for epics
 
+## Testing
+
+FORGE includes 9 test suites with 57+ tests covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, and manifest tracking.
+
+```bash
+# Run all tests
+for t in tests/test-*.sh; do bash "$t"; done
+```
+
+Tests run automatically in GitHub Actions CI on every push.
+
 ## Documentation
 
 - [Getting Started](docs/getting-started.md) — install, setup, first session
 - [Skills Reference](docs/skills-reference.md) — detailed docs for every skill
 - [Memory Guide](docs/memory-guide.md) — how cross-project memory works
 - [Evolve Guide](docs/evolve-guide.md) — how self-evolution works
+- [Artifact Schema](docs/artifact-schema.md) — `.forge/` artifact contracts
+- [Troubleshooting](docs/troubleshooting.md) — common issues and solutions
 - [CLAUDE.md Template](docs/CLAUDE-md-template.md) — project config template
 - [Contributing](docs/contributing.md) — how to contribute
 - [Architecture](ARCHITECTURE.md) — design decisions and rationale

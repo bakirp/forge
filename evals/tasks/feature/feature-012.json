@@ -1,0 +1,10 @@
+{
+  "id": "feature-012",
+  "input": "Add API versioning with /api/v1/ and /api/v2/ prefixes, maintaining backward compatibility for v1 while v2 uses the new response format",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "broke v1 responses", "duplicated all route handlers"],
+  "notes": "Architectural routing change. Architecture doc must define versioning strategy and migration path."
+}

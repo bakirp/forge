@@ -1,6 +1,6 @@
 ---
 name: document-release
-description: "Post-ship documentation sync. Reads the shipped PR and updates README, CHANGELOG, API docs, and other documentation to reflect what was released."
+description: "Post-ship documentation sync. Reads the shipped PR and updates README, CHANGELOG, API docs, and other documentation to reflect what was released. Use after shipping — triggered by 'update the docs', 'sync documentation', 'update changelog', 'docs are stale'."
 argument-hint: "[optional: PR number or version tag]"
 allowed-tools: Read Grep Glob Write Edit Bash
 ---

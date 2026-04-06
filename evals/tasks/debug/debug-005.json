@@ -1,0 +1,10 @@
+{
+  "id": "debug-005",
+  "input": "CORS error: 'Access-Control-Allow-Origin' header missing on preflight response for POST /api/auth/login from the frontend at localhost:3000",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "set Access-Control-Allow-Origin to *", "disabled CORS entirely"],
+  "notes": "Configuration/middleware ordering bug. Should check CORS middleware placement relative to route handlers."
+}

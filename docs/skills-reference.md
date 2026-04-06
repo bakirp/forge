@@ -117,7 +117,7 @@ Verifies build output actually works. Produces a pass/fail report for `/ship`.
 
 Final gate. Security audit, then PR creation.
 
-**Blocks on**: `/verify` failures — no override, no exceptions.
+**Blocks on**: `/review` and `/verify` failures — no override, no exceptions.
 
 **OWASP Top 10 Check**: Scans all changed files for injection, broken auth, data exposure, XXE, access control issues, misconfig, XSS, insecure deserialization, known vulnerabilities, insufficient logging.
 
@@ -153,6 +153,18 @@ Code review gate between `/build` and `/verify`. Checks spec compliance, code qu
 - **FAIL**: Critical issues or fundamental problems. May need `/architect` revisit.
 
 **Rules**: Critical issues = automatic FAIL. Never modifies code. Report must be machine-parseable by `/ship`.
+
+### /review request — Prepare Review Request
+
+**Usage**: `/review request [scope or context]`
+
+Prepares a scoped review request for human reviewers or `/review` execution. Defines review criteria, focus areas, and context so reviewers know what to look at.
+
+### /review response — Process Review Feedback
+
+**Usage**: `/review response [feedback source]`
+
+Processes and acts on review feedback. Extracts action items from review comments and prioritizes them as blocking, recommended, or suggestions.
 
 ---
 
@@ -448,3 +460,12 @@ Post-merge deployment and health verification. Runs after a PR is merged to depl
 **Output**: Deploy report at `.forge/releases/`.
 
 **Rules**: Never deploys from an unmerged branch. Health checks must pass before marking deployment as successful. Supports rollback if health checks fail.
+
+---
+
+## /forge — FORGE Overview
+
+**Phase**: Any
+**Usage**: `/forge`
+
+FORGE workflow overview and help. Lists all available skills, routing rules, and phase dependencies. Use as a quick reference or starting point.

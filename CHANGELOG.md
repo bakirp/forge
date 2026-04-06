@@ -1,8 +1,8 @@
 # Changelog
 
-## v2.1.0 — 2026-04-05
+## v2.1.0 — 2026-04-06
 
-Complete roadmap test plan coverage.
+Complete roadmap test plan coverage. Version bumped across plugin manifests.
 
 ### Test Suites Added
 - **test-memory.sh** — Memory append, dedup, ranking, prune safety, invalid JSON handling (12 tests)
@@ -17,7 +17,17 @@ Complete roadmap test plan coverage.
 - `tests/fixtures/retro-sample.json` — Sample retrospective data for evolve testing
 
 ### CI Updated
-- All 7 test suites now run in GitHub Actions
+- All 9 test suites now run in GitHub Actions
+
+### Documentation & Manifests
+- Fixed clone URL in README and getting-started.md (was placeholder)
+- Added Testing section to README with test suite overview
+- Added missing doc links in README and getting-started.md: artifact-schema, troubleshooting
+- Bumped plugin.json and marketplace.json to 2.1.0
+- Updated skills-reference.md: added /review:request, /review:response sub-skills, /forge overview skill, fixed /ship blocking description
+- Updated contributing.md: expanded skill directory tree to include all 30 skills
+- Updated memory-guide.md: fixed stale "deferred to v2" references
+- Updated artifact-schema.md: added brainstorm, design, benchmark directories; expanded cross-artifact dependency table with all skills
 
 ## v2.0.0 — 2026-04-05
 

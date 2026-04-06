@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-005",
+  "input": "Update the dashboard",
+  "category": "ambiguous",
+  "acceptable_routes": ["/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without asking what update means", "started building without scope"],
+  "notes": "Could mean update a label (tiny) or redesign the whole dashboard (feature). Completely ambiguous scope."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "feature-007",
+  "input": "Implement file upload for project avatars with size validation (max 5MB), type checking (PNG/JPG only), and S3 storage",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no file size validation", "stored files on local disk"],
+  "notes": "Multi-concern feature: upload handling, validation, cloud storage. Requires architecture for error cases."
+}

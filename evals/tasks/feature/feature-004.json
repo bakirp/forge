@@ -1,0 +1,10 @@
+{
+  "id": "feature-004",
+  "input": "Implement JWT-based auth middleware that validates tokens on protected routes and attaches user context to the request",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "hardcoded secrets", "no token expiry handling"],
+  "notes": "Security-critical middleware. Architecture must cover token validation, error responses, and edge cases."
+}

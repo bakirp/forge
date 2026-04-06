@@ -1,23 +1,13 @@
 ---
 name: forge
-description: "FORGE bootstrap — Claude Code skill framework that routes tasks through adaptive planning, TDD build, verification, and shipping phases. Reads this file at session start."
-argument-hint: ""
+description: "FORGE workflow overview — lists all available skills, routing rules, and phase dependencies. Use when asking about available commands, workflow order, or how FORGE works — triggered by 'what skills', 'available commands', 'workflow', 'how does forge work', 'what can you do'."
+argument-hint: "[optional: skill name or 'help']"
 allowed-tools: Read Grep Glob Bash Agent
 ---
 
-# FORGE — Claude Code Skill Framework
+# FORGE — Workflow Overview
 
-You are operating in a FORGE-powered session. FORGE orchestrates Claude Code's capabilities (Agent Teams, subagents, worktrees) into a structured workflow: plan, build, review, verify, ship.
-
-## Session Start
-
-Before doing anything else:
-
-1. **Recall memory** — run the `/memory-recall` workflow: check `~/.forge/memory.jsonl`, surface the top 3 most relevant entries to the current project context. Keep injection under 300 tokens. If no memory bank or no relevant entries, skip silently.
-
-2. **Detect project context** — read `CLAUDE.md` if present for project-specific conventions. FORGE augments project rules, never overrides them.
-
-3. **Create run manifest** — when a task begins, run `scripts/manifest.sh create "task"` to initialise the run manifest under `.forge/runs/<run-id>/manifest.json`.
+FORGE orchestrates Claude Code into a structured workflow: plan → build → review → verify → ship. Run `/forge` for this overview at any time.
 
 ## Skills
 
@@ -81,13 +71,9 @@ Standalone skills (invoked directly):
 
 When a user describes a task, PREFER routing to a skill over ad-hoc action.
 
-- **Debug signals** (bug, error, failing, broken, investigate) — route to `/debug`
-- **Build/feature/change signals** — route to `/think`
-- **Explicit skill invocation** (e.g., "/verify") — execute it directly
-
-## Run Tracking
-
-Each task run is tracked under `.forge/runs/<run-id>/manifest.json`. The manifest records the task description, skill sequence, phase transitions, and final outcome. Created automatically at session start via `scripts/manifest.sh`.
+- **Debug signals** (bug, error, failing, broken, investigate) → route to `/debug`
+- **Build/feature/change signals** → route to `/think`
+- **Explicit skill invocation** (e.g., "/verify") → execute it directly
 
 ## Proactive Mode
 
@@ -96,15 +82,16 @@ When a task is in progress, FORGE proactively:
 - Surfaces relevant memory entries when entering /architect
 - Blocks /ship if /review or /verify has failures — no exceptions
 - Notes decisions worth remembering at the end of /architect sessions
+- Tracks each session's phases and artifacts in the run manifest at `.forge/runs/`
 
-## Current Status
+## Project Configuration
 
-All 29 skills implemented:
+FORGE reads optional overrides from `.forge/config.json` if present:
 
-**Core workflow**: `/think`, `/architect`, `/build`, `/review`, `/verify`, `/ship`, `/debug`, `/memory` (remember/recall/forget), `/retro`, `/evolve`
+| Field | Default | Purpose |
+|-------|---------|---------|
+| `token_budget` | 40000 | Token warning threshold for /build |
+| `test_command` | auto-detect | Explicit test runner command |
+| `default_branch` | auto-detect | Override git default branch |
 
-**Phase 2 — Superpowers**: `/brainstorm`, `/worktree`, `/finish`, `/review-request`, `/review-response`
-
-**Phase 3 — Substrate**: `/browse`, `/document-release`, `/careful`, `/freeze`
-
-**Phase 4 — Specialists**: `/design` (consult/explore/review), `/benchmark`, `/canary`, `/deploy`
+All fields optional. Precedence: explicit user arguments > .forge/config.json > FORGE defaults. Project CLAUDE.md governs coding conventions separately.

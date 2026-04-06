@@ -1,6 +1,6 @@
 ---
 name: memory-recall
-description: "Retrieve relevant past decisions from the FORGE memory bank. Triggered automatically at /architect start and available on-demand. Read-only — never modifies memory."
+description: "Retrieve relevant past decisions from the FORGE memory bank. Triggered automatically at /architect start and available on-demand. Read-only — never modifies memory. Use to retrieve past decisions — triggered by 'what did we decide', 'recall decisions', 'check memory', 'past decisions about'."
 argument-hint: "[optional: search terms or tags to filter by]"
 allowed-tools: Read Grep Glob Bash
 ---

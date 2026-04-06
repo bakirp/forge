@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Deploy and land flow. Handles post-merge deployment: pull latest, run final checks, deploy to target environment, verify deployment health, and update status."
+description: "Deploy and land flow. Handles post-merge deployment: pull latest, run final checks, deploy to target environment, verify deployment health, and update status. Use after merge — triggered by 'deploy this', 'push to production', 'deploy to staging', 'land this', 'go live'."
 argument-hint: "[optional: environment name, e.g. staging|production]"
 allowed-tools: Read Grep Glob Write Bash
 ---

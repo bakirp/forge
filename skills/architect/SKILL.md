@@ -1,6 +1,6 @@
 ---
 name: architect
-description: "Lock architecture before building. Queries memory bank for past decisions, produces a locked architecture doc with data flow, API contracts, edge cases, and test strategy. Called by /think for feature and epic tasks."
+description: "Lock architecture before building. Queries memory bank for past decisions, produces a locked architecture doc with data flow, API contracts, edge cases, and test strategy. Called by /think for feature and epic tasks. Use when planning architecture, designing systems, or before building features — triggered by 'plan the architecture', 'design the system', 'how should we structure'."
 argument-hint: "[task description or /think output]"
 allowed-tools: Read Grep Glob Write Bash
 ---
@@ -137,3 +137,6 @@ FORGE /architect — Decisions stored to memory bank:
 - Every edge case must have a handling strategy
 - Every API must have defined error cases
 - If the user says "just build it", push back once — then comply if they insist
+
+### Error Handling
+If memory recall fails or returns no results: proceed without memory context and note "No prior decisions found." If codebase scanning fails: ask the user to narrow the scope. Never produce an architecture doc based on assumptions when evidence is unavailable.

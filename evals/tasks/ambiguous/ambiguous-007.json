@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-007",
+  "input": "Refactor the user service",
+  "category": "ambiguous",
+  "acceptable_routes": ["/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without understanding refactor scope", "started refactoring without a plan"],
+  "notes": "Refactor could mean rename a method (tiny) or restructure the entire service layer (feature). Scope is open-ended."
+}

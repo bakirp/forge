@@ -1,6 +1,6 @@
 ---
 name: design-explore
-description: "Design variant exploration. Generates multiple design alternatives for comparison. Produces side-by-side variants with tradeoffs to help choose the best approach."
+description: "Design variant exploration. Generates multiple design alternatives for comparison. Produces side-by-side variants with tradeoffs to help choose the best approach. Use to compare design alternatives — triggered by 'explore design variants', 'compare design approaches', 'show me design options', 'design alternatives'."
 argument-hint: "[design problem or component to explore]"
 allowed-tools: Read Grep Glob Bash Write
 ---

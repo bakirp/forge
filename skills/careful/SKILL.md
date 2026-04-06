@@ -1,6 +1,6 @@
 ---
 name: careful
-description: "Guard skill that warns before destructive operations. Intercepts force pushes, hard resets, branch deletes, and other irreversible actions. Enable with /careful to activate guardrails."
+description: "Guard skill that warns before destructive operations. Intercepts force pushes, hard resets, branch deletes, and other irreversible actions. Enable with /careful to activate guardrails. Use when safety matters — triggered by 'enable careful mode', 'be careful', 'turn on guardrails', 'watch for destructive commands'."
 argument-hint: "[optional: on|off to toggle]"
 allowed-tools: Read Grep Glob Bash
 ---

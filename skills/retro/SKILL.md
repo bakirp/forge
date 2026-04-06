@@ -1,6 +1,6 @@
 ---
 name: retro
-description: "Post-ship retrospective. Asks three structured questions about what slowed you down, what you'd do differently, and what FORGE should remember. Stores structured retro data that /evolve consumes."
+description: "Post-ship retrospective. Asks three structured questions about what slowed you down, what you'd do differently, and what FORGE should remember. Stores structured retro data that /evolve consumes. Use after shipping — triggered by 'run a retro', 'retrospective', 'what went well', 'what slowed us down', 'review the session'."
 argument-hint: "[optional: project name or session context]"
 allowed-tools: Read Grep Glob Bash Write
 ---

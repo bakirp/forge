@@ -1,6 +1,6 @@
 ---
 name: memory-remember
-description: "Store architectural decisions from the current session into the FORGE memory bank. Triggered at end of /architect and /retro, or invoked manually with an explicit decision."
+description: "Store architectural decisions from the current session into the FORGE memory bank. Triggered at end of /architect and /retro, or invoked manually with an explicit decision. Use to save decisions — triggered by 'remember this decision', 'store this', 'save to memory'."
 argument-hint: "[decision to remember, or blank to extract from session]"
 allowed-tools: Read Grep Glob Bash Write
 ---

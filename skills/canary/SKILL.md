@@ -1,6 +1,6 @@
 ---
 name: canary
-description: "Canary deployment workflow. Deploys to a subset of infrastructure, monitors for errors, and either promotes to full rollout or rolls back. Use after /ship for gradual releases."
+description: "Canary deployment workflow. Deploys to a subset of infrastructure, monitors for errors, and either promotes to full rollout or rolls back. Use after /ship for gradual releases. Use for gradual rollouts — triggered by 'canary deploy', 'gradual rollout', 'deploy to a subset', 'test in production'."
 argument-hint: "[optional: percentage or target environment]"
 allowed-tools: Read Grep Glob Write Bash
 ---
@@ -134,6 +134,23 @@ curl -sf [canary-url]/health
 # Check HTTP status
 curl -s -o /dev/null -w "%{http_code}" [canary-url]/health
 ```
+
+### Fallback: Basic HTTP Monitoring
+
+If platform-specific monitoring tools are not available (kubectl, fly, vercel CLI not installed), fall back to basic HTTP health checks:
+
+```bash
+# Poll health endpoint every 30 seconds during monitoring period
+for i in $(seq 1 $((DURATION_SECONDS / 30))); do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" [canary-url]/health)
+  LATENCY=$(curl -s -o /dev/null -w "%{time_total}" [canary-url]/health)
+  echo "Check $i: status=$STATUS latency=${LATENCY}s"
+  [ "$STATUS" != "200" ] && echo "WARNING: Non-200 status detected"
+  sleep 30
+done
+```
+
+This provides minimum viable monitoring when full observability tooling is absent.
 
 Collect metrics over the monitoring period. If any rollback trigger fires during monitoring, immediately recommend rollback.
 

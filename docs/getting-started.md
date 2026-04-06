@@ -9,8 +9,8 @@
 ## Install
 
 ```bash
-git clone https://github.com/yourusername/forge.git
-cd forge
+git clone https://github.com/bakirp/Forge.git
+cd Forge
 ./setup
 ```
 
@@ -134,4 +134,6 @@ Add a `CLAUDE.md` to any project root to set project conventions. FORGE respects
 - [Skills Reference](skills-reference.md) — detailed docs for every skill
 - [Memory Guide](memory-guide.md) — how the memory system works
 - [Evolve Guide](evolve-guide.md) — how self-evolution works
+- [Artifact Schema](artifact-schema.md) — `.forge/` artifact contracts
+- [Troubleshooting](troubleshooting.md) — common issues and solutions
 - [Contributing](contributing.md) — how to contribute to FORGE

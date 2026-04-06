@@ -1,0 +1,10 @@
+{
+  "id": "debug-002",
+  "input": "500 Internal Server Error on GET /api/users when the database is empty. Works fine when there is at least one user.",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "added a seed user instead of fixing the code"],
+  "notes": "Empty state handling bug. Should trace query result handling for empty arrays."
+}

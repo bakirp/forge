@@ -1,6 +1,6 @@
 ---
 name: browse
-description: "Dedicated browser automation skill using Playwright. Executes browser flows, captures screenshots, and reports results. Used by /verify for web domain QA, and available standalone for browser-based tasks."
+description: "Dedicated browser automation skill using Playwright. Executes browser flows, captures screenshots, and reports results. Used by /verify for web domain QA, and available standalone for browser-based tasks. Use for browser testing — triggered by 'test in browser', 'run Playwright', 'check the UI', 'browser automation', 'test the page'."
 argument-hint: "[url or flow description]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
@@ -127,13 +127,14 @@ For each failure, record:
 - What was expected vs. what happened
 - The screenshot path for visual evidence
 
-If the dev server is not running, attempt to start it:
-```bash
-# Detect start command from package.json scripts
-# Start in background, wait for the port to be available
-```
-
-If the server won't start, report FAIL immediately — do not skip browser testing.
+If the dev server is not running:
+1. Read package.json "scripts" — prefer "dev" over "start"
+2. If no script found, try: next dev, vite, flask run, go run main.go (check which tools exist)
+3. Start in background and capture stderr
+4. Detect port from: package.json config → .env PORT → vite.config.js port → default 3000
+5. Poll localhost:[port] every 1 second, timeout after 30 seconds
+6. If server does not start: report FAIL with the command tried and its stderr output
+7. On skill completion: kill the background server process to avoid orphans
 
 ## Step 6: Write Browse Report
 

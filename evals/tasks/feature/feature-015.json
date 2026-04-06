@@ -1,0 +1,10 @@
+{
+  "id": "feature-015",
+  "input": "Implement an audit logging system that records all write operations (create, update, delete) with user, timestamp, resource type, and before/after snapshots",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "logged sensitive data unmasked", "synchronous writes blocking requests"],
+  "notes": "Cross-cutting observability feature. Architecture must cover storage, async writes, and data sensitivity."
+}

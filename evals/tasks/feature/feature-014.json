@@ -1,0 +1,10 @@
+{
+  "id": "feature-014",
+  "input": "Add a user preferences system with endpoints to GET and PATCH /api/users/:id/preferences supporting theme, language, and notification settings",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no schema validation on PATCH", "allowed updating other users preferences"],
+  "notes": "CRUD feature with authorization. Architecture must define the preferences schema and access control."
+}

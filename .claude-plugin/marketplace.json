@@ -1,0 +1,17 @@
+{
+  "name": "forge",
+  "description": "FORGE — structured skill framework for Claude Code",
+  "owner": {
+    "name": "Bakir"
+  },
+  "plugins": [
+    {
+      "name": "forge",
+      "source": "./",
+      "description": "Structured skill framework: plan, build, review, verify, ship",
+      "version": "2.1.0",
+      "category": "development",
+      "tags": ["workflow", "tdd", "architecture", "code-review"]
+    }
+  ]
+}

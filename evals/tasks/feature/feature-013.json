@@ -1,0 +1,10 @@
+{
+  "id": "feature-013",
+  "input": "Build a data export feature that generates CSV and JSON downloads of a user's projects and tasks via GET /api/export",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no streaming for large datasets", "exposed other users data"],
+  "notes": "Data access feature with format and authorization concerns. Architecture should cover streaming and access control."
+}

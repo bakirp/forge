@@ -1,0 +1,10 @@
+{
+  "id": "tiny-013",
+  "input": "Add aria-label='Close dialog' to the modal close button in src/components/Modal.tsx",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "restructured component"],
+  "notes": "Single attribute addition to an existing JSX element."
+}

@@ -1,6 +1,6 @@
 ---
 name: review-request
-description: "Formalize a review request. Defines what is being reviewed, the review criteria, focus areas, and context needed by the reviewer. Produces a structured request that /review or a human reviewer can follow."
+description: "Prepare a scoped review request for human reviewers or structured /review execution. Defines review criteria, focus areas, and context. Use instead of /review when you need custom review criteria, want to scope the review, or are preparing a review for a human teammate — triggered by 'prepare a review', 'set up code review', 'request review from', 'scope the review'."
 argument-hint: "[optional: specific PR, branch, or focus area]"
 allowed-tools: Read Grep Glob Bash
 ---

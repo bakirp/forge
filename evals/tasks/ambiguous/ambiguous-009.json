@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-009",
+  "input": "Make the app more secure",
+  "category": "ambiguous",
+  "acceptable_routes": ["/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature", "epic"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without threat model", "started implementing without identifying specific risks"],
+  "notes": "Extremely broad. Could be adding a CSP header (tiny), implementing RBAC (feature), or a full security overhaul (epic). Must narrow scope."
+}

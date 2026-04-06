@@ -46,7 +46,7 @@ done < <(find "$ROOT" -name SKILL.md -not -path '*/.git/*')
 
 # ── 2. Root SKILL.md (bootstrap) exists and references key skills ──
 
-ROOT_SKILL="$ROOT/SKILL.md"
+ROOT_SKILL="$ROOT/skills/forge/SKILL.md"
 if [[ -f "$ROOT_SKILL" ]]; then
   pass "Root SKILL.md exists"
   for cmd in think architect build verify ship memory evolve; do
@@ -114,6 +114,29 @@ for skill in $existing; do
     fail "Orphan skill /$skill exists but is not referenced in root SKILL.md"
   fi
 done
+
+# ── 7. /think has disambiguation logic for ambiguous tasks ──
+
+if [[ -f "$THINK" ]]; then
+  if grep -qiE 'tiebreaker|disambiguat|ambiguous.*ask|ambiguous' "$THINK"; then
+    pass "/think contains disambiguation logic"
+  else
+    fail "/think missing disambiguation logic (tiebreaker/disambiguate/ambiguous)"
+  fi
+fi
+
+# ── 8. /review has sub-command routing ──
+
+REVIEW="$ROOT/skills/review/SKILL.md"
+if [[ -f "$REVIEW" ]]; then
+  if grep -qiE 'review-request|review-response' "$REVIEW"; then
+    pass "/review has sub-command routing (review-request/review-response)"
+  else
+    fail "/review missing sub-command routing (review-request/review-response)"
+  fi
+else
+  fail "/review SKILL.md does not exist"
+fi
 
 # ── Summary ──
 

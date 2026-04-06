@@ -1,0 +1,10 @@
+{
+  "id": "tiny-005",
+  "input": "Fix ESLint warning: 'no-unused-vars' in src/utils/helpers.ts line 42",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "refactored surrounding code"],
+  "notes": "Remove or use an unused variable. Single line change."
+}

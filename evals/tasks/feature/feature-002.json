@@ -1,0 +1,10 @@
+{
+  "id": "feature-002",
+  "input": "Build a reusable DataTable React component with sorting, filtering, and pagination props",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no prop type definitions"],
+  "notes": "Multi-concern UI component. Needs architecture for API surface, state management, and edge cases."
+}

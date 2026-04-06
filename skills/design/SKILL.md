@@ -1,6 +1,6 @@
 ---
 name: design
-description: "Design workflow hub. Routes to design consultation, variant exploration, or design review. Use when the task involves UI/UX, system design, or architectural design beyond what /architect covers."
+description: "Design workflow hub. Routes to design consultation, variant exploration, or design review. Use when the task involves UI/UX, system design, or architectural design beyond what /architect covers. Use for design work beyond /architect — triggered by 'design this', 'how should I lay out', 'explore design options', 'review the design', 'UI design', 'component design'."
 argument-hint: "[consult|explore|review] [context]"
 allowed-tools: Read Grep Glob Bash
 ---

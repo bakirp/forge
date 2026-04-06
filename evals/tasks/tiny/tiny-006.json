@@ -1,0 +1,10 @@
+{
+  "id": "tiny-006",
+  "input": "Remove unused import of 'lodash' from src/services/userService.ts",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "modified other files"],
+  "notes": "Delete one import line. Single-file, single-line change."
+}

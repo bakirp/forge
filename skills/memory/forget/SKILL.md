@@ -1,6 +1,6 @@
 ---
 name: memory-forget
-description: "Remove or prune entries from the FORGE memory bank. Search by keyword to selectively delete, or use --prune to auto-remove stale low-confidence entries."
+description: "Remove or prune entries from the FORGE memory bank. Search by keyword to selectively delete, or use --prune to auto-remove stale low-confidence entries. Use to clean up memory — triggered by 'forget this', 'remove from memory', 'clean up memory', 'prune old decisions'."
 argument-hint: "[search term] or [--prune]"
 allowed-tools: Read Grep Glob Bash Write
 ---

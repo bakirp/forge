@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: "Meta-agent that rewrites FORGE skills based on retrospective data. Reads retros, scores each skill's effectiveness, proposes targeted diffs, auto-applies low-risk changes, and flags high-risk changes for human review."
+description: "Meta-agent that rewrites FORGE skills based on retrospective data. Reads retros, scores each skill's effectiveness, proposes targeted diffs, auto-applies low-risk changes, and flags high-risk changes for human review. Use after retros — triggered by 'evolve skills', 'improve FORGE', 'self-improve', 'update skills from feedback'."
 argument-hint: "[optional: specific skill to evolve, e.g. 'build']"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
@@ -135,6 +135,16 @@ Review medium-risk changes? (y/n/select numbers)
 ```
 
 ## Step 5: Apply Changes
+
+### Rollback Preparation
+
+Before applying ANY change to a skill file:
+1. Back up: `cp skills/[skill]/SKILL.md $TMPDIR/forge-evolve-backup-[skill].md`
+2. Apply the proposed change
+3. Run the full test harness: `for test in tests/test-*.sh; do bash "$test" || exit 1; done`
+4. If ALL tests pass: delete the backup
+5. If ANY test fails: restore with `cp $TMPDIR/forge-evolve-backup-[skill].md skills/[skill]/SKILL.md` and report: "Change reverted — escalating to medium-risk (requires user approval)."
+6. Never apply a second change while a failed change is pending revert
 
 ### Auto-Apply Low-Risk
 

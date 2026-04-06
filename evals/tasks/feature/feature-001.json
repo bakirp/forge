@@ -1,0 +1,10 @@
+{
+  "id": "feature-001",
+  "input": "Add a REST endpoint POST /api/projects that creates a new project with name, description, and owner fields",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no input validation"],
+  "notes": "New API endpoint with data model. Requires architecture doc, TDD, and input validation."
+}

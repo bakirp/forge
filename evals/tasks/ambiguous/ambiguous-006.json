@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-006",
+  "input": "The tests are slow",
+  "category": "ambiguous",
+  "acceptable_routes": ["/debug", "/build"],
+  "acceptable_classifications": ["tiny", "feature", "debug"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without measuring baseline", "assumed the cause without profiling"],
+  "notes": "Could be a missing mock (tiny debug), a test infra overhaul (feature), or investigating a regression (debug). Needs diagnosis first."
+}

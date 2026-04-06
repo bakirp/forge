@@ -1,0 +1,10 @@
+{
+  "id": "tiny-009",
+  "input": "Bump version in package.json from 2.3.0 to 2.3.1",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "modified CHANGELOG"],
+  "notes": "Patch version bump. Single field change in package.json."
+}

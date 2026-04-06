@@ -8,20 +8,36 @@ FORGE skills are pure Markdown files. Each skill is a `SKILL.md` with YAML front
 
 ```
 skills/
-  think/SKILL.md
-  architect/SKILL.md
-  build/SKILL.md
+  think/SKILL.md          # Adaptive entry point
+  architect/SKILL.md      # Lock architecture
+  build/SKILL.md          # TDD implementation
   review/SKILL.md         # Code review gate
-  verify/SKILL.md
-  ship/SKILL.md
+    request/SKILL.md      # Prepare review request
+    response/SKILL.md     # Process review feedback
+  verify/SKILL.md         # Cross-platform QA
+  ship/SKILL.md           # Security audit + PR
   debug/SKILL.md          # Root-cause debugging
-  memory/
-    SKILL.md
+  memory/SKILL.md         # Decision memory hub
     remember/SKILL.md
     recall/SKILL.md
     forget/SKILL.md
-  retro/SKILL.md
-  evolve/SKILL.md
+  retro/SKILL.md          # Post-ship retrospective
+  evolve/SKILL.md         # Self-evolution
+  brainstorm/SKILL.md     # Ideation before architecture
+  worktree/SKILL.md       # Isolated workspace setup
+  finish/SKILL.md         # Branch completion and merge
+  browse/SKILL.md         # Playwright browser automation
+  design/SKILL.md         # Design consultation hub
+    consult/SKILL.md
+    explore/SKILL.md
+    review/SKILL.md
+  benchmark/SKILL.md      # Performance benchmarking
+  canary/SKILL.md         # Canary deployment
+  deploy/SKILL.md         # Post-merge deployment
+  document-release/SKILL.md # Post-ship docs sync
+  careful/SKILL.md        # Destructive operation guard
+  freeze/SKILL.md         # Scoped edit locks
+  forge/SKILL.md          # FORGE overview and help
 ```
 
 ## Skill File Format

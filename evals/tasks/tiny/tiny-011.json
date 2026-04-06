@@ -1,0 +1,10 @@
+{
+  "id": "tiny-011",
+  "input": "Set the default timeout in config/app.json from 30000 to 60000",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "modified source code"],
+  "notes": "Single numeric value change in a config file."
+}

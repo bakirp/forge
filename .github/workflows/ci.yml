@@ -103,6 +103,8 @@ jobs:
           bash tests/test-routing.sh
           bash tests/test-blocking.sh
           bash tests/test-artifacts.sh
+          bash tests/test-completeness.sh
+          bash tests/test-manifest.sh
           bash tests/test-memory.sh
           bash tests/test-browser.sh
           bash tests/test-setup.sh

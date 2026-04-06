@@ -1,0 +1,10 @@
+{
+  "id": "feature-011",
+  "input": "Implement rate limiting middleware: 100 requests per minute per API key, with 429 responses and Retry-After headers",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no Retry-After header", "in-memory store only"],
+  "notes": "Cross-cutting middleware with storage and header concerns. Architecture should specify algorithm (sliding window vs token bucket)."
+}

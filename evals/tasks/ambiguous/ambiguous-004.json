@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-004",
+  "input": "Handle the edge case in user registration",
+  "category": "ambiguous",
+  "acceptable_routes": ["/debug", "/build"],
+  "acceptable_classifications": ["tiny", "feature", "debug"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without identifying which edge case", "assumed scope without evidence"],
+  "notes": "No specific edge case named. Could be a null check (tiny), a validation overhaul (feature), or a reported bug (debug)."
+}

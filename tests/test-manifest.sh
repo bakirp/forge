@@ -14,10 +14,11 @@ fail() { printf "${RED}FAIL${RST}: %s\n" "$1"; FAILS=$((FAILS + 1)); }
 skip() { printf "${YEL}SKIP${RST}: %s\n" "$1"; SKIPS=$((SKIPS + 1)); }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TMPDIR="$(mktemp -d)"
-trap 'rm -rf "$TMPDIR"' EXIT
+TEST_TMP="${TMPDIR:-/tmp}/forge-manifest-test-$$"
+mkdir -p "$TEST_TMP"
+trap 'rm -rf "$TEST_TMP"' EXIT
 
-cd "$TMPDIR"
+cd "$TEST_TMP"
 
 run_id="$("$ROOT/scripts/manifest.sh" create "manifest regression test" | tail -1)"
 

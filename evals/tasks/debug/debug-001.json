@@ -1,0 +1,10 @@
+{
+  "id": "debug-001",
+  "input": "TypeError: Cannot read property 'id' of undefined in src/controllers/projectController.ts line 47 when fetching a project that was just deleted",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "no root cause identified", "shotgun fix"],
+  "notes": "Classic null reference after deletion. Should reproduce first, then trace the data flow."
+}

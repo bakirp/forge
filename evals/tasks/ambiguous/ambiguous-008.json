@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-008",
+  "input": "Something is wrong with the email notifications",
+  "category": "ambiguous",
+  "acceptable_routes": ["/debug", "/build"],
+  "acceptable_classifications": ["tiny", "debug"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without reproducing", "assumed it was a code bug without checking config"],
+  "notes": "Vague bug report. Could be a config issue (tiny), a code bug (debug), or a missing feature. Needs reproduction and evidence."
+}

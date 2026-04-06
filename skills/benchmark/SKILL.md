@@ -1,6 +1,6 @@
 ---
 name: benchmark
-description: "Performance benchmarking. Runs performance tests, compares against baselines, identifies regressions, and produces a benchmark report. Use before /ship for performance-critical changes."
+description: "Performance benchmarking. Runs performance tests, compares against baselines, identifies regressions, and produces a benchmark report. Use before /ship for performance-critical changes. Use before shipping perf-critical changes — triggered by 'benchmark this', 'check performance', 'run perf tests', 'is this fast enough', 'performance regression'."
 argument-hint: "[optional: specific test or component to benchmark]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---

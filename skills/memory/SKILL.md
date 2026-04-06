@@ -1,6 +1,6 @@
 ---
 name: memory
-description: "Cross-project decision memory. Routes to /memory-remember, /memory-recall, /memory-forget. Defines the canonical memory schema."
+description: "Cross-project decision memory. Routes to /memory-remember, /memory-recall, /memory-forget. Defines the canonical memory schema. Use when storing or retrieving decisions — triggered by 'remember this', 'what did we decide', 'save this decision', 'recall', 'forget'."
 argument-hint: "[remember|recall|forget] [optional args]"
 allowed-tools: Read Grep Glob Bash
 ---

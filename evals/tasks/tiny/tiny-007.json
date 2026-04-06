@@ -1,0 +1,10 @@
+{
+  "id": "tiny-007",
+  "input": "Add return type annotation to the getUserById function in src/services/userService.ts",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "changed function logic"],
+  "notes": "Add a TypeScript return type. No behavior change."
+}

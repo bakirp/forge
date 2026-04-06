@@ -1,0 +1,10 @@
+{
+  "id": "feature-008",
+  "input": "Add full-text search across projects and tasks using PostgreSQL tsvector with relevance ranking",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no search index migration", "SQL injection risk"],
+  "notes": "Database feature with indexing and query concerns. Architecture must cover index strategy and ranking."
+}

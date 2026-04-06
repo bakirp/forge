@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: "Ideation and alternative exploration before architecture. Generates multiple approaches with tradeoffs, helps the user choose or combine, and produces a brainstorm artifact that /architect consumes."
+description: "Ideation and alternative exploration before architecture. Generates multiple approaches with tradeoffs, helps the user choose or combine, and produces a brainstorm artifact that /architect consumes. Use before architecture when exploring options — triggered by 'brainstorm', 'explore alternatives', 'what are the options', 'ideation', 'compare approaches'."
 argument-hint: "[task or problem description]"
 allowed-tools: Read Grep Glob Bash
 ---

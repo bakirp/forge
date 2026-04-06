@@ -1,6 +1,6 @@
 ---
 name: build
-description: "TDD-enforced implementation. Reads the locked architecture doc from /architect, spawns subagents in isolated worktrees, enforces failing tests before implementation, runs 2-stage review (spec compliance + code quality), and routes to optimal models."
+description: "TDD-enforced implementation. Reads the locked architecture doc from /architect, spawns subagents in isolated worktrees, enforces failing tests before implementation, runs 2-stage review (spec compliance + code quality), and routes to optimal models. Use when ready to implement — triggered by 'build it', 'start coding', 'implement this', 'write the code'."
 argument-hint: "[architecture doc path or 'continue']"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
@@ -40,7 +40,7 @@ Avg tokens per task: ~8,000 (implementation + tests + review)
 Projected total: [count × 8,000]
 ```
 
-If projected total > 40,000 tokens:
+If projected total > the configured token_budget (.forge/config.json, default: 40,000):
 ```
 FORGE /build — Token budget warning
 
@@ -76,10 +76,12 @@ Order respects dependencies. Start? (y/n, or adjust)
 
 ### Model Routing
 
-Assign models based on task complexity:
-- **Haiku**: Config files, boilerplate, simple CRUD, type definitions, straightforward tests
-- **Sonnet**: Standard features, API endpoints, moderate logic, integration tests
-- **Opus**: Complex algorithms, security-critical code, architectural decisions, edge case handling
+Assign models based on task complexity — use the fastest capable model for simple work:
+- **Fast model** (e.g., Haiku): Config files, boilerplate, simple CRUD, type definitions, straightforward tests
+- **Balanced model** (e.g., Sonnet): Standard features, API endpoints, moderate logic, integration tests
+- **Most capable model** (e.g., Opus): Complex algorithms, security-critical code, architectural decisions, edge cases
+
+Model routing is advisory, not mandatory. If the preferred model is unavailable, use whatever model IS available and log the fallback. Never skip a task because a preferred model isn't available.
 
 ## Step 4: TDD Loop (Per Task)
 
@@ -92,14 +94,19 @@ Based on the architecture doc's test strategy:
 - Tests must cover: happy path, error cases, edge cases from the architecture doc
 - Tests must be runnable with the project's test framework
 
-Run the tests:
-```bash
-# Detect test runner
-# Node: npm test / bun test / vitest / jest
-# Python: pytest
-# Go: go test ./...
-# Rust: cargo test
-```
+Detect the project test runner using this priority order:
+1. If .forge/config.json has "test_command" → use that
+2. Read package.json "scripts.test" if it exists → use that exact command
+3. If bun.lockb exists → bun test
+4. If vitest.config.* exists → npx vitest run
+5. If jest.config.* exists or jest is in package.json dependencies → npx jest
+6. If pytest.ini exists or pyproject.toml has [tool.pytest] → pytest
+7. If go.mod exists → go test ./...
+8. If Cargo.toml exists → cargo test
+9. If none detected → ask the user for the test command. Do not guess.
+For monorepos: prefer the runner closest to the files being modified.
+
+Run the tests.
 
 **Tests MUST fail.** If tests pass before implementation, something is wrong:
 - The feature already exists → skip this task
@@ -133,19 +140,19 @@ If tests fail, fix the implementation (not the tests) until they pass.
 **Stage 1 — Spec Compliance**
 
 Check implementation against architecture doc:
-- [ ] API contracts match exactly (types, inputs, outputs, errors)
-- [ ] All edge cases from architecture doc are handled
-- [ ] Component boundaries respected (no logic leaking across boundaries)
+- [ ] API contracts match: compare function signatures in the architecture doc against the actual implementation. If any parameter name, type, or return type differs → fix before proceeding
+- [ ] All edge cases from architecture doc are handled: for each listed edge case, locate the code path that handles it
+- [ ] Component boundaries respected: no imports crossing boundaries defined in the architecture doc
 - [ ] Dependencies used as specified
 
 If any check fails, fix before proceeding.
 
 **Stage 2 — Code Quality**
 
-- [ ] No hardcoded secrets, credentials, or API keys
-- [ ] Input validation at system boundaries
-- [ ] Error handling is explicit, not swallowed
-- [ ] No obvious performance issues (N+1 queries, unbounded loops)
+- [ ] No hardcoded secrets: search modified files for literal credential values (strings assigned to password/secret/api_key variables that are >8 chars and not env var references). Exclude test fixtures and .env.example
+- [ ] Input validation at system boundaries: for each function accepting external input (HTTP handler, CLI parser, file reader), verify the first operation validates or sanitizes the input
+- [ ] Error handling is explicit — no empty catch blocks, no swallowed errors
+- [ ] No obvious performance issues (N+1 queries, unbounded loops, synchronous blocking in async code)
 - [ ] Code follows existing project conventions (naming, structure, patterns)
 
 If issues found, fix them. Do not flag style opinions — only real problems.
@@ -187,6 +194,17 @@ After all subagents complete:
 - Run the full test suite to catch integration issues
 - Fix any conflicts or integration failures
 
+### Subagent Failure Handling
+
+If a subagent fails (error, timeout, or produces no usable output):
+1. Retry ONCE with the same task and pruned context
+2. If retry also fails: execute the task inline (in the main agent, no subagent)
+3. If inline execution also fails: mark the task as BLOCKED
+4. Continue with remaining independent tasks
+5. At the end of /build, report all blocked tasks and ask the user how to proceed
+
+Never silently skip a task because a subagent failed.
+
 ## Step 6: Final Verification
 
 After all tasks complete:
@@ -224,4 +242,7 @@ If any tests fail, fix them before declaring complete.
 - If a task reveals an architecture gap, stop and ask the user — don't improvise
 - Subagents work in isolated worktrees — never modify shared state directly
 - Report progress after each task, not just at the end
-- **Evidence before claims** — never claim "tests passing" without showing the actual test output. Every success claim must cite the command run and its output.
+- **Evidence before claims** — after running any test command, your response MUST include: (1) the exact command run, (2) the terminal output (last 30 lines minimum), (3) the exit code or pass/fail summary line. Do NOT write "Tests: N/N passing" — show the actual runner output. If a command failed to run or timed out, state that explicitly.
+
+### Error Handling
+If any step fails unexpectedly: (1) state what failed and show the error output, (2) state what has been completed so far, (3) state what remains, (4) ask the user: retry this step, skip it, or abort. Never silently continue past a failed step.

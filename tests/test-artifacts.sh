@@ -99,7 +99,7 @@ fi
 
 # ── 6. Run manifest path .forge/runs/ is referenced in root SKILL.md ──
 
-ROOT_SKILL="$ROOT/SKILL.md"
+ROOT_SKILL="$ROOT/skills/forge/SKILL.md"
 if grep -q '\.forge/runs/' "$ROOT_SKILL"; then
   pass "Root SKILL.md references .forge/runs/ (run manifest)"
 else
@@ -140,6 +140,73 @@ if require_skill verify && require_skill ship; then
   else
     fail "/verify and /ship disagree on verify report path"
   fi
+fi
+
+# ── 9. Cross-skill format contracts: /verify and /review contain "## Status:" ──
+
+VERIFY_FILE="$ROOT/skills/verify/SKILL.md"
+REVIEW_FILE="$ROOT/skills/review/SKILL.md"
+SHIP_FILE="$ROOT/skills/ship/SKILL.md"
+
+if [[ -f "$VERIFY_FILE" ]]; then
+  if grep -q '## Status:' "$VERIFY_FILE"; then
+    pass "/verify SKILL.md contains '## Status:'"
+  else
+    fail "/verify SKILL.md missing '## Status:' format"
+  fi
+fi
+
+if [[ -f "$REVIEW_FILE" ]]; then
+  if grep -q '## Status:' "$REVIEW_FILE"; then
+    pass "/review SKILL.md contains '## Status:'"
+  else
+    fail "/review SKILL.md missing '## Status:' format"
+  fi
+fi
+
+if [[ -f "$SHIP_FILE" ]]; then
+  if grep -qi 'Status:' "$SHIP_FILE"; then
+    pass "/ship SKILL.md references 'Status:'"
+  else
+    fail "/ship SKILL.md does not reference 'Status:' (cannot parse verify/review reports)"
+  fi
+fi
+
+# ── 10. /architect contains all fields that /build parses in Step 1 ──
+
+ARCH_FILE="$ROOT/skills/architect/SKILL.md"
+if [[ -f "$ARCH_FILE" ]]; then
+  ARCH_FIELDS=(Component "API contracts" "Test strategy" "Edge cases" Dependencies)
+  arch_ok=true
+  for field in "${ARCH_FIELDS[@]}"; do
+    if grep -qi "$field" "$ARCH_FILE"; then
+      pass "/architect contains '$field' (parsed by /build)"
+    else
+      fail "/architect missing '$field' (or variant) — /build Step 1 expects it"
+      arch_ok=false
+    fi
+  done
+else
+  fail "/architect SKILL.md does not exist"
+fi
+
+# ── 11. /browse report path referenced in both /browse and /verify ──
+
+BROWSE_FILE="$ROOT/skills/browse/SKILL.md"
+if [[ -f "$BROWSE_FILE" && -f "$VERIFY_FILE" ]]; then
+  BROWSE_PATH=".forge/browse/report.md"
+  if grep -q "$BROWSE_PATH" "$BROWSE_FILE"; then
+    pass "/browse references $BROWSE_PATH"
+  else
+    fail "/browse does not reference $BROWSE_PATH"
+  fi
+  if grep -q "$BROWSE_PATH" "$VERIFY_FILE"; then
+    pass "/verify references $BROWSE_PATH"
+  else
+    fail "/verify does not reference $BROWSE_PATH"
+  fi
+else
+  skip "/browse or /verify not found — skipping browse report path cross-check"
 fi
 
 # ── Summary ──

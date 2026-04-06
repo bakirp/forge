@@ -1,6 +1,6 @@
 ---
 name: design-consult
-description: "Design consultation with constraints. Analyzes design requirements, identifies constraints, proposes design direction with rationale. For UI/UX, system design, or API design discussions."
+description: "Design consultation with constraints. Analyzes design requirements, identifies constraints, proposes design direction with rationale. For UI/UX, system design, or API design discussions. Use for focused design advice — triggered by 'consult on design', 'what approach should I take', 'advise on design', 'design direction'."
 argument-hint: "[design problem or requirements]"
 allowed-tools: Read Grep Glob Bash Write
 ---

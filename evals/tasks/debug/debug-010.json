@@ -1,0 +1,10 @@
+{
+  "id": "debug-010",
+  "input": "Flaky test: 'should send email notification' passes locally but fails intermittently in CI with 'Timeout of 5000ms exceeded'",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "just increased the timeout", "disabled the test"],
+  "notes": "Flaky test investigation. Should check for external dependencies, timing assumptions, or missing mocks."
+}

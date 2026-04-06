@@ -1,0 +1,10 @@
+{
+  "id": "ambiguous-002",
+  "input": "The login page needs work",
+  "category": "ambiguous",
+  "acceptable_routes": ["/debug", "/build", "/architect"],
+  "acceptable_classifications": ["tiny", "feature", "debug"],
+  "expected_artifacts": [],
+  "red_flags": ["classified without asking for clarification", "assumed it was a bug without evidence"],
+  "notes": "Could mean visual polish (tiny), broken functionality (debug), or a full redesign (feature). Needs clarification."
+}

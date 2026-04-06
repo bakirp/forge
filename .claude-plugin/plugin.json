@@ -1,0 +1,11 @@
+{
+  "name": "forge",
+  "version": "2.1.0",
+  "description": "Structured skill framework: plan, build, review, verify, ship — with TDD enforcement, cross-project memory, and adaptive complexity routing",
+  "author": {
+    "name": "Bakir"
+  },
+  "repository": "https://github.com/bakir/Forge",
+  "license": "MIT",
+  "keywords": ["workflow", "tdd", "architecture", "code-review", "shipping", "debugging"]
+}

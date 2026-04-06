@@ -1,0 +1,10 @@
+{
+  "id": "feature-010",
+  "input": "Add Redis-based response caching for GET /api/projects and GET /api/projects/:id with TTL and cache invalidation on writes",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "no cache invalidation strategy", "cached authenticated data globally"],
+  "notes": "Infrastructure-touching feature. Architecture must cover cache key strategy, TTL, and invalidation triggers."
+}

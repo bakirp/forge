@@ -1,0 +1,10 @@
+{
+  "id": "debug-009",
+  "input": "SQL injection vulnerability: the search endpoint passes user input directly into a raw SQL query. Found via: GET /api/search?q='; DROP TABLE users; --",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "used string escaping instead of parameterized queries"],
+  "notes": "Security-critical bug. Must use parameterized queries, not string sanitization. Should flag for /ship review."
+}

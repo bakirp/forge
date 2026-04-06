@@ -1,0 +1,10 @@
+{
+  "id": "tiny-014",
+  "input": "Fix the z-index on the dropdown menu in src/styles/nav.css so it appears above the hero banner",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "restructured CSS architecture"],
+  "notes": "Single CSS property change. Isolated visual fix."
+}

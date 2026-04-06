@@ -1,0 +1,10 @@
+{
+  "id": "debug-004",
+  "input": "Race condition: two simultaneous PATCH /api/projects/:id requests sometimes result in lost updates. Last write wins instead of proper conflict handling.",
+  "category": "debug",
+  "expected_skill_route": "/debug",
+  "expected_classification": "debug",
+  "expected_artifacts": [".forge/debug/report.md"],
+  "red_flags": ["skipped reproduction", "modified tests to pass", "added a global lock", "no concurrency test"],
+  "notes": "Concurrency bug. Should investigate optimistic locking or transaction isolation."
+}

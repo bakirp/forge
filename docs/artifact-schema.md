@@ -10,6 +10,7 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
 .forge/
   architecture/
     [task-name-slugified].md        <- /architect
+    [task-name]-brainstorm.md       <- /brainstorm
   review/
     report.md                       <- /review
   verify/
@@ -20,6 +21,11 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
     report.md                       <- /debug
   browse/
     report.md                       <- /browse
+    screenshots/                    <- /browse
+  design/
+    [artifact].md                   <- /design (consult/explore/review)
+  benchmark/
+    report.md                       <- /benchmark
   runs/
     [run-id]/
       manifest.json                 <- root dispatcher
@@ -381,12 +387,19 @@ Skills read artifacts from prior phases. The dependency chain is strict.
 | Skill | Reads | Writes | Blocks if missing |
 |-------|-------|--------|-------------------|
 | `/think` | -- | run manifest | -- |
-| `/architect` | memory bank | architecture doc | -- |
+| `/brainstorm` | codebase | brainstorm doc | -- |
+| `/architect` | memory bank, brainstorm doc | architecture doc | -- |
 | `/build` | architecture doc | source code, tests | architecture doc |
 | `/review` | architecture doc, source code | review report | -- |
 | `/verify` | architecture doc | verify report, screenshots | -- |
 | `/debug` | source code, error output | debug report | -- |
-| `/ship` | verify report | release summary, PR | verify report |
+| `/browse` | -- | screenshots, logs | -- |
+| `/benchmark` | baselines | benchmark report | -- |
+| `/design` | -- | design artifacts | -- |
+| `/ship` | review report, verify report | release summary, PR | review report, verify report |
+| `/canary` | build output | canary report | -- |
+| `/deploy` | merged PR | deploy report | -- |
+| `/retro` | -- | retro data | -- |
 | `/evolve` | retro data | updated skill files | -- |
 
 ---

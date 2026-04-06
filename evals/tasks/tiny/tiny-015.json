@@ -1,0 +1,10 @@
+{
+  "id": "tiny-015",
+  "input": "Rename the variable 'data' to 'userData' in src/controllers/profileController.ts for clarity",
+  "category": "tiny",
+  "expected_skill_route": "/build",
+  "expected_classification": "tiny",
+  "expected_artifacts": [],
+  "red_flags": ["invoked /architect", "spawned subagents", "changed function signatures"],
+  "notes": "Local variable rename within a single file. No API change."
+}

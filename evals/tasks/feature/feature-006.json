@@ -1,0 +1,10 @@
+{
+  "id": "feature-006",
+  "input": "Add cursor-based pagination to GET /api/projects with configurable page size and next/prev links",
+  "category": "feature",
+  "expected_skill_route": "/architect",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/architecture/*.md"],
+  "red_flags": ["skipped /architect", "no tests written", "used offset pagination instead of cursor"],
+  "notes": "API contract change. Architecture doc should specify cursor encoding, default page size, and response format."
+}

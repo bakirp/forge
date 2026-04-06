@@ -1,6 +1,6 @@
 ---
 name: design-review
-description: "Design review against principles. Evaluates an existing design or implementation against design principles, consistency, accessibility, and user experience."
+description: "Design review against principles. Evaluates an existing design or implementation against design principles, consistency, accessibility, and user experience. Use to evaluate existing designs — triggered by 'review the design', 'check accessibility', 'is this consistent', 'design quality check'."
 argument-hint: "[file paths, component names, or PR to review]"
 allowed-tools: Read Grep Glob Bash Write
 ---

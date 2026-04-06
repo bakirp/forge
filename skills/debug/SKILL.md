@@ -1,6 +1,6 @@
 ---
 name: debug
-description: "Root-cause-first debugging. Structured reproduction, evidence collection, hypothesis testing, and targeted fix. Produces a debug report with verified root cause and fix."
+description: "Root-cause-first debugging. Structured reproduction, evidence collection, hypothesis testing, and targeted fix. Produces a debug report with verified root cause and fix. Use when something is broken — triggered by 'error', 'bug', 'broken', 'failing', 'crash', 'not working', 'investigate', 'why does', 'fix this bug'."
 argument-hint: "[bug description, error message, or failing test]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
