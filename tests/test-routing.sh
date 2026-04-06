@@ -88,7 +88,7 @@ fi
 # ── 5. All skills listed in the Skills table actually exist as files ──
 #    Only match the command column pattern: "| `/name`" in the Skills table
 
-KNOWN_SKILLS=(think architect build verify ship memory evolve retro)
+KNOWN_SKILLS=(think architect build verify ship memory evolve retro autopilot)
 for ref in "${KNOWN_SKILLS[@]}"; do
   skill_dir="$ROOT/skills/$ref"
   if [[ -f "$skill_dir/SKILL.md" ]]; then

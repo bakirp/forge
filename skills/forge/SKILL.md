@@ -14,6 +14,7 @@ FORGE orchestrates Claude Code into a structured workflow: plan → build → re
 | Command | Phase | What it does |
 |---------|-------|-------------|
 | `/think [task]` | Entry | Classifies complexity (tiny/feature/epic), routes to the right depth |
+| `/autopilot [desc]` | All | Fully autonomous pipeline with self-healing loops and future enhancements |
 | `/architect [task]` | Planning | Locks architecture doc before building |
 | `/build` | Build | TDD-enforced implementation with subagents |
 | `/review` | Review | Code review gate — spec compliance, quality, security surface |
@@ -49,6 +50,8 @@ FORGE orchestrates Claude Code into a structured workflow: plan → build → re
 
 ```
 User task
+  │
+  ├── /autopilot ── brainstorm → architect → [build ⟷ review]* → [verify]* → ship → future
   │
   ▼
 /think ── tiny ───────── /build ── /review ── /verify ── /ship ── /retro ── /evolve
