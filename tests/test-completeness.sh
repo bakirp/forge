@@ -163,6 +163,58 @@ else
   skip "/ship not found"
 fi
 
+# ── 9. /brainstorm contains problem-framing step ──
+
+path="$ROOT/skills/brainstorm/SKILL.md"
+if [[ -f "$path" ]]; then
+  if grep -qi 'right problem' "$path"; then
+    pass "/brainstorm contains problem-framing step"
+  else
+    fail "/brainstorm missing problem-framing step ('right problem' not found)"
+  fi
+else
+  skip "/brainstorm not found"
+fi
+
+# ── 10. /review-response contains anti-sycophancy gate ──
+
+path="$ROOT/skills/review/response/SKILL.md"
+if [[ -f "$path" ]]; then
+  if grep -qi 'sycophancy\|push back\|performatively' "$path"; then
+    pass "/review-response contains anti-sycophancy guardrails"
+  else
+    fail "/review-response missing anti-sycophancy guardrails"
+  fi
+else
+  skip "/review-response not found"
+fi
+
+# ── 11. /think contains --auto flag documentation ──
+
+path="$ROOT/skills/think/SKILL.md"
+if [[ -f "$path" ]]; then
+  if grep -q '\-\-auto' "$path"; then
+    pass "/think contains --auto workflow automation flag"
+  else
+    fail "/think missing --auto flag documentation"
+  fi
+else
+  skip "/think not found"
+fi
+
+# ── 12. /evolve references telemetry data ──
+
+path="$ROOT/skills/evolve/SKILL.md"
+if [[ -f "$path" ]]; then
+  if grep -q 'telemetry' "$path"; then
+    pass "/evolve references telemetry data source"
+  else
+    fail "/evolve missing telemetry data source reference"
+  fi
+else
+  skip "/evolve not found"
+fi
+
 # ── Summary ──
 
 echo ""

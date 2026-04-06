@@ -266,5 +266,11 @@ scripts/manifest.sh status "$(cat .forge/runs/latest)" completed
 - Report progress after each task, not just at the end
 - **Evidence before claims** — after running any test command, your response MUST include: (1) the exact command run, (2) the terminal output (last 30 lines minimum), (3) the exit code or pass/fail summary line. Do NOT write "Tests: N/N passing" — show the actual runner output. If a command failed to run or timed out, state that explicitly.
 
+### Telemetry
+After the build completes (or fails), log the invocation:
+```bash
+bash scripts/telemetry.sh build [completed|error]
+```
+
 ### Error Handling
 If any step fails unexpectedly: (1) state what failed and show the error output, (2) state what has been completed so far, (3) state what remains, (4) ask the user: retry this step, skip it, or abort. Never silently continue past a failed step.

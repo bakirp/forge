@@ -23,9 +23,30 @@ Confirm the source before proceeding:
 FORGE /review-response — Loading feedback from: [source]
 ```
 
-## Step 2: Extract Action Items
+## Step 2: Verify Feedback Technically (Anti-Sycophancy Gate)
 
-Parse the feedback into three priority tiers:
+Before accepting any feedback item, verify it is technically correct:
+
+1. **Read the actual code** referenced by the feedback — do not assume the reviewer is right
+2. **Check each claim against the codebase**: Does the issue actually exist? Is the line number correct? Is the described behavior real?
+3. **Push back on incorrect feedback**: If a suggestion is factually wrong, technically unnecessary, or would introduce a regression — say so explicitly. Do not implement bad suggestions to be agreeable.
+4. **Flag subjective opinions**: If feedback is a style preference rather than a correctness issue, classify it as a suggestion, not a blocker — regardless of how the reviewer framed it.
+5. **Verify against architecture doc**: If feedback contradicts the architecture doc, the architecture doc wins unless the user explicitly overrides.
+
+```
+FORGE /review-response — Technical verification
+
+Feedback items: [N] total
+Verified correct: [N]
+Incorrect/rejected: [N] (with reasons)
+Reclassified: [N] (e.g., "blocking" → "suggestion")
+```
+
+Do NOT skip this step. Implementing wrong suggestions wastes time and can introduce bugs. Being helpful means being honest, not agreeable.
+
+## Step 3: Extract Action Items
+
+Parse the **verified** feedback into three priority tiers:
 
 ```
 FORGE /review-response — Action items extracted
@@ -50,7 +71,7 @@ Classification rules:
 - **Recommended**: code quality issues, missing error handling, poor naming, duplication
 - **Suggestions**: style preferences, alternative approaches, minor optimizations
 
-## Step 3: Prioritize and Plan
+## Step 4: Prioritize and Plan
 
 Order blocking items by dependency — fix foundations before things that depend on them.
 
@@ -72,7 +93,7 @@ Conflicts: [any contradictions with architecture doc, or "none"]
 
 Present the plan and wait for user approval before applying fixes.
 
-## Step 4: Execute Fixes
+## Step 5: Execute Fixes
 
 Only proceed if the user approves.
 
@@ -92,7 +113,7 @@ After each fix, verify no regressions:
 # Run the project's test suite
 ```
 
-## Step 5: Update Review Status
+## Step 6: Update Review Status
 
 If `.forge/review/report.md` exists and contains a `NEEDS_CHANGES` verdict:
 - After all blocking items are resolved, update the status section to reflect progress
@@ -117,7 +138,7 @@ Write a resolution log to `.forge/review/response.md`:
 [Any context for the next review pass]
 ```
 
-## Step 6: Report
+## Step 7: Report
 
 ```
 FORGE /review-response — Complete
@@ -139,3 +160,6 @@ Remaining blockers: [N]
 - Track what was fixed and what was deferred with reasons
 - If feedback contradicts the architecture doc, flag the conflict — don't silently choose one side
 - Never change a review verdict yourself — only `/review` can issue a new verdict
+- **Never implement feedback you haven't verified** — read the code, check the claim, then act
+- **Push back on wrong suggestions** — being helpful means being honest. A polite "this suggestion is incorrect because..." is better than silently introducing a bug
+- **Do not agree performatively** — phrases like "great catch!" or "absolutely right!" before even checking the code are anti-patterns. Verify first, then respond.

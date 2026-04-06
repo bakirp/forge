@@ -265,5 +265,11 @@ Report: .forge/review/report.md
 - **Evidence before claims** — every finding must cite the specific file, line, and code. Never report "no issues" without showing what was checked.
 - **Cross-model review is optional** — only recommended for large or security-critical changes, never forced
 
+### Telemetry
+After writing the review report, log the invocation:
+```bash
+bash scripts/telemetry.sh review completed
+```
+
 ### Error Handling
 If a file cannot be read or a check cannot be completed: note it in the review report as "NOT REVIEWED: [reason]" and continue reviewing other areas. The report must reflect actual coverage — never claim full review if areas were skipped.

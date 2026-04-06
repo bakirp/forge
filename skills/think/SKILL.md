@@ -9,9 +9,17 @@ allowed-tools: Read Grep Glob Bash Agent
 
 You are the FORGE entry point. Your job is to understand what the user wants to build, classify its complexity, and route to the right workflow depth.
 
+## Step 0: Parse Flags
+
+Check `$ARGUMENTS` for the `--auto` flag:
+- If `--auto` is present, set AUTO_MODE=true and strip the flag from arguments before proceeding
+- In auto mode, after classification and user confirmation, the pipeline auto-chains: `/architect` → `/build` → `/review` → `/verify` (skipping `/architect` for tiny tasks)
+- The user can interrupt at any gate by declining when prompted
+- Default behavior (no flag) is unchanged — manual skill invocation per phase
+
 ## Step 1: Understand the Task
 
-Read the user's task description from `$ARGUMENTS`. If no arguments provided, ask the user what they want to build.
+Read the user's task description from `$ARGUMENTS` (with `--auto` stripped if present). If no arguments provided, ask the user what they want to build.
 
 Gather context:
 - Read `CLAUDE.md` if present for project conventions
@@ -93,11 +101,13 @@ Wait for user confirmation. If they disagree, reclassify immediately.
 - Skip /architect entirely
 - Invoke `/build` with the task description — /build will detect the tiny classification and skip the architecture doc requirement
 - /build still enforces TDD and the 2-stage review, even for tiny tasks
+- **Auto mode**: after `/build` completes, auto-invoke `/review` → `/verify`
 
 ### FEATURE → /architect first
 - Invoke `/architect $ARGUMENTS`
 - /architect produces a locked architecture doc
 - Then proceed to build
+- **Auto mode**: auto-chain `/architect` → `/build` → `/review` → `/verify`. At each gate, show a brief status and ask "Continue to /[next]? (y/n)" — proceed on confirmation, stop on decline.
 
 ### EPIC → Agent Teams with Roles
 
@@ -106,6 +116,7 @@ Spawn three specialized agents (Product, Architecture, Security) using the Agent
 Read `skills/think/references/epic-agent-prompts.md` for the full agent prompts and synthesis instructions.
 
 After all agents complete, merge their outputs into a unified architecture doc at `.forge/architecture/[task-name].md` and present to user for approval before proceeding to /build.
+- **Auto mode**: same chain as FEATURE after architecture doc is approved.
 
 ## Rules
 
@@ -116,6 +127,13 @@ After all agents complete, merge their outputs into a unified architecture doc a
 - If the task looks like debugging, route to /debug — don't force it through complexity classification
 - If signals are ambiguous between two skills, do NOT default to the simpler option — present the ambiguity to the user with concrete options
 - If a routed skill fails or the user aborts, return control to /think — do not retry automatically without user confirmation
+
+### Telemetry
+After routing, log the invocation:
+```bash
+bash scripts/telemetry.sh think completed [tiny|feature|epic]
+```
+If the user aborts or overrides, log with outcome `aborted`.
 
 ### Error Handling
 If classification is unclear after gathering context: present the ambiguity to the user with options. Never default to a lower complexity tier when uncertain — pick the higher one.

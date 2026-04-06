@@ -1,5 +1,45 @@
 # Changelog
 
+## v2.3.0 — 2026-04-06
+
+Competitive analysis-driven improvements: SessionStart hook, local telemetry, anti-sycophancy review, problem-framing brainstorm, and workflow automation.
+
+### SessionStart Hook
+- Added `hooks/hooks.json` with SessionStart event that injects FORGE context at session start
+- `hooks/session-start` script outputs skill overview and suggests `/think`
+- Claude Code only — auto-discovers available skills on every session
+
+### Local Telemetry
+- Added `scripts/telemetry.sh` — appends skill invocations to `~/.forge/telemetry.jsonl`
+- Fields: skill name, timestamp, project path, classification (optional), outcome
+- No external services — local JSONL only, feeds into `/evolve` for data-driven skill improvement
+- Telemetry logging added to `/think`, `/build`, `/review`, `/ship`
+
+### Anti-Sycophancy in `/review-response`
+- Added Step 2: Technical Verification Gate before accepting review feedback
+- Verifies each feedback item against actual code before implementing
+- Pushes back on incorrect suggestions, reclassifies subjective opinions
+- New rules: never implement unverified feedback, no performative agreement
+
+### Problem-Framing in `/brainstorm`
+- Added Step 0: "Are we solving the right problem?" with 5 forcing questions
+- Questions: Who benefits? What if we don't build this? What does success look like? Simplest version? Solving a symptom?
+- Respects user's "just build it" override — notes reasoning and proceeds
+
+### Workflow Automation in `/think`
+- Added `--auto` flag: auto-chains through pipeline (architect → build → review → verify) after classification
+- User can interrupt at any gate by declining the continue prompt
+- Default behavior (manual chaining) unchanged — opt-in automation only
+
+### `/evolve` Enhanced with Telemetry
+- `/evolve` now reads `~/.forge/telemetry.jsonl` alongside retro data
+- Telemetry provides objective usage patterns: invocation counts, completion rates, abort frequency
+- Can run telemetry-only analysis when no retro data exists
+
+### New Test Suites
+- `tests/test-hooks.sh` — 9 tests: hook directory, JSON validity, SessionStart event, script execution, output format
+- `tests/test-telemetry.sh` — 13 tests: script execution, JSONL format, required fields, optional fields, append behavior, skill references
+
 ## v2.2.0 — 2026-04-06
 
 Adopted superpowers execution discipline: artifact freshness, evidence-before-claims, and stronger subagent gates.

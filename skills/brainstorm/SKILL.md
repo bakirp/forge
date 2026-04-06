@@ -9,9 +9,31 @@ allowed-tools: Read Grep Glob Bash
 
 You generate multiple approaches to a problem, surface honest tradeoffs, and help the user choose before committing to architecture. The output is a brainstorm artifact that /architect consumes as input.
 
-## Step 1: Understand the Problem Space
+## Step 0: Are We Solving the Right Problem?
+
+Before exploring solutions, question the problem itself. This prevents wasting time building the wrong thing well.
 
 Read `$ARGUMENTS` for the task description. If no arguments provided, ask the user what problem they want to explore.
+
+Ask the user these forcing questions (adapt to context — skip any that are obviously answered):
+
+1. **Who benefits?** — Who is the end user of this change? What does their workflow look like today without it?
+2. **What happens if we don't build this?** — Is there a workaround? How painful is the status quo, really?
+3. **What does success look like?** — How will we know this worked? What's the measurable outcome?
+4. **What's the simplest version?** — If we had to ship something in 1 hour, what would it be? Is that enough?
+5. **Are we solving a symptom?** — Is this the root problem, or is there a deeper issue we're patching over?
+
+Wait for the user's answers. If they reveal the problem is different from what was initially stated, reframe before proceeding. If the user says "just build it" or signals they've already thought this through, respect that — note their reasoning and move to Step 1.
+
+```
+FORGE /brainstorm — Problem validated
+
+Original: [what was asked]
+Reframed: [what we're actually solving, if different]
+Success criteria: [from user's answers]
+```
+
+## Step 1: Understand the Problem Space
 
 Gather context:
 - Read the codebase structure (directories, key files, tech stack)

@@ -9,7 +9,7 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 You are the meta-agent. You read retrospective data and rewrite FORGE skills to make them better. You are the reason FORGE improves over time.
 
-## Step 1: Load Retro Data
+## Step 1: Load Retro Data and Telemetry
 
 Read all retrospective files:
 
@@ -17,12 +17,22 @@ Read all retrospective files:
 ls -t ~/.forge/retros/*.json 2>/dev/null
 ```
 
-If no retros exist:
+Also read telemetry data for usage patterns:
+
+```bash
+cat ~/.forge/telemetry.jsonl 2>/dev/null
 ```
-FORGE /evolve — No retrospective data found.
-Run /retro after your next /ship cycle to generate data for evolution.
+
+Telemetry provides objective data: which skills are invoked, how often, and whether they complete or abort. Use this alongside subjective retro ratings — a skill with high invocation count but frequent aborts likely has UX problems even if its retro score is decent.
+
+If no retros AND no telemetry exist:
+```
+FORGE /evolve — No retrospective or telemetry data found.
+Run /retro after your next /ship cycle, or use skills normally to generate telemetry.
 ```
 Stop here.
+
+If retros are missing but telemetry exists, proceed with telemetry-only analysis (skip per-skill ratings, focus on usage patterns and completion rates).
 
 If `$ARGUMENTS` specifies a skill name, focus analysis on that skill only.
 

@@ -16,7 +16,7 @@ cd Forge
 ./setup
 ```
 
-Then open any project in Claude Code and type `/think` to start.
+Then open any project in Claude Code. FORGE's SessionStart hook will auto-inject a skill overview. Type `/think` to start any task.
 
 See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 
@@ -26,7 +26,7 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 
 | Command | What it does | Phase |
 |---------|-------------|-------|
-| `/think` | Classifies task complexity (tiny/feature/epic), routes to right depth | Planning |
+| `/think` | Classifies task complexity (tiny/feature/epic), routes to right depth. `--auto` chains the full pipeline. | Planning |
 | `/architect` | Locks architecture — data flow, API contracts, test strategy | Planning |
 | `/build` | TDD-enforced implementation with subagents and model routing | Build |
 | `/review` | Code review gate — spec compliance, quality, security surface | Review |
@@ -41,7 +41,7 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 
 | Command | What it does | Phase |
 |---------|-------------|-------|
-| `/brainstorm` | Ideation and alternative exploration before /architect | Ideation |
+| `/brainstorm` | Problem-framing + ideation before /architect (5 forcing questions, then alternatives) | Ideation |
 | `/worktree` | Isolated git worktree setup for tasks | Lifecycle |
 | `/finish` | Branch completion, merge, and cleanup | Lifecycle |
 | `/browse` | Playwright-based browser automation (standalone or from /verify) | Browser |
@@ -93,10 +93,12 @@ Memory:     /memory (remember/recall/forget)
 - **Artifact freshness protocol** — `/review` and `/verify` stamp `commit_sha` + `tree_hash` into their reports. `/ship` validates both against current HEAD before shipping, blocking with `STALE:` on mismatch. After any auto-fix, both reports must be regenerated.
 - **Subagent checkpoints in `/build`** — explicit checkpoint after each subagent verifies output against the architecture doc before the next subagent starts. Final verification is two-stage: architecture compliance first, then the test suite. Tests alone are not sufficient to pass the gate.
 - **Evidence-before-claims** — `/ship`, `/architect`, and `/review` require showing actual output as evidence before claiming work is complete.
+- **Anti-sycophancy in `/review response`** — review feedback is technically verified against the actual codebase before implementation. Incorrect suggestions are pushed back on, not blindly applied.
+- **Local telemetry** — skill invocations are logged to `~/.forge/telemetry.jsonl` for data-driven improvement via `/evolve`.
 
 ## Testing
 
-FORGE includes 9 test suites with 57+ tests covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, and manifest tracking.
+FORGE includes 11 test suites with 79+ tests covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, and telemetry.
 
 ```bash
 # Run all tests

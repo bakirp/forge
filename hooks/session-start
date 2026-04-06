@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# FORGE SessionStart hook — injects skill context at session start
+set -euo pipefail
+
+PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Read the forge overview skill for context
+SKILL_CONTENT=""
+if [[ -f "$PLUGIN_ROOT/skills/forge/SKILL.md" ]]; then
+  SKILL_CONTENT=$(cat "$PLUGIN_ROOT/skills/forge/SKILL.md")
+fi
+
+# JSON-escape a string
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\t'/\\t}"
+  s="${s//$'\r'/}"
+  printf '%s' "$s"
+}
+
+MESSAGE="<FORGE-SESSION-START>
+FORGE is active. Available workflow:
+
+  /think [task]     — Start here. Classifies complexity, routes to the right depth.
+  /brainstorm       — Explore alternatives before architecture
+  /architect        — Lock architecture before building
+  /build            — TDD-enforced implementation
+  /review           — Code review gate
+  /verify           — Cross-platform QA
+  /ship             — Security audit + PR creation
+  /debug            — Root-cause debugging
+  /memory           — Cross-project decision memory
+  /retro            — Post-ship retrospective
+  /evolve           — Self-improve skills from retro data
+
+Start any task with /think. For options on a problem, try /brainstorm first.
+</FORGE-SESSION-START>"
+
+ESCAPED=$(json_escape "$MESSAGE")
+
+# Output in Claude Code hook format
+printf '{"message":"%s"}' "$ESCAPED"

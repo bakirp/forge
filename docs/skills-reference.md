@@ -21,9 +21,9 @@ Ideation:   /brainstorm → /architect
 ## /think — Adaptive Entry Point
 
 **Phase**: Planning
-**Usage**: `/think [task description]`
+**Usage**: `/think [task description]` or `/think --auto [task description]`
 
-Classifies task complexity and routes to the right workflow depth.
+Classifies task complexity and routes to the right workflow depth. With `--auto`, chains the full pipeline (architect → build → review → verify) without manual invocation per phase — user can interrupt at any gate.
 
 | Classification | Signals | Route |
 |---------------|---------|-------|
@@ -37,6 +37,8 @@ Classifies task complexity and routes to the right workflow depth.
 - **Security Agent** — STRIDE analysis, OWASP mapping, security requirements
 
 Each agent has a FORGE checklist and required output format. Their outputs are synthesized into a unified architecture doc.
+
+**Telemetry**: Logs invocation to `~/.forge/telemetry.jsonl` with classification and outcome.
 
 **Rules**: Always shows reasoning. User can override classification. When uncertain, picks the higher level.
 
@@ -168,7 +170,7 @@ Prepares a scoped review request for human reviewers or `/review` execution. Def
 
 **Usage**: `/review response [feedback source]`
 
-Processes and acts on review feedback. Extracts action items from review comments and prioritizes them as blocking, recommended, or suggestions.
+Processes and acts on review feedback with anti-sycophancy guardrails. Before extracting action items, technically verifies each piece of feedback against the actual codebase — pushes back on incorrect suggestions and reclassifies subjective opinions. Then prioritizes verified items as blocking, recommended, or suggestions.
 
 ---
 
@@ -239,7 +241,7 @@ Collects structured feedback after a `/ship` cycle.
 Reads retrospective data and rewrites FORGE skills to improve them.
 
 **Process**:
-1. Loads all retro files, aggregates skill ratings
+1. Loads all retro files and telemetry data (`~/.forge/telemetry.jsonl`), aggregates skill ratings and usage patterns
 2. Scores each skill: healthy (>=3.5), ok (2.5-3.4), needs work (<2.5)
 3. Analyzes feedback for low-scoring skills
 4. Proposes changes classified by risk level
@@ -265,6 +267,7 @@ Reads retrospective data and rewrites FORGE skills to improve them.
 Generates 3-5 alternative approaches before committing to architecture. Invoked by `/think` when a task has ambiguous solution paths, or directly by the user.
 
 **Steps**:
+0. **Problem-framing** — asks 5 forcing questions: Who benefits? What if we don't build this? What does success look like? Simplest version? Solving a symptom? Respects "just build it" override.
 1. Analyzes the task and existing codebase for constraints
 2. Generates 3-5 distinct approaches with trade-offs
 3. Scores each on effort, risk, maintainability, and performance

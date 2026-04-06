@@ -125,3 +125,33 @@ Every success or failure claim in FORGE must cite evidence: the command run, its
 ## Multi-Host Support (Phase 3)
 
 FORGE skills are pure Markdown, portable to any AI host. The setup script detects the environment (Claude Code, Codex, Cursor) and installs to the appropriate skills directory. Claude Code is the primary host; others are experimental.
+
+## SessionStart Hook
+
+FORGE uses Claude Code's hook infrastructure to inject context at session start. The `hooks/hooks.json` file registers a SessionStart event that runs `hooks/session-start`, which outputs a skill overview and suggests `/think`. This ensures users always know FORGE is active without needing to remember to invoke it manually.
+
+Why a hook instead of relying on trigger words: trigger words in skill descriptions require Claude Code to match against user input, which is unreliable for session initialization. A SessionStart hook fires deterministically on every session, clear, and compact.
+
+## Local Telemetry
+
+Skill invocations are logged to `~/.forge/telemetry.jsonl` via `scripts/telemetry.sh`. Each entry records: skill name, timestamp, project path, classification (optional), and outcome (completed/aborted/error).
+
+Why local JSONL (not a service): same rationale as the memory bank — human-readable, append-only, grep-friendly, no dependencies. Telemetry feeds into `/evolve` as an objective data source alongside subjective retro ratings, enabling data-driven skill improvement.
+
+## Anti-Sycophancy in Review Response
+
+`/review-response` includes a technical verification gate before implementing review feedback. Every feedback item is verified against the actual codebase — incorrect suggestions are pushed back on, subjective opinions are reclassified.
+
+Why this matters: AI agents have a tendency toward performative agreement ("great catch!") before verifying claims. This wastes time implementing bad suggestions and can introduce bugs. The anti-sycophancy gate enforces honest technical assessment.
+
+## Problem-Framing in Brainstorm
+
+`/brainstorm` now starts with 5 forcing questions ("Are we solving the right problem?") before exploring solutions. This was identified as a gap vs gstack's `/office-hours` skill — FORGE was solution-oriented without questioning the problem first.
+
+Why integrated (not a new skill): a separate problem-framing skill would add ceremony and dilute FORGE's identity. Integrating it as Step 0 in `/brainstorm` keeps the workflow lean while addressing the gap.
+
+## Workflow Automation (`--auto` flag)
+
+`/think --auto` chains through the full pipeline (architect → build → review → verify) without manual invocation per phase. The user can interrupt at any gate.
+
+Why opt-in: the default manual chaining preserves user control and visibility. Auto mode is for experienced users who trust the pipeline and want less friction. It's a flag, not a mode switch — each invocation decides independently.

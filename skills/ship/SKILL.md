@@ -351,5 +351,11 @@ Run /document-release to sync docs with this release.
 - **Secrets in git history are always critical** — even if removed from current code, they may be exposed
 - **Suggest /document-release** after shipping if docs may be stale — don't auto-run it
 
+### Telemetry
+After PR creation (or if blocked), log the invocation:
+```bash
+bash scripts/telemetry.sh ship [completed|blocked|error]
+```
+
 ### Error Handling
 If any step fails unexpectedly: (1) state what failed and show the error output, (2) state what has been completed so far, (3) state what remains, (4) ask the user: retry this step, skip it, or abort. Never silently continue past a failed step. If a security fix breaks tests, always stop and ask.
