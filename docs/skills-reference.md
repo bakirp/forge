@@ -9,11 +9,12 @@ Complete reference for all FORGE skills. Each skill is a Markdown file with YAML
                 ↕                                      ↕
              /memory                                /memory
 
-Standalone: /debug, /browse, /design, /benchmark
-Lifecycle:  /worktree, /finish, /document-release
-Guards:     /careful, /freeze
-Deploy:     /canary, /deploy
-Ideation:   /brainstorm → /architect
+Standalone:  /debug, /browse, /design, /benchmark
+Lifecycle:   /worktree, /finish, /document-release
+Guards:      /careful, /freeze
+Deploy:      /canary, /deploy
+Ideation:    /brainstorm → /architect
+Automation:  /autopilot (full pipeline, zero prompts)
 ```
 
 ---
@@ -467,6 +468,51 @@ Post-merge deployment and health verification. Runs after a PR is merged to depl
 **Output**: Deploy report at `.forge/releases/`.
 
 **Rules**: Never deploys from an unmerged branch. Health checks must pass before marking deployment as successful. Supports rollback if health checks fail.
+
+---
+
+## /autopilot — Fully Autonomous Product Builder
+
+**Phase**: Automation
+**Usage**: `/autopilot [product description]` or `/autopilot --skip-brainstorm [description]`
+
+Takes a one-line product description and runs the entire FORGE pipeline — brainstorm, architect, build, review, verify, ship — with zero user prompts. Self-heals on failures via guard-enforced iteration limits.
+
+**Core contract**: The user should not need to type anything after invoking. Emits one-line status updates at each phase transition. The user CAN interrupt at any time.
+
+**Guard Enforcement**: Every phase transition goes through `scripts/autopilot-guard.sh`, which manages a state file (`.forge/autopilot/state.json`) with hard counters:
+- **Inner loop** (build-review cycles): default max 3
+- **Outer loop** (verify retries): default max 2
+- **Total phases**: default max 15
+- **Repeated failure detection**: halts if the same issue appears twice
+
+**Pipeline by Complexity**:
+
+| Classification | Pipeline |
+|---------------|----------|
+| TINY | build → review → verify → ship |
+| FEATURE | brainstorm → architect → build → review → verify → ship |
+| EPIC | brainstorm → architect (agent teams) → build → review → verify → ship |
+
+**Flags**:
+- `--max-iterations N` — max build-review inner loops (default 3)
+- `--skip-brainstorm` — skip brainstorm phase, go straight to architect
+
+**Steps**:
+1. Initialize guard state and run manifest
+2. Classify complexity (TINY/FEATURE/EPIC)
+3. Brainstorm (skipped for TINY) — answers forcing questions autonomously
+4. Architect (skipped for TINY) — produces locked architecture doc
+5. Build with TDD enforcement
+6. Review + fix loop (inner loop, guard-enforced)
+7. Verify + fix loop (outer loop, guard-enforced)
+8. Ship — security audit, PR creation
+9. Generate future enhancements at `.forge/autopilot/future-enhancements.md`
+10. Store key decisions to memory
+
+**Output**: PR URL, future enhancements doc, run manifest.
+
+**Rules**: Guard's word is final — if check exits non-zero, stop immediately. Debug tasks are rejected (use `/debug` instead). Never asks the user for input after initialization.
 
 ---
 

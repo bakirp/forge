@@ -11,7 +11,7 @@ FORGE is a Claude Code skill framework with three capabilities no existing tool 
 ## Quick Start
 
 ```bash
-git clone https://github.com/bakir/Forge.git
+git clone https://github.com/bakirp/Forge.git
 cd Forge
 ./setup
 ```
@@ -52,6 +52,8 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 | `/document-release` | Post-ship documentation sync | Docs |
 | `/careful` | Warns before destructive operations | Guard |
 | `/freeze` | Scoped edit locks on files/directories | Guard |
+| `/autopilot` | Fully autonomous product builder — runs the entire pipeline with self-healing loops | Automation |
+| `/forge` | FORGE workflow overview, skill listing, and red-flags table | Meta |
 
 ## Workflow
 
@@ -69,9 +71,11 @@ User task
   │
   └── epic ── Agent Teams ── /architect ── /build ── /review ── /verify ── /ship ...
 
-Standalone: /worktree, /finish, /browse, /design, /benchmark, /canary, /deploy
-Guards:     /careful, /freeze, /document-release
-Memory:     /memory (remember/recall/forget)
+Standalone:  /worktree, /finish, /browse, /design, /benchmark, /canary, /deploy
+Guards:      /careful, /freeze, /document-release
+Memory:      /memory (remember/recall/forget)
+Automation:  /autopilot (full pipeline, zero prompts)
+Meta:        /forge (overview + red-flags table)
 ```
 
 ## How It Works
@@ -98,7 +102,7 @@ Memory:     /memory (remember/recall/forget)
 
 ## Testing
 
-FORGE includes 11 test suites with 79+ tests covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, and telemetry.
+FORGE includes 13 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, and context-prune.
 
 ```bash
 # Run all tests

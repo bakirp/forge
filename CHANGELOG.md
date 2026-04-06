@@ -2,7 +2,17 @@
 
 ## v2.4.0 — 2026-04-06
 
-Context pruning for build subagents — reduces token waste and ensures consistent context when spawning parallel subagents.
+Autonomous product builder and context pruning for build subagents.
+
+### `/autopilot` — Fully Autonomous Product Builder
+- New `/autopilot` skill: takes a one-line product description and runs the entire FORGE pipeline (brainstorm → architect → build → review → verify → ship) with zero user prompts
+- Guard-enforced iteration limits via `scripts/autopilot-guard.sh` with real state file (`.forge/autopilot/state.json`)
+- Inner loop (build-review): default max 3 cycles. Outer loop (verify retries): default max 2. Total phases: max 15
+- Repeated failure detection: halts if the same issue hash appears twice
+- Flags: `--max-iterations N`, `--skip-brainstorm`
+- Generates `.forge/autopilot/future-enhancements.md` with deferred items, suggested improvements, tech debt, and security hardening
+- Debug tasks are auto-detected and rejected (directs user to `/debug`)
+- Added `tests/test-autopilot-guard.sh` with guard state management tests
 
 ### Context Pruning in `/build`
 - Added `scripts/context-prune.sh` with subcommands: `extract`, `conventions`, `estimate`, `clean`

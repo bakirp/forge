@@ -9,7 +9,7 @@
       "name": "forge",
       "source": "./",
       "description": "Structured skill framework: plan, build, review, verify, ship",
-      "version": "2.1.0",
+      "version": "2.4.0",
       "category": "development",
       "tags": ["workflow", "tdd", "architecture", "code-review"]
     }

@@ -109,3 +109,7 @@ jobs:
           bash tests/test-browser.sh
           bash tests/test-setup.sh
           bash tests/test-evolution.sh
+          bash tests/test-hooks.sh
+          bash tests/test-telemetry.sh
+          bash tests/test-autopilot-guard.sh
+          bash tests/test-context-prune.sh
