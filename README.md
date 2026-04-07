@@ -115,13 +115,14 @@ See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each s
 - **Code reusability** — `/build` searches for existing functions before writing new code; `/review` flags duplicate implementations as major issues.
 - **Artifact freshness protocol** — `/review` and `/verify` stamp `commit_sha` + `tree_hash` into their reports. `/ship` validates both against current HEAD before shipping, blocking with `STALE:` on mismatch. After any auto-fix, both reports must be regenerated.
 - **Subagent checkpoints in `/build`** — explicit checkpoint after each subagent verifies output against the architecture doc before the next subagent starts. Final verification is two-stage: architecture compliance first, then the test suite. Tests alone are not sufficient to pass the gate.
+- **Phase isolation** — post-build phases (`/review`, `/verify`, `/ship`) can run as isolated foreground subagents with fresh context, eliminating self-evaluation bias and context rot. `/build` writes a structured handoff artifact (`.forge/build/report.md`) that captures files modified, test results, architecture deviations, and user decisions for downstream phases.
 - **Evidence-before-claims** — `/ship`, `/architect`, and `/review` require showing actual output as evidence before claiming work is complete.
 - **Anti-sycophancy in `/review response`** — review feedback is technically verified against the actual codebase before implementation. Incorrect suggestions are pushed back on, not blindly applied.
 - **Local telemetry** — skill invocations are logged to `~/.forge/telemetry.jsonl` for data-driven improvement via `/evolve`.
 
 ## Testing
 
-FORGE includes 14 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, and quality-gate.
+FORGE includes 16 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, and handover.
 
 ```bash
 # Run all tests

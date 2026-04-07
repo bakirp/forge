@@ -204,8 +204,7 @@ For 3+ independent tasks, spawn subagents in isolated worktrees:
 - On repeated failure: mark task BLOCKED and continue with others
 
 Model routing (when available):
-- **Haiku:** Config, boilerplate, simple CRUD
-- **Sonnet:** Standard features, API endpoints
+- **Opus:** All tasks (model routing deferred to future optimization)
 - **Opus:** Complex algorithms, security-critical code
 
 **Record the phase:**
@@ -214,12 +213,27 @@ bash scripts/autopilot-guard.sh tick build
 bash scripts/manifest.sh phase "$RUN_ID" build
 ```
 
+Write the build report (handoff artifact for isolated post-build phases):
+```bash
+mkdir -p .forge/build
+```
+Write `.forge/build/report.md` with: commit_sha, tree_hash, files modified, test results, architecture deviations, and user decisions (see `/build` Step 6.5 for format).
+
+Log phase transition:
+```bash
+bash scripts/telemetry.sh phase-transition build
+```
+
 Emit status:
 ```
 FORGE /autopilot — Build complete, running review...
 ```
 
-## Step 5: Review + Fix Loop
+## Step 5: Review + Fix Loop (Isolated)
+
+**Phase isolation:** Spawn `/review` as an isolated foreground subagent using the `forge-reviewer` agent. This provides fresh-context review, eliminating self-evaluation bias from the build phase.
+
+The reviewer subagent reads artifacts from disk (`.forge/architecture/*.md`, `.forge/build/report.md`, `git diff`) — it does NOT need the build conversation context.
 
 This is where the inner loop lives. The guard enforces the iteration limit.
 
@@ -229,18 +243,13 @@ LOOP:
   bash scripts/autopilot-guard.sh check
   # If check fails → STOP. Report guard error to user and exit.
 
-  Run /review logic:
-    Stage 1 — Spec Compliance (vs architecture doc):
-      API contracts, edge cases, component boundaries, test coverage
-    Stage 2 — Code Quality:
-      No hardcoded secrets, input validation, error handling, performance, conventions
-    Stage 3 — Security Surface:
-      Injection risks, data handling, auth enforcement
-
-  Write review report to .forge/review/report.md with:
-    - Status: PASS | NEEDS_CHANGES | FAIL
-    - commit_sha: [output of git rev-parse HEAD]
-    - tree_hash: [output of git rev-parse HEAD^{tree}]
+  Spawn the forge-reviewer Agent (foreground):
+    - The subagent loads the /review skill via `skills: [forge:review]`
+    - It reads .forge/architecture/*.md, .forge/build/report.md, and runs git diff
+    - It writes .forge/review/report.md with:
+      Status: PASS | NEEDS_CHANGES | FAIL
+      commit_sha: [output of git rev-parse HEAD]
+      tree_hash: [output of git rev-parse HEAD^{tree}]
 
   # ── Record the review invocation ──
   bash scripts/autopilot-guard.sh tick review
@@ -274,9 +283,11 @@ Emit status:
 FORGE /autopilot — Review PASS (after [N] cycles)
 ```
 
-## Step 6: Verify + Fix Loop
+## Step 6: Verify + Fix Loop (Isolated)
 
 This is the outer loop. The guard enforces the retry limit.
+
+**Phase isolation:** Spawn `/verify` as an isolated foreground subagent using the `forge-verifier` agent.
 
 ```
 LOOP:
@@ -284,13 +295,14 @@ LOOP:
   bash scripts/autopilot-guard.sh check
   # If check fails → STOP. Report guard error to user and exit.
 
-  Run /verify logic:
-    Auto-detect domain:
-      WEB → Playwright flows (delegate to /browse logic)
-      API → curl every endpoint (status codes, response shapes, errors, auth)
-      PIPELINE → run with test data, diff output
+  Spawn the forge-verifier Agent (foreground):
+    - The subagent loads the /verify skill via `skills: [forge:verify]`
+    - It auto-detects domain (WEB/API/PIPELINE)
+    - For WEB: delegates to /browse logic
+    - For API: curls every endpoint
+    - For PIPELINE: runs with test data, diffs output
 
-  Write verify report to .forge/verify/report.md with:
+  The subagent writes .forge/verify/report.md with:
     - Status: PASS | FAIL
     - Domain detected
     - Test results per flow/endpoint
@@ -335,14 +347,16 @@ Emit status:
 FORGE /autopilot — Verify PASS
 ```
 
-## Step 7: Ship
+## Step 7: Ship (Isolated)
 
 **Guard gate:**
 ```bash
 bash scripts/autopilot-guard.sh check
 ```
 
-Run `/ship` logic:
+**Phase isolation:** Spawn `/ship` as an isolated foreground subagent using the `forge-shipper` agent. Before spawning, determine the version bump and PR type to pass to the subagent prompt.
+
+Run `/ship` logic (via forge-shipper subagent):
 
 1. Read `.forge/review/report.md` — confirm Status: PASS and commit_sha matches current HEAD
 2. Read `.forge/verify/report.md` — confirm Status: PASS and commit_sha matches current HEAD
@@ -488,6 +502,7 @@ Run /retro to reflect on this session.
 
 ```bash
 bash scripts/telemetry.sh autopilot completed
+bash scripts/telemetry.sh phase-transition autopilot
 ```
 
 ## How Guard Enforcement Works

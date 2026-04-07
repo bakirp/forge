@@ -28,6 +28,8 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
     review-[topic].md               <- /design review
   benchmark/
     report.md                       <- /benchmark
+  build/
+    report.md                       <- /build Step 6.5 (handoff artifact)
   context/
     task-{n}.md                     <- /build Step 3.5 (ephemeral)
   runs/
@@ -305,6 +307,48 @@ No `NEEDS_CHANGES` status exists for verify. It either passes or it does not.
 | Reproduction | Yes | Numbered steps preferred |
 | Fix | Yes | State "proposed" or "applied" |
 | Verification | Yes | How correctness was confirmed |
+
+---
+
+## Build Report
+
+**Produced by:** `/build` Step 6.5
+**Consumed by:** `/review` (Step 0), `/verify` (Step 0), `/ship` (Step 0), `/autopilot`
+**Path:** `.forge/build/report.md`
+**Purpose:** Structured handoff artifact for post-build phases. Captures all context that downstream phases need to operate independently — especially when running as isolated subagents with no prior conversation history.
+
+```markdown
+# FORGE Build Report
+
+## commit_sha: [git rev-parse HEAD]
+## tree_hash: [git rev-parse HEAD^{tree}]
+## Date: [YYYY-MM-DD HH:MM]
+## Classification: [tiny | feature | epic]
+## Architecture: [path to arch doc or "N/A (tiny task)"]
+
+## Files Modified
+- path/to/file.ts (created | modified)
+- path/to/file.test.ts (created | modified)
+
+## Test Results
+- Framework: [detected test runner]
+- Passed: [N]/[N]
+- Coverage: [XX% or "not measured"]
+
+## Tasks Completed
+1. [Task name] — [model used] — PASS
+2. [Task name] — [model used] — PASS
+
+## Architecture Deviations
+[None | list of deviations with the user's approval rationale]
+
+## User Decisions
+[Decisions made during the build that are NOT captured in the architecture doc]
+```
+
+**Required fields:** `commit_sha`, `tree_hash`, `Files Modified`, `Test Results`, `Architecture Deviations`, `User Decisions`
+
+**Critical:** The `Architecture Deviations` and `User Decisions` sections capture verbal context that would otherwise be lost when post-build phases run as isolated subagents. If a deviation was user-approved during the build, the reviewer must respect it.
 
 ---
 

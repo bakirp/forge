@@ -144,5 +144,12 @@ FORGE /architect — Decisions stored to memory bank:
 - Every API must have defined error cases
 - If the user says "just build it", push back once — then comply if they insist
 
+### Telemetry
+After the architecture doc is locked, log the phase transition:
+```bash
+bash scripts/telemetry.sh architect completed
+bash scripts/telemetry.sh phase-transition architect
+```
+
 ### Error Handling
 If memory recall fails or returns no results: proceed without memory context and note "No prior decisions found." If codebase scanning fails: ask the user to narrow the scope. Never produce an architecture doc based on assumptions when evidence is unavailable.

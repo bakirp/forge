@@ -98,7 +98,7 @@ fi
 #    Known project-local artifact dirs: architecture, verify, review, debug, runs
 #    Paths under ~/.forge/ (retros, memory.jsonl) are user-home paths, not project artifacts.
 
-KNOWN_PATHS="architecture|verify|review|debug|runs|browse|brainstorm|design|benchmark|releases|worktrees|deploy|autopilot|context"
+KNOWN_PATHS="architecture|verify|review|debug|runs|browse|brainstorm|design|benchmark|releases|worktrees|deploy|autopilot|context|build"
 
 all_clean=true
 while IFS= read -r skill_file; do

@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.8.0 — 2026-04-08
+
+Skill handover optimization: phase isolation, build report handoff artifact, phase-transition telemetry, and 4 new subagent definitions.
+
+### Phase Isolation — Isolated Subagents for Post-Build Phases
+- **`/review`, `/verify`, `/ship`** can now run as isolated foreground subagents with fresh context, eliminating self-evaluation bias and context rot from accumulated build tool I/O
+- New subagent definitions: `forge-reviewer`, `forge-verifier`, `forge-shipper`, `forge-builder` in `agents/`
+- All skills gain **Step 0: Context Detection** — detects whether running as an isolated subagent or inline, and loads artifacts from disk accordingly
+- `/think` and `/autopilot` updated to spawn post-build phases as isolated subagents with user confirmation gates
+- `/build` supports conditional isolation: subagent mode for < 3 tasks, inline for 3+ tasks (needs to spawn its own worktree subagents)
+
+### Build Report — Structured Handoff Artifact
+- New **Step 6.5** in `/build` writes `.forge/build/report.md` with commit SHA, files modified, test results, architecture deviations, and user decisions
+- Enables downstream phases to operate independently without prior conversation context
+- `User Decisions` section captures verbal constraints that would otherwise be lost during context isolation
+
+### Phase-Transition Telemetry
+- New `phase-transition` command in `scripts/telemetry.sh` tracks context metrics (token estimates, tool call counts, artifact sizes) at each skill boundary
+- All 6 core skills now log phase transitions for data-driven optimization via `/evolve`
+
+### Testing
+- New `tests/test-handover.sh` with 53 tests covering agent definitions, model assignments, tool restrictions, Step 0 context detection, build report, phase-transition telemetry, and cross-artifact consistency
+- Updated `tests/test-artifacts.sh` to include `.forge/build/` in known artifact paths
+
+---
+
 ## v2.7.0 — 2026-04-07
 
 Adopted patterns from mattpocock/skills: vertical slices, mocking discipline, post-TDD refactoring, and plan stress-testing.
@@ -278,7 +304,7 @@ First public release. All 7 core skills implemented.
 
 - **/think** — Adaptive entry point. Classifies tasks as tiny/feature/epic and routes to the right workflow depth. Epic tasks spawn Agent Teams with product, architecture, and security agents.
 - **/architect** — Locks architecture before build. Queries memory bank for past decisions, produces structured architecture doc with data flow, API contracts, edge cases, and test strategy.
-- **/build** — TDD-enforced implementation. Failing tests before code, 2-stage review (spec compliance + code quality), subagent execution in isolated worktrees, smart model routing (Haiku/Sonnet/Opus), token budget warnings.
+- **/build** — TDD-enforced implementation. Failing tests before code, 2-stage review (spec compliance + code quality), subagent execution in isolated worktrees, smart model routing, token budget warnings.
 - **/verify** — Cross-platform QA. Auto-detects project domain (web/API/pipeline). Playwright for browser testing, contract validation for APIs, output diffing for pipelines. Produces pass/fail report.
 - **/ship** — Security audit + PR creation. OWASP Top 10 and STRIDE threat model checks. Auto-fixes critical issues. Creates PR with release summary. Blocks on /verify failures.
 - **/memory** — Cross-project decision memory (remember/recall/forget). JSONL storage at ~/.forge/memory.jsonl. Keyword + tag matching for recall. Auto-prune for stale entries.

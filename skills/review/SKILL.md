@@ -20,6 +20,22 @@ If argument starts with "response", or user says "fix review comments", "address
 
 You review what `/build` produced before `/verify` runs. You never modify code — you observe, judge, and report. Your review report is consumed by `/ship`, so the format matters.
 
+## Step 0: Context Detection (Isolated vs. Inline)
+
+Detect whether you are running as an isolated subagent or inline in the main session:
+
+**If running as a subagent** (no prior conversation history, spawned by `forge-reviewer` agent):
+- Load the build report: `cat .forge/build/report.md`
+- Load the architecture doc from `.forge/architecture/*.md`
+- Run `git diff` to see all changes
+- These are your ONLY inputs — you have fresh eyes, which is an advantage
+- Respect any "Architecture Deviations" and "User Decisions" listed in the build report — these were approved during the build
+- Skip to Step 1 (no routing needed — you are running a full review)
+
+**If running inline** (in the main session with prior conversation context):
+- Proceed normally through Routing and Step 1 below
+- You benefit from conversation context but may carry self-evaluation bias from the build phase
+
 ## Routing
 
 If `$ARGUMENTS` starts with a sub-command, delegate:
@@ -177,7 +193,7 @@ This change is [large | security-critical]. A second-opinion review from a diffe
 Request cross-model review? (y/n)
 ```
 
-If approved, spawn a subagent with `model: "sonnet"` (if the primary review ran on Opus) or `model: "opus"` (if primary ran on Sonnet):
+If approved, spawn a subagent with a different model for perspective diversity:
 
 ```
 You are a FORGE cross-model reviewer. Review this code independently:
@@ -307,9 +323,10 @@ Report: .forge/review/report.md
 - **Cross-model review is optional** — only recommended for large or security-critical changes, never forced
 
 ### Telemetry
-After writing the review report, log the invocation:
+After writing the review report, log the invocation and phase transition:
 ```bash
 bash scripts/telemetry.sh review completed
+bash scripts/telemetry.sh phase-transition review
 ```
 
 ### Error Handling

@@ -9,6 +9,22 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 You execute the locked architecture doc produced by `/architect`. No freestyling — the architecture is the contract.
 
+## Step 0: Execution Mode Detection
+
+`/build` supports two execution modes based on task count:
+
+- **Inline mode** (default): Runs in the main session. Required when spawning worktree subagents for 3+ independent tasks (subagents cannot spawn other subagents).
+- **Subagent mode**: Can run as a subagent when there are fewer than 3 tasks (no nesting needed). The orchestrator decides based on the architecture doc's task count.
+
+If running as a subagent:
+- Load the architecture doc from `.forge/architecture/*.md`
+- You have no prior conversation history — use the architecture doc and `$ARGUMENTS` as your full context
+- You cannot spawn worktree subagents — execute all tasks sequentially in Step 4 (TDD Loop)
+- Skip Step 5 (Subagent Execution) entirely
+
+If running inline:
+- Proceed normally through all steps
+
 ## Step 1: Load Architecture Doc
 
 Find and read the architecture doc:
@@ -45,7 +61,7 @@ If projected total > the configured token_budget (.forge/config.json, default: 4
 FORGE /build — Token budget warning
 
 Projected: ~[N] tokens across [count] tasks
-Recommendation: Route simple tasks to Haiku, complex to Opus
+Recommendation: All tasks use Opus by default. Model routing available for future cost optimization.
 
 Proceed? (y/n, or 'route' to see per-task model suggestions)
 ```
@@ -68,7 +84,7 @@ Present the plan with section identifiers for context pruning:
 FORGE /build — Implementation plan
 
 [N] tasks from architecture doc:
-  1. [task] — [model: haiku|sonnet|opus] — sections: [API Contracts::functionName, Edge Cases::1,3, Test Strategy::unit]
+  1. [task] — [model: opus] — sections: [API Contracts::functionName, Edge Cases::1,3, Test Strategy::unit]
   2. [task] — [model: ...] — sections: [Component Boundaries::ServiceName, Edge Cases::2,4]
   ...
 
@@ -80,9 +96,8 @@ The `sections:` field identifies which architecture doc sections are relevant to
 ### Model Routing
 
 Assign models based on task complexity — use the fastest capable model for simple work:
-- **Fast model** (e.g., Haiku): Config files, boilerplate, simple CRUD, type definitions, straightforward tests
-- **Balanced model** (e.g., Sonnet): Standard features, API endpoints, moderate logic, integration tests
-- **Most capable model** (e.g., Opus): Complex algorithms, security-critical code, architectural decisions, edge cases
+- **Default model** (Opus): All tasks use Opus for maximum quality
+- Model routing to cheaper models is available for future cost optimization
 
 Model routing is advisory, not mandatory. If the preferred model is unavailable, use whatever model IS available and log the fallback. Never skip a task because a preferred model isn't available.
 
@@ -333,8 +348,54 @@ Tests: [total passing] / [total written]
 Files created: [list]
 Files modified: [list]
 
-Ready for /verify.
+Ready for /review.
 ```
+
+## Step 6.5: Write Build Report (Handoff Artifact)
+
+After final verification passes, write a structured build report that downstream phases (`/review`, `/verify`, `/ship`) can consume independently — even if running as isolated subagents with no prior conversation context.
+
+```bash
+mkdir -p .forge/build
+git rev-parse HEAD
+git rev-parse HEAD^{tree}
+```
+
+Write to `.forge/build/report.md`:
+
+```markdown
+# FORGE Build Report
+
+## commit_sha: [output of git rev-parse HEAD]
+## tree_hash: [output of git rev-parse HEAD^{tree}]
+## Date: [YYYY-MM-DD HH:MM]
+## Classification: [tiny | feature | epic]
+## Architecture: [path to arch doc or "N/A (tiny task)"]
+
+## Files Modified
+- path/to/file.ts (created | modified)
+- path/to/file.test.ts (created | modified)
+
+## Test Results
+- Framework: [detected test runner]
+- Passed: [N]/[N]
+- Coverage: [XX% or "not measured"]
+
+## Tasks Completed
+1. [Task name] — [model used] — PASS
+2. [Task name] — [model used] — PASS
+
+## Architecture Deviations
+[None | list of deviations with the user's approval rationale]
+
+## User Decisions
+[Decisions made during the build that are NOT captured in the architecture doc.
+These include verbal constraints, preference overrides, and runtime choices.
+Example: "User chose PostgreSQL over SQLite based on production requirements"
+Example: "User approved skipping edge case #3 — deferred to next sprint"]
+```
+
+This report is the primary handoff artifact for isolated post-build phases. Include every decision that would otherwise be lost if the conversation context were discarded.
 
 Update the run manifest:
 ```bash
@@ -354,9 +415,10 @@ scripts/manifest.sh status "$(cat .forge/runs/latest)" completed
 - **Evidence before claims** — after running any test command, your response MUST include: (1) the exact command run, (2) the terminal output (last 30 lines minimum), (3) the exit code or pass/fail summary line. Do NOT write "Tests: N/N passing" — show the actual runner output. If a command failed to run or timed out, state that explicitly.
 
 ### Telemetry
-After the build completes (or fails), log the invocation:
+After the build completes (or fails), log the invocation and phase transition:
 ```bash
 bash scripts/telemetry.sh build [completed|error]
+bash scripts/telemetry.sh phase-transition build
 ```
 
 ### Error Handling

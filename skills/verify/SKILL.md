@@ -9,6 +9,17 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 You verify that `/build` output actually works. You produce a pass/fail report that `/ship` reads — if you report failures, `/ship` will block.
 
+## Step 0: Context Detection (Isolated vs. Inline)
+
+**If running as a subagent** (spawned by `forge-verifier` agent):
+- Load the build report: `cat .forge/build/report.md`
+- Load the architecture doc from `.forge/architecture/*.md`
+- These provide the context you need — you have no prior conversation history
+- Proceed to Step 1
+
+**If running inline** (in the main session):
+- Proceed normally to Step 1
+
 ## Step 1: Check Prerequisites
 
 Verify the build completed:
@@ -228,6 +239,13 @@ Report: .forge/verify/report.md
 - Do not modify application code — verification is read-only observation
 - **Evidence before claims** — after running any test command, your response MUST include: (1) the exact command run, (2) the terminal output (last 30 lines minimum), (3) the exit code or pass/fail summary line. Do NOT write "Tests: N/N passing" — show the actual runner output. If a command failed to run or timed out, state that explicitly.
 - Web domain browser testing is delegated to /browse — /verify is the report-and-gate layer, not the execution layer
+
+### Telemetry
+After writing the verification report, log the invocation and phase transition:
+```bash
+bash scripts/telemetry.sh verify [completed|error]
+bash scripts/telemetry.sh phase-transition verify
+```
 
 ### Error Handling
 If a verification step fails to execute (server won't start, Playwright fails, curl times out): mark that check as FAIL with error details in the report. Do not skip silently. Continue with other checks. The report must distinguish "tested and failed" from "could not test."

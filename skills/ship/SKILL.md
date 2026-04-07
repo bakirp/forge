@@ -9,6 +9,17 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 You are the final gate. Nothing ships without passing security review and verification.
 
+## Step 0: Context Detection (Isolated vs. Inline)
+
+**If running as a subagent** (spawned by `forge-shipper` agent):
+- Load the build report: `cat .forge/build/report.md` — for file manifest and change context
+- Load the architecture doc from `.forge/architecture/*.md` — for understanding what was built
+- You have no prior conversation history — this is by design for fresh security review
+- Proceed to Step 1
+
+**If running inline** (in the main session):
+- Proceed normally to Step 1
+
 ## Step 1: Read Verification Report
 
 ### Check Review Report
@@ -352,9 +363,10 @@ Run /document-release to sync docs with this release.
 - **Suggest /document-release** after shipping if docs may be stale — don't auto-run it
 
 ### Telemetry
-After PR creation (or if blocked), log the invocation:
+After PR creation (or if blocked), log the invocation and phase transition:
 ```bash
 bash scripts/telemetry.sh ship [completed|blocked|error]
+bash scripts/telemetry.sh phase-transition ship
 ```
 
 ### Error Handling

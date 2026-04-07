@@ -73,12 +73,9 @@ Produces a locked architecture document that `/build` must follow exactly.
 
 Implements the architecture doc with strict TDD enforcement.
 
-**Token Budget**: Before spawning subagents, estimates token cost. Warns if projected >40k tokens. Suggests Haiku routing for simple tasks.
+**Token Budget**: Before spawning subagents, estimates token cost. Warns if projected >40k tokens.
 
-**Model Routing**:
-- **Haiku**: Config, boilerplate, simple CRUD, type definitions
-- **Sonnet**: Standard features, API endpoints, integration tests
-- **Opus**: Complex algorithms, security-critical code, edge cases
+**Model Routing**: All tasks use Opus by default. Model routing to cheaper models is available for future cost optimization.
 
 **TDD Loop** (per task):
 1. Write failing tests first — tests MUST fail. **Mocking discipline**: mock only at system boundaries (external APIs, databases, time, filesystem). Never mock internal collaborators or your own classes.
@@ -97,6 +94,10 @@ Implements the architecture doc with strict TDD enforcement.
 **Final Verification**: Two-stage gate before declaring done. Stage 1: architecture compliance check (BLOCK merge on failure). Stage 2: full test suite (BLOCK merge on failure). Passing tests alone is not sufficient — both stages must pass.
 
 **Task Ordering**: Prefers vertical slices — each task delivers one user-visible behavior end-to-end (data model + logic + route + tests) rather than horizontal layers. Shared foundations are built first only when multiple slices depend on them.
+
+**Build Report (Handoff Artifact)**: After final verification, writes `.forge/build/report.md` with commit SHA, files modified, test results, architecture deviations, and user decisions. This structured artifact enables post-build phases to run as isolated subagents with no prior conversation context.
+
+**Phase Isolation**: For < 3 tasks, `/build` can run as an isolated subagent (`forge-builder` agent). For 3+ tasks, it runs inline in the main session (needs to spawn worktree subagents). When running as a subagent, Step 5 (Subagent Execution) is skipped — all tasks execute sequentially.
 
 **Rules**: Architecture doc is law. Tests must fail before implementation. Mock only at system boundaries. Never skips review. Reports progress per task.
 
@@ -172,6 +173,8 @@ Code review gate between `/build` and `/verify`. Checks spec compliance, code qu
 - **PASS**: Only minor issues or suggestions. Ready for `/verify`.
 - **NEEDS_CHANGES**: Major issues found. Fix and re-run `/review`.
 - **FAIL**: Critical issues or fundamental problems. May need `/architect` revisit. Coverage below threshold or untested condition paths = automatic FAIL.
+
+**Phase Isolation**: Can run as an isolated foreground subagent (`forge-reviewer` agent) for fresh-context review. When isolated, reads `.forge/build/report.md` and `.forge/architecture/*.md` from disk — no prior conversation context. This eliminates self-evaluation bias from the build phase.
 
 **Rules**: Critical issues = automatic FAIL. Coverage below threshold = critical. Untested condition path = critical. Duplicate tests = major. Never modifies code. Report must be machine-parseable by `/ship`.
 

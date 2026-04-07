@@ -97,17 +97,40 @@ Wait for user confirmation. If they disagree, reclassify immediately.
 
 ## Step 5: Route
 
+### Model Routing
+
+Each phase uses the optimal model for its task. When spawning phases as subagents or recommending models, use this routing table:
+
+| Phase | Model | Rationale |
+|-------|-------|-----------|
+| `/think` | Opus | Classification and routing |
+| `/architect` | Opus | Deep reasoning on architectural decisions, trade-offs |
+| `/build` | Opus | TDD implementation (per-task routing available in Step 3) |
+| `/review` | Opus | Judgment + fresh perspective via context isolation |
+| `/verify` | Opus | Verification and QA |
+| `/ship` | Opus | Security audit + PR creation |
+
+> **Note:** All phases use Opus by default. Model routing to cheaper models is available for future cost optimization.
+
+Model routing is advisory — if the preferred model is unavailable, use whatever IS available.
+
 ### TINY → Direct Build
 - Skip /architect entirely
-- Invoke `/build` with the task description — /build will detect the tiny classification and skip the architecture doc requirement
+- Since tiny tasks have 1-2 implementation tasks, spawn `/build` as an isolated subagent using `forge-builder` (no nesting needed)
 - /build still enforces TDD and the 2-stage review, even for tiny tasks
-- **Auto mode**: after `/build` completes, auto-invoke `/review` → `/verify`
+- **Auto mode**: after `/build` completes, spawn `/review` as an isolated subagent for fresh-context review, then `/verify` → `/ship`
+  - Before spawning each post-build subagent, confirm: "FORGE: Spawn isolated [phase] agent? (y/n)"
+  - If user declines, invoke the skill inline instead
 
 ### FEATURE → /architect first
-- Invoke `/architect $ARGUMENTS`
+- Invoke `/architect $ARGUMENTS` (model: opus)
 - /architect produces a locked architecture doc
-- Then proceed to build
-- **Auto mode**: auto-chain `/architect` → `/build` → `/review` → `/verify`. At each gate, show a brief status and ask "Continue to /[next]? (y/n)" — proceed on confirmation, stop on decline.
+- Then proceed to build:
+  - **< 3 implementation tasks**: spawn `/build` as isolated subagent using `forge-builder` (no nesting needed)
+  - **3+ implementation tasks**: invoke `/build` inline in the main session (needs to spawn worktree subagents)
+- **Auto mode**: auto-chain `/architect` → `/build` → `/review` → `/verify` → `/ship`. At each gate, show a brief status and ask "Continue to /[next]? (y/n)" — proceed on confirmation, stop on decline.
+  - Post-build phases (`/review`, `/verify`, `/ship`) should be spawned as isolated foreground subagents for fresh-context execution (see Phase Isolation below)
+  - Before each subagent spawn, confirm with the user
 
 ### EPIC → Agent Teams with Roles
 
@@ -128,10 +151,38 @@ After all agents complete, merge their outputs into a unified architecture doc a
 - If signals are ambiguous between two skills, do NOT default to the simpler option — present the ambiguity to the user with concrete options
 - If a routed skill fails or the user aborts, return control to /think — do not retry automatically without user confirmation
 
+### Phase Isolation (Post-Build Phases)
+
+After `/build` completes, the post-build phases (`/review`, `/verify`, `/ship`) benefit from running as isolated foreground subagents. This provides:
+- **Fresh context** — eliminates context rot from accumulated build tool I/O
+- **Self-evaluation bias prevention** — a different model reviewing with no memory of generating the code
+- **Cost reduction** — each subagent starts with ~15K tokens instead of 100K+ accumulated context
+
+When in auto mode, spawn post-build phases as foreground subagents using the Agent tool:
+
+```
+Agent spawn for /review:
+  - model: opus
+  - skills: [forge:review]
+  - tools: Read, Grep, Glob, Bash
+  - Prompt: "Run FORGE /review. Your inputs are on disk:
+    - Architecture doc: .forge/architecture/*.md
+    - Build report: .forge/build/report.md
+    - Code changes: run git diff
+    Follow the /review skill instructions exactly."
+```
+
+The user must confirm before each subagent spawn. If they decline, invoke the skill inline instead.
+
+**Before spawning `/ship`**: Collect the user's version bump preference (patch/minor/major/skip), PR type (regular/--draft/--canary), and any --skip-security flag. Pass these in the subagent prompt so the shipper doesn't need to ask.
+
+**Exception**: `/build` runs in the main session when it has 3+ tasks (needs to spawn worktree subagents). For < 3 tasks, it can run as a `forge-builder` subagent.
+
 ### Telemetry
-After routing, log the invocation:
+After routing, log the invocation with context metrics:
 ```bash
 bash scripts/telemetry.sh think completed [tiny|feature|epic]
+bash scripts/telemetry.sh phase-transition think
 ```
 If the user aborts or overrides, log with outcome `aborted`.
 
