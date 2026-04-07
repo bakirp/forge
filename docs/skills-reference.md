@@ -81,13 +81,14 @@ Implements the architecture doc with strict TDD enforcement.
 - **Opus**: Complex algorithms, security-critical code, edge cases
 
 **TDD Loop** (per task):
-1. Write failing tests first — tests MUST fail
+1. Write failing tests first — tests MUST fail. **Mocking discipline**: mock only at system boundaries (external APIs, databases, time, filesystem). Never mock internal collaborators or your own classes.
 2. **Path Coverage Protocol**: Enumerates condition paths via `quality-gate.sh path-map`, writes exactly one test per path. For code modifications, `path-diff` classifies paths as ADD_TEST/MODIFY_TEST/REMOVE_TEST
 3. **Reusability Search**: Searches for existing functions via `quality-gate.sh reusability-search` before implementing
 4. Implement minimum code to pass
 5. Run tests — all must pass
-6. **Coverage Gate**: Enforces configured threshold via `quality-gate.sh coverage`
-7. 2-stage review: spec compliance, then code quality
+6. **Quick Refactor**: Brief pass to extract duplication, simplify overly complex logic. Verify tests still pass. 60-second timebox — larger refactors are left for `/review`.
+7. **Coverage Gate**: Enforces configured threshold via `quality-gate.sh coverage`
+8. 2-stage review: spec compliance, then code quality
 
 **Test Framework Detection**: Delegates to `scripts/quality-gate.sh detect-runner` supporting 15+ frameworks (Jest, Vitest, Mocha, Cypress, Playwright, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test, Bun). Config override via `.forge/config.json` `test_command`.
 
@@ -95,7 +96,9 @@ Implements the architecture doc with strict TDD enforcement.
 
 **Final Verification**: Two-stage gate before declaring done. Stage 1: architecture compliance check (BLOCK merge on failure). Stage 2: full test suite (BLOCK merge on failure). Passing tests alone is not sufficient — both stages must pass.
 
-**Rules**: Architecture doc is law. Tests must fail before implementation. Never skips review. Reports progress per task.
+**Task Ordering**: Prefers vertical slices — each task delivers one user-visible behavior end-to-end (data model + logic + route + tests) rather than horizontal layers. Shared foundations are built first only when multiple slices depend on them.
+
+**Rules**: Architecture doc is law. Tests must fail before implementation. Mock only at system boundaries. Never skips review. Reports progress per task.
 
 ---
 
@@ -274,11 +277,11 @@ Reads retrospective data and rewrites FORGE skills to improve them.
 ## /brainstorm — Ideation Before Architecture
 
 **Phase**: Ideation
-**Usage**: `/brainstorm [task description]`
+**Usage**: `/brainstorm [task description]` or `/brainstorm --grill [plan description]`
 
-Generates 3-5 alternative approaches before committing to architecture. Invoked by `/think` when a task has ambiguous solution paths, or directly by the user.
+Generates 3-5 alternative approaches before committing to architecture. Invoked by `/think` when a task has ambiguous solution paths, or directly by the user. With `--grill`, stress-tests an existing plan instead of generating new approaches.
 
-**Steps**:
+**Normal Mode** (default):
 0. **Problem-framing** — asks 5 forcing questions: Who benefits? What if we don't build this? What does success look like? Simplest version? Solving a symptom? Respects "just build it" override.
 1. Analyzes the task and existing codebase for constraints
 2. Generates 3-5 distinct approaches with trade-offs
@@ -286,9 +289,12 @@ Generates 3-5 alternative approaches before committing to architecture. Invoked 
 4. Recommends one approach with rationale
 5. Produces artifact for `/architect` to consume
 
-**Output**: Brainstorm doc at `.forge/brainstorm/[task-name].md`.
+**Grill Mode** (`--grill`):
+Replaces approach generation with decision-tree interrogation of an existing plan. Asks one question at a time, provides a recommended answer with each, and self-resolves questions answerable from the codebase. Walks through: scope boundaries, assumptions, failure modes, integration points, missing pieces, ordering risks. Capped at 10 questions by default (extendable on request). Produces a grill artifact with confirmed decisions, identified risks, plan changes, and open questions.
 
-**Rules**: Never commits to a single approach without showing alternatives. Each approach must have clear trade-offs. Recommended approach must cite evidence from the codebase.
+**Output**: Brainstorm doc at `.forge/brainstorm/[task-name].md` (both modes).
+
+**Rules**: Never commits to a single approach without showing alternatives (normal mode). Each approach must have clear trade-offs. Recommended approach must cite evidence from the codebase. In grill mode, always provide a recommended answer with every question.
 
 ---
 

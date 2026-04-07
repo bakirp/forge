@@ -4,19 +4,7 @@ set -euo pipefail
 # FORGE test: artifact contract consistency
 # Run from project root: bash tests/test-artifacts.sh
 
-RED='\033[0;31m'
-GRN='\033[0;32m'
-YEL='\033[0;33m'
-RST='\033[0m'
-
-FAILS=0
-SKIPS=0
-
-pass() { printf "${GRN}PASS${RST}: %s\n" "$1"; }
-fail() { printf "${RED}FAIL${RST}: %s\n" "$1"; FAILS=$((FAILS + 1)); }
-skip() { printf "${YEL}SKIP${RST}: %s\n" "$1"; SKIPS=$((SKIPS + 1)); }
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$(dirname "$0")/lib/test-helpers.sh"
 
 # Helper: check skill file exists, print SKIP if not
 require_skill() {
@@ -275,9 +263,4 @@ if require_skill verify; then
   fi
 fi
 
-# ── Summary ──
-
-echo ""
-echo "──────────────────────────────"
-printf "Failures: %d  Skipped: %d\n" "$FAILS" "$SKIPS"
-exit "$FAILS"
+print_test_summary

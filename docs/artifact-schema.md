@@ -430,6 +430,46 @@ blocked -> active      (blocker resolved)
 ## Rationale: [why this was chosen]
 ```
 
+### Brainstorm Artifact (Grill Mode)
+
+When `/brainstorm --grill` is used, the artifact format captures interrogation results instead of approaches:
+
+```markdown
+# FORGE Brainstorm (Grill): [Task Name]
+
+## Date: [ISO 8601 timestamp]
+## Mode: Grill
+## Plan: [1-2 sentence summary of the plan that was interrogated]
+
+## Decisions Confirmed
+- [Decision 1]: [what was confirmed and why]
+- [Decision 2]: [what was confirmed and why]
+
+## Risks Identified
+- [Risk 1]: [description and severity — low|medium|high]
+- [Risk 2]: [description and severity]
+
+## Plan Changes
+[List any changes the user agreed to during interrogation. If none: "No changes — plan validated as-is."]
+
+## Open Questions
+[Any questions that were not resolved. If none: "All questions resolved."]
+
+## Constraints Discovered
+- [any constraints surfaced during grilling]
+
+## Next: /architect
+```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| Mode | Yes | Always `Grill` for grill artifacts |
+| Plan | Yes | Summary of the interrogated plan |
+| Decisions Confirmed | Yes | At least one confirmed decision |
+| Risks Identified | Yes | Even if empty, state "No risks identified" |
+| Plan Changes | Yes | Even if empty, state "No changes" |
+| Open Questions | Yes | Even if empty, state "All questions resolved" |
+
 ---
 
 ## Release Summary

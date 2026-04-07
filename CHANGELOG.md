@@ -1,5 +1,32 @@
 # Changelog
 
+## v2.7.0 — 2026-04-07
+
+Adopted patterns from mattpocock/skills: vertical slices, mocking discipline, post-TDD refactoring, and plan stress-testing.
+
+### `/build` — Vertical Slices, Mocking Discipline, Refactor Checkpoint
+- **Vertical slice ordering**: Step 3 now prefers implementing each user-visible behavior end-to-end (schema + logic + route + tests) over horizontal layer ordering. Shared foundations built first only when multiple slices depend on them. Explicit anti-pattern callout against "all models → all logic → all routes → all tests"
+- **Mocking discipline**: Step 4a adds boundary-only mocking guidance — mock external APIs, databases, time, filesystem only. Never mock internal collaborators. If a test requires mocking an internal module, that's a design signal to restructure
+- **Post-TDD refactor checkpoint**: New Step 4c.1 — brief 60-second refactor pass after tests go green. Extract duplication, simplify complex logic, verify tests still pass. Catches quality issues before `/review`
+
+### `/brainstorm` — Grill Mode (`--grill`)
+- New `--grill` flag for stress-testing existing plans instead of generating new approaches
+- Decision-tree interrogation: one question at a time, with recommended answers and codebase self-resolution
+- Interrogation categories: scope boundaries, assumptions, failure modes, integration points, missing pieces, ordering risks
+- 10-question default cap (extendable on request)
+- Produces grill artifact with confirmed decisions, identified risks, plan changes, and open questions
+- New trigger phrases: "grill my plan", "stress test this", "challenge this plan"
+
+### `/autopilot` — Memory Write Fix
+- Step 9 now uses `jq -n -c` for safe JSON construction instead of raw `echo` with string interpolation
+- Fixes contract violation with `/memory-remember` which explicitly prohibits raw `echo` (special characters produce invalid JSONL)
+- Adds `jq empty` validation of written lines
+
+### Documentation
+- Updated `docs/skills-reference.md`: `/brainstorm` grill mode, `/build` vertical slices + mocking + refactor step
+- Updated `docs/artifact-schema.md`: grill brainstorm artifact format and field rules
+- Updated `skills/forge/SKILL.md`: `/brainstorm` entry notes `--grill` flag
+
 ## v2.6.0 — 2026-04-07
 
 Quality gates: code reusability enforcement, test coverage thresholds, universal framework detection, and path coverage validation.

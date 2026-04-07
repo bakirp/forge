@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+source "$(dirname "$0")/lib/colors.sh"
+source "$(dirname "$0")/lib/json-helpers.sh"
 
 # --- detect-runner: expanded test framework detection ---
 # Usage: quality-gate.sh detect-runner [project-root]
@@ -9,17 +10,11 @@ cmd_detect_runner() {
   local root="${1:-.}"
 
   # Priority 1: explicit config override
-  if [[ -f "$root/.forge/config.json" ]]; then
-    local tc=""
-    if command -v jq &>/dev/null; then
-      tc=$(jq -r '.test_command // empty' "$root/.forge/config.json" 2>/dev/null)
-    else
-      tc=$(python3 -c "import json; d=json.load(open('$root/.forge/config.json')); print(d.get('test_command',''))" 2>/dev/null || true)
-    fi
-    if [[ -n "$tc" ]]; then
-      echo "$tc"
-      return 0
-    fi
+  local tc=""
+  tc=$(read_forge_config "$root" "test_command" 2>/dev/null || true)
+  if [[ -n "$tc" ]]; then
+    echo "$tc"
+    return 0
   fi
 
   # Priority 2: package.json scripts.test
@@ -50,14 +45,7 @@ cmd_detect_runner() {
   fi
   if [[ -f "$root/package.json" ]]; then
     local deps=""
-    if command -v jq &>/dev/null; then
-      deps=$(jq -r '(.dependencies // {}) + (.devDependencies // {}) | keys[]' "$root/package.json" 2>/dev/null || true)
-    else
-      deps=$(python3 -c "
-import json; d=json.load(open('$root/package.json'))
-m=dict(d.get('dependencies',{})); m.update(d.get('devDependencies',{}))
-for k in m: print(k)" 2>/dev/null || true)
-    fi
+    deps=$(get_package_deps "$root")
     if echo "$deps" | grep -q '^jest$'; then
       echo "npx jest"; return 0
     fi
@@ -138,17 +126,11 @@ cmd_detect_coverage() {
   local root="${1:-.}"
 
   # Config override
-  if [[ -f "$root/.forge/config.json" ]]; then
-    local cc=""
-    if command -v jq &>/dev/null; then
-      cc=$(jq -r '.coverage_command // empty' "$root/.forge/config.json" 2>/dev/null)
-    else
-      cc=$(python3 -c "import json; d=json.load(open('$root/.forge/config.json')); print(d.get('coverage_command',''))" 2>/dev/null || true)
-    fi
-    if [[ -n "$cc" ]]; then
-      echo "$cc"
-      return 0
-    fi
+  local cc=""
+  cc=$(read_forge_config "$root" "coverage_command" 2>/dev/null || true)
+  if [[ -n "$cc" ]]; then
+    echo "$cc"
+    return 0
   fi
 
   local test_cmd
@@ -157,14 +139,7 @@ cmd_detect_coverage() {
   # JS/TS ecosystem
   if [[ -f "$root/package.json" ]]; then
     local deps=""
-    if command -v jq &>/dev/null; then
-      deps=$(jq -r '(.dependencies // {}) + (.devDependencies // {}) | keys[]' "$root/package.json" 2>/dev/null || true)
-    else
-      deps=$(python3 -c "
-import json; d=json.load(open('$root/package.json'))
-m=dict(d.get('dependencies',{})); m.update(d.get('devDependencies',{}))
-for k in m: print(k)" 2>/dev/null || true)
-    fi
+    deps=$(get_package_deps "$root")
 
     if ls "$root"/vitest.config.* &>/dev/null 2>&1; then
       echo "npx vitest run --coverage"; return 0
@@ -264,12 +239,8 @@ cmd_coverage() {
   done
 
   # Read threshold from config if not provided via flag
-  if [[ -z "$threshold" ]] && [[ -f "$root/.forge/config.json" ]]; then
-    if command -v jq &>/dev/null; then
-      threshold=$(jq -r '.coverage_threshold // empty' "$root/.forge/config.json" 2>/dev/null)
-    else
-      threshold=$(python3 -c "import json; d=json.load(open('$root/.forge/config.json')); print(d.get('coverage_threshold',''))" 2>/dev/null || true)
-    fi
+  if [[ -z "$threshold" ]]; then
+    threshold=$(read_forge_config "$root" "coverage_threshold" 2>/dev/null || true)
   fi
 
   local cov_cmd
@@ -390,52 +361,63 @@ cmd_dry_check() {
 
   echo "--- DRY Check (minimum ${block_size}-line duplicate blocks) ---"
 
+  # Phase 1: Build a hash index of all blocks across all input files.
+  # Each entry maps hash -> "filepath:line_num". Duplicates share a hash.
+  local hash_index
+  hash_index=$(mktemp)
+  trap "rm -f '$hash_index'" RETURN
+
   for file in "$@"; do
     [[ -f "$root/$file" ]] || [[ -f "$file" ]] || continue
     local filepath="$file"
     [[ -f "$root/$file" ]] && filepath="$root/$file"
 
-    # Extract consecutive line blocks and hash them
     local total_lines
     total_lines=$(wc -l < "$filepath" 2>/dev/null || echo 0)
+    [[ "$total_lines" -lt "$block_size" ]] && continue
 
-    if [[ "$total_lines" -lt "$block_size" ]]; then
-      continue
-    fi
-
-    # Generate fingerprints for each block of N consecutive lines
+    # Use overlapping windows (step=1) for thorough detection
     local line_num=1
     while [[ $line_num -le $((total_lines - block_size + 1)) ]]; do
       local block
       block=$(sed -n "${line_num},$((line_num + block_size - 1))p" "$filepath" | sed 's/^[[:space:]]*//' | grep -v '^$' | grep -v '^[[:space:]]*$')
 
-      # Skip blocks that are mostly empty or trivial
       local non_empty
       non_empty=$(echo "$block" | grep -c '[^[:space:]]' || true)
       if [[ "$non_empty" -ge 3 ]]; then
         local hash
         hash=$(echo "$block" | shasum | cut -d' ' -f1)
-
-        # Search for this block in other project files
-        local other_files
-        other_files=$(grep -rlF "$(echo "$block" | head -1)" "$root" \
-          --include="*.js" --include="*.ts" --include="*.py" --include="*.go" \
-          --include="*.rs" --include="*.java" --include="*.kt" --include="*.rb" \
-          --include="*.php" --include="*.cs" \
-          2>/dev/null | grep -v "$filepath" | head -3 || true)
-
-        if [[ -n "$other_files" ]]; then
-          echo "DUPLICATE|$filepath:$line_num|block_hash=$hash"
-          echo "  First line: $(echo "$block" | head -1)"
-          echo "  Also found in:"
-          echo "$other_files" | while read -r f; do echo "    - $f"; done
-          duplicates_found=$((duplicates_found + 1))
-        fi
+        printf '%s|%s:%s\n' "$hash" "$filepath" "$line_num" >> "$hash_index"
       fi
 
-      line_num=$((line_num + block_size))
+      line_num=$((line_num + 1))
     done
   done
+
+  # Phase 2: Find hashes that appear in multiple distinct files
+  local prev_hash="" prev_file="" prev_loc="" is_dup=false
+  while IFS='|' read -r hash loc; do
+    local cur_file="${loc%%:*}"
+
+    if [[ "$hash" == "$prev_hash" && "$cur_file" != "$prev_file" ]]; then
+      if ! $is_dup; then
+        local first_line
+        first_line=$(sed -n "${prev_loc##*:}p" "$prev_file" 2>/dev/null | sed 's/^[[:space:]]*//')
+        echo "DUPLICATE|${prev_loc}|block_hash=$hash"
+        echo "  First line: $first_line"
+        echo "  Also found in:"
+        is_dup=true
+      fi
+      echo "    - $loc"
+      duplicates_found=$((duplicates_found + 1))
+    else
+      is_dup=false
+    fi
+
+    prev_hash="$hash"
+    prev_file="$cur_file"
+    prev_loc="$loc"
+  done < <(sort "$hash_index")
 
   if [[ $duplicates_found -gt 0 ]]; then
     echo -e "${YELLOW}WARN${NC} Found $duplicates_found potential duplicate block(s)" >&2
@@ -484,106 +466,131 @@ cmd_path_map() {
     base=$(basename "$filepath" | sed 's/\.[^.]*$//')
 
     local path_counter=0
-    local in_block=0
+    local in_multiline_comment=false
     local func_name="global"
     local line_num=0
+
+    # Function/method detection patterns (constants, declared outside loop)
+    local _re_js_func='^(export[[:space:]]+)?(async[[:space:]]+)?function[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*)'
+    local _re_js_const='^(export[[:space:]]+)?(const|let|var)[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*='
+    local _re_js_method='^([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*\('
+    local _re_go_func='^func[[:space:]]+([(][^)]+[)][[:space:]]+)?([a-zA-Z_][a-zA-Z0-9_]*)'
+    local _re_access='^(public|private|protected)[[:space:]]+.*[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*)[[:space:]]*[(]'
+    local _re_php_func='^(public|private|protected)?[[:space:]]*(static[[:space:]]+)?function[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*)'
+
+    # Branching construct detection patterns
+    local _re_if='^(if|[}] else if|elif|elsif|else if)[[:space:](]'
+    local _re_else='^([}][[:space:]]*)?(else)[[:space:]:}{]*$'
+    local _re_loop='^(for|while|do|loop|until)[[:space:](]'
+    local _re_catch='^([}]?[[:space:]]*)?(catch|except|rescue)[[:space:](]'
+    local _re_guard='^[[:space:]]*(if|unless).*[[:space:]](return|throw|raise|panic|exit)'
+    local _re_ternary='[?][[:space:]]*[^?]+:'
+    local _re_type_annot='^[[:space:]]*(type|interface)[[:space:]]'
 
     while IFS= read -r line; do
       line_num=$((line_num + 1))
 
-      # Skip comments and empty lines
-      local trimmed
-      trimmed=$(echo "$line" | sed 's/^[[:space:]]*//')
+      local trimmed="${line#"${line%%[![:space:]]*}"}"
       [[ -z "$trimmed" ]] && continue
+
+      # Track multi-line comments (/* ... */)
+      if $in_multiline_comment; then
+        [[ "$trimmed" == *"*/"* ]] && in_multiline_comment=false
+        continue
+      fi
+      if [[ "$trimmed" == "/*"* ]]; then
+        [[ "$trimmed" != *"*/"* ]] && in_multiline_comment=true
+        continue
+      fi
+
+      # Skip single-line comments
       [[ "$trimmed" == "//"* ]] && continue
       [[ "$trimmed" == "#"* && "$lang" != "csharp" ]] && continue
-      [[ "$trimmed" == "/*"* ]] && continue
       [[ "$trimmed" == "*"* ]] && continue
 
-      # Track current function/method name
-      local new_func=""
+      # Track current function/method name using bash pattern matching
       case "$lang" in
         js)
-          new_func=$(echo "$trimmed" | grep -oE '(function\s+\w+|const\s+\w+\s*=\s*(async\s+)?\(|(\w+)\s*\(.*\)\s*\{)' | head -1 | grep -oE '\w+' | head -1 || true)
+          if [[ "$trimmed" =~ $_re_js_func ]]; then
+            func_name="${BASH_REMATCH[3]}"
+          elif [[ "$trimmed" =~ $_re_js_const ]]; then
+            func_name="${BASH_REMATCH[3]}"
+          elif [[ "$trimmed" =~ $_re_js_method ]]; then
+            func_name="${BASH_REMATCH[1]}"
+          fi
           ;;
         python)
-          new_func=$(echo "$trimmed" | grep -oE 'def\s+\w+' | sed 's/def //' || true)
+          [[ "$trimmed" =~ ^def[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*) ]] && func_name="${BASH_REMATCH[1]}"
           ;;
         go)
-          new_func=$(echo "$trimmed" | grep -oE 'func\s+(\(\w+\s+\*?\w+\)\s+)?\w+' | grep -oE '\w+$' || true)
+          [[ "$trimmed" =~ $_re_go_func ]] && func_name="${BASH_REMATCH[2]}"
           ;;
         rust)
-          new_func=$(echo "$trimmed" | grep -oE 'fn\s+\w+' | sed 's/fn //' || true)
+          [[ "$trimmed" =~ ^(pub[[:space:]]+)?fn[[:space:]]+([a-zA-Z_][a-zA-Z0-9_]*) ]] && func_name="${BASH_REMATCH[2]}"
           ;;
-        java)
-          new_func=$(echo "$trimmed" | grep -oE '(public|private|protected)\s+.*\s+\w+\s*\(' | grep -oE '\w+\s*\(' | sed 's/(//' || true)
+        java|csharp)
+          [[ "$trimmed" =~ $_re_access ]] && func_name="${BASH_REMATCH[2]}"
           ;;
         ruby)
-          new_func=$(echo "$trimmed" | grep -oE 'def\s+\w+' | sed 's/def //' || true)
+          [[ "$trimmed" =~ ^def[[:space:]]+([a-zA-Z_][a-zA-Z0-9_?!]*) ]] && func_name="${BASH_REMATCH[1]}"
           ;;
         php)
-          new_func=$(echo "$trimmed" | grep -oE 'function\s+\w+' | sed 's/function //' || true)
-          ;;
-        csharp)
-          new_func=$(echo "$trimmed" | grep -oE '(public|private|protected)\s+.*\s+\w+\s*\(' | grep -oE '\w+\s*\(' | sed 's/(//' || true)
+          [[ "$trimmed" =~ $_re_php_func ]] && func_name="${BASH_REMATCH[3]}"
           ;;
       esac
-      [[ -n "$new_func" ]] && func_name="$new_func"
 
       # Detect branching constructs
       local path_type="" path_desc=""
 
-      # if/else if/elif/elsif
-      if echo "$trimmed" | grep -qE '^(if|} else if|elif|elsif|else if)\b'; then
+      if [[ "$trimmed" =~ $_re_if ]]; then
         path_counter=$((path_counter + 1))
         path_type="if"
-        local condition
-        condition=$(echo "$trimmed" | sed 's/^[^(]*(//;s/)[^)]*$//;s/{$//' | head -c 60)
+        local condition="${trimmed:${#BASH_REMATCH[0]}}"
+        condition="${condition%%\{*}"
+        condition="${condition:0:60}"
         path_desc="${func_name} — if: ${condition}"
-      elif echo "$trimmed" | grep -qE '^(} else|else:?|else\b)'; then
+      elif [[ "$trimmed" =~ $_re_else ]]; then
         path_counter=$((path_counter + 1))
         path_type="else"
         path_desc="${func_name} — else branch"
-      # switch/case/match/when
-      elif echo "$trimmed" | grep -qE '^(switch|match)\b'; then
+      elif [[ "$trimmed" =~ ^(switch|match)[[:space:]] ]]; then
         path_counter=$((path_counter + 1))
         path_type="switch"
         path_desc="${func_name} — switch/match entry"
-      elif echo "$trimmed" | grep -qE '^(case|when)\b'; then
+      elif [[ "$trimmed" =~ ^(case|when)[[:space:]] ]]; then
         path_counter=$((path_counter + 1))
-        local case_val
-        case_val=$(echo "$trimmed" | sed 's/^case\s*//;s/^when\s*//;s/:.*//;s/{.*//' | head -c 40)
+        local case_val="${trimmed:${#BASH_REMATCH[0]}}"
+        case_val="${case_val%%:*}"
+        case_val="${case_val%%\{*}"
+        case_val="${case_val:0:40}"
         path_type="switch-case"
         path_desc="${func_name} — case: ${case_val}"
-      elif echo "$trimmed" | grep -qE '^default\s*:'; then
+      elif [[ "$trimmed" =~ ^default[[:space:]]*: ]]; then
         path_counter=$((path_counter + 1))
         path_type="switch-default"
         path_desc="${func_name} — default case"
-      # loops
-      elif echo "$trimmed" | grep -qE '^(for|while|do|loop|until)\b'; then
+      elif [[ "$trimmed" =~ $_re_loop ]]; then
         path_counter=$((path_counter + 1))
         path_type="loop"
-        local loop_cond
-        loop_cond=$(echo "$trimmed" | head -c 60)
-        path_desc="${func_name} — loop: ${loop_cond}"
-      # try/catch/except/rescue
-      elif echo "$trimmed" | grep -qE '^try\b|^begin\b'; then
+        path_desc="${func_name} — loop: ${trimmed:0:60}"
+      elif [[ "$trimmed" == try* ]] || [[ "$trimmed" =~ ^begin$ ]]; then
         path_counter=$((path_counter + 1))
         path_type="try"
         path_desc="${func_name} — try (happy path)"
-      elif echo "$trimmed" | grep -qE '^(\}?\s*)?(catch|except|rescue)\b'; then
+      elif [[ "$trimmed" =~ $_re_catch ]]; then
         path_counter=$((path_counter + 1))
-        local exc_type
-        exc_type=$(echo "$trimmed" | sed 's/^catch\s*//;s/^except\s*//;s/^rescue\s*//;s/{.*//;s/:.*//;s/(//;s/)//' | head -c 40)
+        local exc_type="${trimmed#*${BASH_REMATCH[2]}}"
+        exc_type="${exc_type#[[:space:](]}"
+        exc_type="${exc_type%%[)\{:]*}"
+        exc_type="${exc_type:0:40}"
         path_type="catch"
         path_desc="${func_name} — catch: ${exc_type}"
-      # guard/early return
-      elif echo "$trimmed" | grep -qE '^\s*(if|unless).*\b(return|throw|raise|panic|exit)\b'; then
+      elif [[ "$trimmed" =~ $_re_guard ]]; then
         path_counter=$((path_counter + 1))
         path_type="guard"
         path_desc="${func_name} — early return/guard"
-      # ternary (JS/TS/Java/C#)
-      elif echo "$trimmed" | grep -qE '\?\s*[^?]+\s*:' && [[ "$lang" != "python" ]]; then
+      # Ternary — exclude TypeScript type annotations
+      elif [[ "$lang" != "python" && "$trimmed" == *"?"*":"* ]] && ! [[ "$trimmed" =~ $_re_type_annot ]] && [[ "$trimmed" =~ $_re_ternary ]]; then
         path_counter=$((path_counter + 1))
         path_type="ternary-true"
         path_desc="${func_name} — ternary true branch"

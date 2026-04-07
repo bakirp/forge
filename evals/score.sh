@@ -68,8 +68,18 @@ while IFS= read -r line; do
     continue
   fi
 
-  TASK=$(cat "$TASK_FILE")
-  CATEGORY=$(echo "$TASK" | jq -r '.category')
+  # Parse task JSON once, extract all needed fields upfront
+  TASK_PARSED=$(jq '{
+    category,
+    expected_skill_route,
+    expected_classification,
+    acceptable_routes: (.acceptable_routes // []),
+    acceptable_classifications: (.acceptable_classifications // []),
+    expected_artifacts: (.expected_artifacts // []),
+    red_flags: (.red_flags // [])
+  }' "$TASK_FILE")
+
+  CATEGORY=$(echo "$TASK_PARSED" | jq -r '.category')
 
   # --- Route accuracy ---
   ACTUAL_ROUTE=$(echo "$line" | jq -r '.actual_route // empty')
@@ -77,18 +87,16 @@ while IFS= read -r line; do
     ROUTE_TOTAL=$((ROUTE_TOTAL + 1))
 
     if [[ "$CATEGORY" == "ambiguous" ]]; then
-      # For ambiguous tasks, check against acceptable_routes array
-      MATCH=$(echo "$TASK" | jq -r --arg route "$ACTUAL_ROUTE" \
-        '.acceptable_routes | map(select(. == $route)) | length')
+      MATCH=$(echo "$TASK_PARSED" | jq -r --arg route "$ACTUAL_ROUTE" \
+        '[.acceptable_routes[] | select(. == $route)] | length')
       if [[ "$MATCH" -gt 0 ]]; then
         ROUTE_CORRECT=$((ROUTE_CORRECT + 1))
       else
-        ACCEPTABLE=$(echo "$TASK" | jq -r '.acceptable_routes | join(", ")')
+        ACCEPTABLE=$(echo "$TASK_PARSED" | jq -r '.acceptable_routes | join(", ")')
         echo "MISS route  | $RESULT_ID | got: $ACTUAL_ROUTE | acceptable: $ACCEPTABLE"
       fi
     else
-      # For non-ambiguous tasks, check against expected_skill_route
-      EXPECTED_ROUTE=$(echo "$TASK" | jq -r '.expected_skill_route')
+      EXPECTED_ROUTE=$(echo "$TASK_PARSED" | jq -r '.expected_skill_route')
       if [[ "$ACTUAL_ROUTE" == "$EXPECTED_ROUTE" ]]; then
         ROUTE_CORRECT=$((ROUTE_CORRECT + 1))
       else
@@ -103,16 +111,16 @@ while IFS= read -r line; do
     CLASS_TOTAL=$((CLASS_TOTAL + 1))
 
     if [[ "$CATEGORY" == "ambiguous" ]]; then
-      MATCH=$(echo "$TASK" | jq -r --arg cls "$ACTUAL_CLASS" \
-        '.acceptable_classifications | map(select(. == $cls)) | length')
+      MATCH=$(echo "$TASK_PARSED" | jq -r --arg cls "$ACTUAL_CLASS" \
+        '[.acceptable_classifications[] | select(. == $cls)] | length')
       if [[ "$MATCH" -gt 0 ]]; then
         CLASS_CORRECT=$((CLASS_CORRECT + 1))
       else
-        ACCEPTABLE=$(echo "$TASK" | jq -r '.acceptable_classifications | join(", ")')
+        ACCEPTABLE=$(echo "$TASK_PARSED" | jq -r '.acceptable_classifications | join(", ")')
         echo "MISS class  | $RESULT_ID | got: $ACTUAL_CLASS | acceptable: $ACCEPTABLE"
       fi
     else
-      EXPECTED_CLASS=$(echo "$TASK" | jq -r '.expected_classification')
+      EXPECTED_CLASS=$(echo "$TASK_PARSED" | jq -r '.expected_classification')
       if [[ "$ACTUAL_CLASS" == "$EXPECTED_CLASS" ]]; then
         CLASS_CORRECT=$((CLASS_CORRECT + 1))
       else
@@ -123,42 +131,38 @@ while IFS= read -r line; do
 
   # --- Artifact compliance ---
   ACTUAL_ARTIFACTS=$(echo "$line" | jq -r '.actual_artifacts // empty')
-  EXPECTED_ARTIFACTS=$(echo "$TASK" | jq -r '.expected_artifacts // []')
+  EXPECTED_ARTIFACTS=$(echo "$TASK_PARSED" | jq -r '.expected_artifacts')
 
   if [[ -n "$ACTUAL_ARTIFACTS" && "$EXPECTED_ARTIFACTS" != "[]" ]]; then
     ARTIFACT_TOTAL=$((ARTIFACT_TOTAL + 1))
 
-    # Check that every expected artifact pattern is present in actual artifacts
     ALL_PRESENT=true
     while IFS= read -r pattern; do
-      # Use glob-style matching: check if any actual artifact matches the pattern
       FOUND=$(echo "$line" | jq -r --arg pat "$pattern" \
         '[.actual_artifacts[] | select(test($pat))] | length')
       if [[ "$FOUND" -eq 0 ]]; then
         ALL_PRESENT=false
         echo "MISS artifact | $RESULT_ID | missing: $pattern"
       fi
-    done < <(echo "$TASK" | jq -r '.expected_artifacts[]')
+    done < <(echo "$TASK_PARSED" | jq -r '.expected_artifacts[]')
 
     if [[ "$ALL_PRESENT" == "true" ]]; then
       ARTIFACT_COMPLIANT=$((ARTIFACT_COMPLIANT + 1))
     fi
   elif [[ "$EXPECTED_ARTIFACTS" == "[]" ]]; then
-    # No artifacts expected — compliance is automatic
     ARTIFACT_TOTAL=$((ARTIFACT_TOTAL + 1))
     ARTIFACT_COMPLIANT=$((ARTIFACT_COMPLIANT + 1))
   fi
 
   # --- Red flag detection ---
   ACTUAL_FLAGS=$(echo "$line" | jq -r '.observed_flags // [] | .[]' 2>/dev/null)
-  TASK_RED_FLAGS=$(echo "$TASK" | jq -r '.red_flags // []')
 
   if [[ -n "$ACTUAL_FLAGS" ]]; then
     while IFS= read -r flag; do
       [[ -z "$flag" ]] && continue
       RED_FLAG_TOTAL=$((RED_FLAG_TOTAL + 1))
 
-      MATCH=$(echo "$TASK" | jq -r --arg f "$flag" \
+      MATCH=$(echo "$TASK_PARSED" | jq -r --arg f "$flag" \
         '[.red_flags[] | select(. == $f)] | length')
       if [[ "$MATCH" -gt 0 ]]; then
         RED_FLAG_VIOLATIONS=$((RED_FLAG_VIOLATIONS + 1))

@@ -54,14 +54,14 @@ Wait for user confirmation before proceeding.
 
 ## Step 3: Plan Task Order
 
-Break the architecture into ordered implementation tasks. Each task is one logical unit (a function, endpoint, component, or test suite).
+Break the architecture into ordered implementation tasks. **Prefer vertical slices** — each task should deliver one user-visible behavior end-to-end (data model + logic + route + tests), not a horizontal layer.
 
-Order by dependency — implement foundations first:
-1. Data models / types
-2. Core logic / business rules
-3. API layer / routes
-4. Integration points
-5. Edge case handling
+Order by dependency within slices:
+1. **Vertical slices first** — group by behavior: e.g., "user can create a task" = schema + validation + endpoint + tests, all in one task
+2. **Shared foundations** — if multiple slices depend on the same base (e.g., a shared DB connection, auth middleware), implement that foundation first as its own task
+3. **Edge cases last** — after core behaviors work end-to-end, add edge case handling per slice
+
+**Anti-pattern:** Do NOT plan as "all models → all logic → all routes → all tests." This delays integration feedback and produces tests disconnected from real behavior. Each slice should be independently verifiable before starting the next.
 
 Present the plan with section identifiers for context pruning:
 ```
@@ -123,6 +123,7 @@ Based on the architecture doc's test strategy:
 - Write test file(s) for this task
 - Tests must cover: happy path, error cases, edge cases from the architecture doc
 - Tests must be runnable with the project's test framework
+- **Mock only at system boundaries** — external APIs, databases, time, filesystem. Never mock internal collaborators or your own classes. If a test requires mocking an internal module to work, that's a design signal — consider restructuring the code to accept dependencies instead
 
 Detect the project test runner using the shared detection script:
 ```bash
@@ -187,6 +188,15 @@ Tests: [passed]/[total] passing
 ```
 
 If tests fail, fix the implementation (not the tests) until they pass.
+
+### 4c.1 Quick Refactor
+
+Now that tests are green, do a brief refactor pass before moving on:
+- Extract any duplicated code introduced across this task
+- Simplify overly complex conditionals or deeply nested logic
+- Verify tests still pass after refactoring — if a refactor breaks tests, revert it
+
+This is a **60-second pass**, not a deep rewrite. If the refactor would take more than a few minutes, note it and move on — `/review` will catch larger structural issues.
 
 ### 4c.5 Coverage Gate
 

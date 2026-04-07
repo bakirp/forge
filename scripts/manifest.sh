@@ -1,33 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; NC='\033[0m'
+source "$(dirname "$0")/lib/colors.sh"
+source "$(dirname "$0")/lib/json-helpers.sh"
+
 RUNS_DIR=".forge/runs"
-
-# --- JSON helpers (jq preferred, python3 fallback) ---
-HAS_JQ=false; command -v jq &>/dev/null && HAS_JQ=true
-# jq_write <file> [--arg k v ...] <expr>  — modify JSON file in place
-jq_write() {
-  local f="$1"; shift
-  local tmp; tmp=$(jq "$@" "$f") && printf '%s\n' "$tmp" > "$f"
-}
-json_create() {
-  if $HAS_JQ; then printf '%s\n' "$1" | jq . > "$2"
-  else python3 -c "import json; json.dump(json.loads('$1'),open('$2','w'),indent=2)"; fi
-}
-json_print() {
-  if $HAS_JQ; then jq . "$1"
-  else python3 -c "import json; print(json.dumps(json.load(open('$1')),indent=2))"; fi
-}
-# py_write <file> <statements>
-py_write() { python3 -c "
-import json
-with open('$1') as f: d=json.load(f)
-$2
-with open('$1','w') as f: json.dump(d,f,indent=2)
-"; }
-
-now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
 cmd_create() {
   local desc="${1:?Usage: manifest.sh create \"description\"}"

@@ -13,21 +13,27 @@ CLASSIFICATION="${3:-}"
 TELEMETRY_DIR="$HOME/.forge"
 TELEMETRY_FILE="$TELEMETRY_DIR/telemetry.jsonl"
 
-# Ensure directory exists
 mkdir -p "$TELEMETRY_DIR"
 
-# Get project path (git root or cwd)
 PROJECT_PATH="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-
-# Build JSON entry
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-if [[ -n "$CLASSIFICATION" ]]; then
-  printf '{"skill":"%s","timestamp":"%s","project":"%s","classification":"%s","outcome":"%s"}\n' \
-    "$SKILL_NAME" "$TIMESTAMP" "$PROJECT_PATH" "$CLASSIFICATION" "$OUTCOME" \
-    >> "$TELEMETRY_FILE"
+# Use jq for safe JSON construction; fall back to python3 for proper escaping
+if command -v jq &>/dev/null; then
+  if [[ -n "$CLASSIFICATION" ]]; then
+    jq -nc --arg s "$SKILL_NAME" --arg ts "$TIMESTAMP" --arg p "$PROJECT_PATH" \
+      --arg c "$CLASSIFICATION" --arg o "$OUTCOME" \
+      '{skill:$s,timestamp:$ts,project:$p,classification:$c,outcome:$o}' >> "$TELEMETRY_FILE"
+  else
+    jq -nc --arg s "$SKILL_NAME" --arg ts "$TIMESTAMP" --arg p "$PROJECT_PATH" \
+      --arg o "$OUTCOME" \
+      '{skill:$s,timestamp:$ts,project:$p,outcome:$o}' >> "$TELEMETRY_FILE"
+  fi
 else
-  printf '{"skill":"%s","timestamp":"%s","project":"%s","outcome":"%s"}\n' \
-    "$SKILL_NAME" "$TIMESTAMP" "$PROJECT_PATH" "$OUTCOME" \
-    >> "$TELEMETRY_FILE"
+  python3 -c "
+import json, sys
+d = {'skill': sys.argv[1], 'timestamp': sys.argv[2], 'project': sys.argv[3], 'outcome': sys.argv[4]}
+if sys.argv[5]: d['classification'] = sys.argv[5]
+print(json.dumps(d))
+" "$SKILL_NAME" "$TIMESTAMP" "$PROJECT_PATH" "$OUTCOME" "$CLASSIFICATION" >> "$TELEMETRY_FILE"
 fi

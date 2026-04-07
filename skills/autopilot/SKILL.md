@@ -425,9 +425,28 @@ bash scripts/manifest.sh artifact "$RUN_ID" future-enhancements ".forge/autopilo
 
 Store key decisions from this session via `/memory-remember` logic:
 
-For each significant decision made during autopilot (architecture choices, stack selections, security decisions):
+For each significant decision made during autopilot (architecture choices, stack selections, security decisions), use `jq` for safe JSON construction — **never use raw `echo` with string interpolation** (special characters will produce invalid JSONL):
+
 ```bash
-echo '{"id":"...","project":"...","date":"...","category":"...","decision":"...","rationale":"...","anti_patterns":[],"tags":[],"confidence":0.8}' >> ~/.forge/memory.jsonl
+ID="$(date +%Y%m%d_%H%M%S)_$(xxd -l2 -p /dev/urandom)"
+PROJECT="$(basename "$(pwd)")"
+DATE="$(date +%Y-%m-%d)"
+
+jq -n -c \
+  --arg id "$ID" \
+  --arg project "$PROJECT" \
+  --arg date "$DATE" \
+  --arg category "[architecture|stack-choice|security|workflow|anti-pattern]" \
+  --arg decision "[one-sentence summary]" \
+  --arg rationale "[one-sentence why]" \
+  --argjson anti_patterns '[]' \
+  --argjson tags '["tag1","tag2"]' \
+  --argjson confidence 0.8 \
+  '{id:$id,project:$project,date:$date,category:$category,decision:$decision,rationale:$rationale,anti_patterns:$anti_patterns,tags:$tags,confidence:$confidence}' \
+  >> ~/.forge/memory.jsonl
+
+# Validate the written line
+tail -1 ~/.forge/memory.jsonl | jq empty || echo "ERROR: Invalid JSON written — remove last line"
 ```
 
 ## Step 10: Final Report

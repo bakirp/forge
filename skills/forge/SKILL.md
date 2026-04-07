@@ -24,7 +24,7 @@ FORGE orchestrates Claude Code into a structured workflow: plan → build → re
 | `/memory` | All | Cross-project decision memory |
 | `/retro` | Retro | Post-ship retrospective |
 | `/evolve` | Meta | Self-rewriting skills from retro data |
-| `/brainstorm` | Ideation | Alternative exploration before /architect |
+| `/brainstorm` | Ideation | Alternative exploration before /architect. Use `--grill` to stress-test an existing plan |
 | `/worktree` | Setup | Isolated git worktree for a task |
 | `/finish` | Lifecycle | Complete branch, merge back, clean up |
 | `/browse` | Browser | Playwright-based browser automation |

@@ -4,17 +4,7 @@ set -euo pipefail
 # FORGE test: autopilot-guard enforcement
 # Run from project root: bash tests/test-autopilot-guard.sh
 
-RED='\033[0;31m'
-GRN='\033[0;32m'
-YEL='\033[0;33m'
-RST='\033[0m'
-
-FAILS=0
-
-pass() { printf "${GRN}PASS${RST}: %s\n" "$1"; }
-fail() { printf "${RED}FAIL${RST}: %s\n" "$1"; FAILS=$((FAILS + 1)); }
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$(dirname "$0")/lib/test-helpers.sh"
 GUARD="$ROOT/scripts/autopilot-guard.sh"
 TEST_TMP="${TMPDIR:-/tmp}/forge-guard-test-$$"
 
@@ -236,9 +226,4 @@ else
   fail "history expected 4 events, got $EVENTS"
 fi
 
-# ── Summary ──
-
-echo ""
-echo "──────────────────────────────"
-printf "Failures: %d\n" "$FAILS"
-exit "$FAILS"
+print_test_summary

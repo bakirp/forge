@@ -12,38 +12,11 @@ set -euo pipefail
 #   autopilot-guard.sh complete
 #   autopilot-guard.sh status
 
-GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; NC='\033[0m'
+source "$(dirname "$0")/lib/colors.sh"
+source "$(dirname "$0")/lib/json-helpers.sh"
+
 STATE_DIR=".forge/autopilot"
 STATE_FILE="$STATE_DIR/state.json"
-
-# --- JSON helpers (match manifest.sh pattern) ---
-HAS_JQ=false; command -v jq &>/dev/null && HAS_JQ=true
-
-jq_read() {
-  local f="$1"; shift
-  jq -r "$@" "$f"
-}
-jq_write() {
-  local f="$1"; shift
-  local tmp; tmp=$(jq "$@" "$f") && printf '%s\n' "$tmp" > "$f"
-}
-py_read() {
-  python3 -c "
-import json
-with open('$1') as f: d=json.load(f)
-print($2)
-"
-}
-py_write() {
-  python3 -c "
-import json
-with open('$1') as f: d=json.load(f)
-$2
-with open('$1','w') as f: json.dump(d,f,indent=2)
-"
-}
-
-now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
 # --- Commands ---
 
@@ -146,23 +119,22 @@ cmd_tick() {
   local counter="${2:-}" # optional: "inner" or "outer" to increment loop counter
   local ts; ts=$(now_iso)
 
+  # Batch all updates into a single read-parse-write cycle
+  local counter_expr=""
+  if [[ "$counter" == "inner" ]]; then
+    counter_expr=" | .inner_count += 1"
+  elif [[ "$counter" == "outer" ]]; then
+    counter_expr=" | .outer_count += 1"
+  fi
+
   if $HAS_JQ; then
     jq_write "$STATE_FILE" --arg p "$phase" --arg ts "$ts" \
-      '.total_count += 1 | .current_phase=$p | .history += [{"event":"tick","phase":$p,"timestamp":$ts}]'
-
-    if [[ "$counter" == "inner" ]]; then
-      jq_write "$STATE_FILE" '.inner_count += 1'
-    elif [[ "$counter" == "outer" ]]; then
-      jq_write "$STATE_FILE" '.outer_count += 1'
-    fi
+      ".total_count += 1 | .current_phase=\$p | .history += [{\"event\":\"tick\",\"phase\":\$p,\"timestamp\":\$ts}]${counter_expr}"
   else
-    py_write "$STATE_FILE" "d['total_count']+=1; d['current_phase']='$phase'; d['history'].append({'event':'tick','phase':'$phase','timestamp':'$ts'})"
-
-    if [[ "$counter" == "inner" ]]; then
-      py_write "$STATE_FILE" "d['inner_count']+=1"
-    elif [[ "$counter" == "outer" ]]; then
-      py_write "$STATE_FILE" "d['outer_count']+=1"
-    fi
+    local py_counter=""
+    [[ "$counter" == "inner" ]] && py_counter="; d['inner_count']+=1"
+    [[ "$counter" == "outer" ]] && py_counter="; d['outer_count']+=1"
+    py_write "$STATE_FILE" "d['total_count']+=1; d['current_phase']='$phase'; d['history'].append({'event':'tick','phase':'$phase','timestamp':'$ts'})${py_counter}"
   fi
 
   echo -e "${GREEN}GUARD TICK${NC} $phase (total=$(cmd_read_field total_count))"

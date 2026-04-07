@@ -4,19 +4,7 @@ set -euo pipefail
 # FORGE test: memory system (append, dedup, ranking, prune safety, invalid JSON)
 # Run from project root: bash tests/test-memory.sh
 
-RED='\033[0;31m'
-GRN='\033[0;32m'
-YEL='\033[0;33m'
-RST='\033[0m'
-
-FAILS=0
-SKIPS=0
-
-pass() { printf "${GRN}PASS${RST}: %s\n" "$1"; }
-fail() { printf "${RED}FAIL${RST}: %s\n" "$1"; FAILS=$((FAILS + 1)); }
-skip() { printf "${YEL}SKIP${RST}: %s\n" "$1"; SKIPS=$((SKIPS + 1)); }
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$(dirname "$0")/lib/test-helpers.sh"
 FIXTURES="$ROOT/tests/fixtures"
 TMPWORK="${TMPDIR:-/tmp}/forge-test-memory-$$"
 mkdir -p "$TMPWORK"
@@ -227,9 +215,4 @@ else
   skip "/memory-remember skill not found"
 fi
 
-# ── Summary ──
-
-echo ""
-echo "──────────────────────────────"
-printf "Failures: %d  Skipped: %d\n" "$FAILS" "$SKIPS"
-exit "$FAILS"
+print_test_summary

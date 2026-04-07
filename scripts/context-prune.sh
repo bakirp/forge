@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[0;33m'; NC='\033[0m'
+source "$(dirname "$0")/lib/colors.sh"
+source "$(dirname "$0")/lib/json-helpers.sh"
 
 # --- extract: pull named sections from an architecture doc ---
 # Usage: context-prune.sh extract <arch-doc> <output-file> <section1> [section2 ...]
@@ -120,21 +121,17 @@ cmd_extract() {
           # Include the parent section header for context
           content+="$line"$'\n'
         fi
-      elif $capturing && [[ $depth -gt $capture_depth ]]; then
-        # Deeper header within a captured section
+      elif [[ $depth -gt $capture_depth ]]; then
+        # Deeper header within a captured section (check even if capturing=false
+        # because a prior non-matching subsection may have disabled it)
         if [[ -n "$active_sub_filter" ]]; then
-          # Check if this subsection matches the filter
           if [[ "$lower_line" == *"$active_sub_filter"* ]]; then
             content+="$line"$'\n'
-            # Temporarily clear filter to capture entire subsection body
-            # We use a flag to track we're in a matched subsection
             capturing=true
           else
-            # Non-matching subsection — skip it by not adding to content
-            # But we need to track that we should skip lines until next header
             capturing=false
           fi
-        else
+        elif $capturing; then
           content+="$line"$'\n'
         fi
       fi
@@ -210,17 +207,7 @@ cmd_conventions() {
   if [[ -f "$root/package.json" ]]; then
     local fw="unknown"
     local deps=""
-    if command -v jq &>/dev/null; then
-      deps=$(jq -r '(.dependencies // {}) + (.devDependencies // {}) | keys[]' "$root/package.json" 2>/dev/null || true)
-    else
-      deps=$(python3 -c "
-import json
-d=json.load(open('$root/package.json'))
-merged=dict(d.get('dependencies',{}))
-merged.update(d.get('devDependencies',{}))
-for k in merged: print(k)
-" 2>/dev/null || true)
-    fi
+    deps=$(get_package_deps "$root")
     for candidate in next react vue angular svelte express fastify hono; do
       if echo "$deps" | grep -q "^$candidate$"; then fw="$candidate"; break; fi
     done

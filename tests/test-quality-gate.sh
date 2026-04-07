@@ -1,23 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RED='\033[0;31m'
-GRN='\033[0;32m'
-YEL='\033[0;33m'
-RST='\033[0m'
-
-FAILS=0
-SKIPS=0
-
-pass() { printf "${GRN}PASS${RST}: %s\n" "$1"; }
-fail() { printf "${RED}FAIL${RST}: %s\n" "$1"; FAILS=$((FAILS + 1)); }
-skip() { printf "${YEL}SKIP${RST}: %s\n" "$1"; SKIPS=$((SKIPS + 1)); }
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$(dirname "$0")/lib/test-helpers.sh"
 SCRIPT="$ROOT/scripts/quality-gate.sh"
-TEST_TMP="${TMPDIR:-/tmp}/forge-quality-gate-test-$$"
-mkdir -p "$TEST_TMP"
-trap 'rm -rf "$TEST_TMP"' EXIT
+setup_test_tmp "forge-quality-gate-test"
 
 echo "quality-gate.sh tests"
 echo "──────────────────────────────"
@@ -503,15 +489,4 @@ exit_code=0
 bash "$SCRIPT" nonexistent 2>/dev/null || exit_code=$?
 [[ "$exit_code" -ne 0 ]] && pass "unknown command exits non-zero" || fail "unknown command: exit code $exit_code"
 
-# ═══════════════════════════════════
-# Summary
-# ═══════════════════════════════════
-echo ""
-echo "──────────────────────────────"
-if [[ $FAILS -gt 0 ]]; then
-  echo -e "${RED}$FAILS test(s) failed${RST}, $SKIPS skipped"
-  exit 1
-else
-  echo -e "${GRN}All tests passed${RST}, $SKIPS skipped"
-  exit 0
-fi
+print_test_summary

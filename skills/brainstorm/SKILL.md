@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: "Ideation and alternative exploration before architecture. Generates multiple approaches with tradeoffs, helps the user choose or combine, and produces a brainstorm artifact that /architect consumes. Use before architecture when exploring options — triggered by 'brainstorm', 'explore alternatives', 'what are the options', 'ideation', 'compare approaches'."
+description: "Ideation and alternative exploration before architecture. Generates multiple approaches with tradeoffs, helps the user choose or combine, and produces a brainstorm artifact that /architect consumes. Use --grill to stress-test an existing plan instead of generating new approaches. Use before architecture when exploring options — triggered by 'brainstorm', 'explore alternatives', 'what are the options', 'ideation', 'compare approaches', 'grill my plan', 'stress test this', 'challenge this plan'."
 argument-hint: "[task or problem description]"
 allowed-tools: Read Grep Glob Bash
 ---
@@ -9,11 +9,18 @@ allowed-tools: Read Grep Glob Bash
 
 You generate multiple approaches to a problem, surface honest tradeoffs, and help the user choose before committing to architecture. The output is a brainstorm artifact that /architect consumes as input.
 
-## Step 0: Are We Solving the Right Problem?
+## Step 0: Parse Flags and Mode
+
+Read `$ARGUMENTS`. Check for the `--grill` flag:
+- If `--grill` is present, set GRILL_MODE=true and strip the flag from arguments before proceeding
+- GRILL_MODE replaces approach generation (Steps 1-4) with decision-tree interrogation (Step 0.5)
+- Default behavior (no flag) is unchanged — normal brainstorm flow
+
+If no arguments provided (after flag stripping), ask the user what problem or plan they want to explore.
+
+## Step 0.1: Are We Solving the Right Problem?
 
 Before exploring solutions, question the problem itself. This prevents wasting time building the wrong thing well.
-
-Read `$ARGUMENTS` for the task description. If no arguments provided, ask the user what problem they want to explore.
 
 Ask the user these forcing questions (adapt to context — skip any that are obviously answered):
 
@@ -32,6 +39,74 @@ Original: [what was asked]
 Reframed: [what we're actually solving, if different]
 Success criteria: [from user's answers]
 ```
+
+**If GRILL_MODE=true:** Skip Steps 1-4 entirely. Proceed to Step 0.5.
+
+## Step 0.5: Grill Mode — Decision Tree Interrogation
+
+**Only runs when `--grill` flag is set.** This mode stress-tests an existing plan rather than generating new approaches.
+
+### Setup
+
+1. Read the codebase structure, tech stack, existing patterns, and relevant memory (`/memory-recall`)
+2. Read the user's plan from `$ARGUMENTS` or ask them to describe it
+3. Identify the plan's key decision points — each choice the plan makes (or assumes) is a branch to interrogate
+
+### Interrogation Loop
+
+Walk the decision tree **one question at a time**. For each decision point in the plan:
+
+1. **Self-resolve first** — before asking the user, check if the codebase already answers the question (existing patterns, constraints, dependencies). If it does:
+   ```
+   [Question about X]
+   I checked the codebase — [what you found]. This confirms/contradicts the plan's assumption.
+   Moving on.
+   ```
+
+2. **Ask with a recommended answer** — if the question requires user input:
+   ```
+   [Question about the plan]
+   My recommendation: [what you'd suggest and why, based on codebase context].
+   Do you agree, or see it differently?
+   ```
+
+3. **Follow branches** — each answer may reveal follow-up questions. Walk down that branch before moving to the next decision point. Keep branches focused — don't let follow-ups drift into unrelated territory.
+
+4. **Track decisions** — maintain a running list of confirmed decisions and identified risks as you go.
+
+### Interrogation Categories
+
+Walk through these angles (skip any that are obviously settled):
+
+- **Scope boundaries** — What's in, what's explicitly out? What happens at the edges?
+- **Assumptions** — What does the plan take for granted? Are those assumptions valid in this codebase?
+- **Failure modes** — What happens when each component fails? Is error handling specified or assumed?
+- **Integration points** — Where does this touch existing code? Are those interfaces stable?
+- **Missing pieces** — What does the plan not mention that it will need? (Auth, validation, migrations, etc.)
+- **Ordering risks** — Does the plan's sequence create unnecessary risk? Could a different order reduce integration pain?
+
+### Termination
+
+- **Default cap: 10 questions.** After 10, summarize findings and move to artifact writing.
+- If the user says "keep going" or there are clearly unresolved branches, continue for up to 10 more.
+- If the user says "enough" or "looks good" at any point, stop immediately and move to artifact writing.
+- If you run out of genuine questions before 10, stop early — don't pad with obvious questions.
+
+### Transition to Artifact
+
+When interrogation is complete:
+```
+FORGE /brainstorm — Grill complete ([N] questions, [M] decisions confirmed)
+
+Key findings:
+- [most important finding or risk identified]
+- [second most important]
+- [third most important]
+
+Writing artifact...
+```
+
+**Skip Steps 1-4. Proceed directly to Step 5** (Write Brainstorm Artifact), but use the grill artifact format instead (see Step 5).
 
 ## Step 1: Understand the Problem Space
 
@@ -120,6 +195,39 @@ Refining...
 
 Write to `.forge/brainstorm/[task-name-slugified].md`. Create the directory if it doesn't exist.
 
+**If GRILL_MODE=true**, use the grill artifact format:
+
+```markdown
+# FORGE Brainstorm (Grill): [Task Name]
+
+## Date: [YYYY-MM-DD]
+## Mode: Grill
+## Plan: [1-2 sentence summary of the plan that was interrogated]
+
+## Decisions Confirmed
+- [Decision 1]: [what was confirmed and why]
+- [Decision 2]: [what was confirmed and why]
+...
+
+## Risks Identified
+- [Risk 1]: [description and severity — low|medium|high]
+- [Risk 2]: [description and severity]
+...
+
+## Plan Changes
+[List any changes the user agreed to during interrogation. If none: "No changes — plan validated as-is."]
+
+## Open Questions
+[Any questions that were not resolved. If none: "All questions resolved."]
+
+## Constraints Discovered
+- [any constraints surfaced during grilling]
+
+## Next: /architect
+```
+
+**Otherwise (normal mode)**, use the standard format:
+
 ```markdown
 # FORGE Brainstorm: [Task Name]
 
@@ -171,11 +279,13 @@ Ready for /architect. The brainstorm artifact provides context for architecture 
 
 ## Rules
 
-- Generate at least 3 approaches — even if one seems obviously best
+- Generate at least 3 approaches — even if one seems obviously best (normal mode only)
 - Never pick for the user — present options, let them choose
-- Include at least one unconventional or contrarian approach
+- Include at least one unconventional or contrarian approach (normal mode only)
 - Tradeoffs must be honest — no approach is perfect, say so
 - The brainstorm artifact is input for /architect, not a binding contract
 - If the user already knows what they want, don't force brainstorming — confirm their choice and write a minimal artifact
-- Keep it time-bounded — if discussion exceeds 3 rounds, push toward a decision
+- Keep it time-bounded — if discussion exceeds 3 rounds, push toward a decision (normal mode); 10 questions default cap (grill mode)
 - Never write implementation code — ideation only
+- **Grill mode**: always provide a recommended answer with every question — don't just ask, show what you'd decide and why
+- **Grill mode**: self-resolve from the codebase before asking the user — don't waste their time on answerable questions
