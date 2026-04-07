@@ -131,6 +131,7 @@ Add a `CLAUDE.md` to any project root to set project conventions. FORGE respects
 
 ## Next Steps
 
+- [Recipes](recipes.md) — workflows for bugs, features, deploys, incidents, and more
 - [Skills Reference](skills-reference.md) — detailed docs for every skill
 - [Memory Guide](memory-guide.md) — how the memory system works
 - [Evolve Guide](evolve-guide.md) — how self-evolution works

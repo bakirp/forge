@@ -78,6 +78,21 @@ Automation:  /autopilot (full pipeline, zero prompts)
 Meta:        /forge (overview + red-flags table)
 ```
 
+## Common Scenarios
+
+| Scenario | Commands | Notes |
+|----------|----------|-------|
+| New greenfield project | `/think --auto` or `/autopilot` | Epic; spawns Agent Teams |
+| Add a feature | `/think` → `/architect` → `/build` → `/review` → `/verify` → `/ship` | Use `/worktree` for isolation |
+| Fix a bug | `/debug` or `/think` (auto-routes on bug signals) | Evidence-first, minimal fix |
+| Enhance / refactor | `/think` → `/build` → `/review` → `/verify` → `/ship` | Tiny or feature classification |
+| Production incident | `/debug [error or stack trace]` | Urgent root-cause-first |
+| Performance issue | `/benchmark [target]` | Baseline + regression detection |
+| Review a PR | `/review request` / `/review` / `/review response` | Anti-sycophancy guardrails |
+| Deploy to production | `/ship` → `/deploy` or `/canary` | Security audit gates deployment |
+
+See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each scenario.
+
 ## How It Works
 
 - **Claude Code provides the engine. FORGE provides the process.**
@@ -118,6 +133,7 @@ Tests run automatically in GitHub Actions CI on every push.
 ## Documentation
 
 - [Getting Started](docs/getting-started.md) — install, setup, first session
+- [Recipes](docs/recipes.md) — step-by-step workflows for common scenarios
 - [Skills Reference](docs/skills-reference.md) — detailed docs for every skill
 - [Memory Guide](docs/memory-guide.md) — how cross-project memory works
 - [Evolve Guide](docs/evolve-guide.md) — how self-evolution works
