@@ -1,5 +1,41 @@
 # Changelog
 
+## v2.6.0 — 2026-04-07
+
+Quality gates: code reusability enforcement, test coverage thresholds, universal framework detection, and path coverage validation.
+
+### `scripts/quality-gate.sh` — New Shared Detection Script
+- 7 subcommands: `detect-runner`, `detect-coverage`, `coverage`, `reusability-search`, `dry-check`, `path-map`, `path-diff`
+- **Universal test framework detection** — 15+ frameworks: Jest, Vitest, Mocha, Cypress, Playwright, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test, Bun
+- **Coverage tool detection** — Istanbul/nyc, c8, coverage.py, go cover, JaCoCo, SimpleCov, PHPUnit coverage, dotnet coverage
+- **Coverage threshold enforcement** — configurable via `.forge/config.json` `coverage_threshold`, exit code 1 on failure (hard gate)
+- **Path coverage mapping** — extracts all condition paths (if/else, switch/case, loops, try/catch, ternary, guards) across 7 language families
+- **Change impact analysis** — `path-diff` classifies changes as ADD_TEST, MODIFY_TEST, REMOVE_TEST, or NO_ACTION
+- **Reusability search** — finds existing functions/classes matching patterns before writing new code
+- **DRY check** — detects duplicate multi-line code blocks across files
+
+### `/build` — Quality Gate Integration
+- Replaced inline 9-item test runner detection with `quality-gate.sh detect-runner`
+- New Step 4a.5: Reusability Search — searches for existing code before implementing
+- New Path Coverage Protocol: enumerates paths before writing tests, one test per path, change impact analysis for modifications
+- New Step 4c.5: Coverage Gate — blocks build if coverage below configured threshold
+
+### `/review` — Path Coverage and Reusability Audit
+- Added automated DRY check via `quality-gate.sh dry-check`
+- New Path Coverage Completeness audit: flags untested paths (critical), duplicate tests (major), orphaned tests (minor)
+- New Reusability audit: flags duplicate implementations when existing code could be reused
+- Added Coverage and Path Coverage sections to review report template
+- Updated FAIL rules: untested path = critical, duplicate tests = major
+
+### `/verify` — Coverage Gate
+- Added coverage threshold check in prerequisites — blocks verification if below threshold
+- Added Coverage Metrics section to verification report
+
+### Infrastructure
+- `context-prune.sh` now delegates test runner detection to `quality-gate.sh` (eliminates duplication)
+- New `tests/test-quality-gate.sh` with 40+ test cases across all 7 subcommands
+- Updated `docs/artifact-schema.md` with Coverage and Path Coverage report sections
+
 ## v2.5.0 — 2026-04-07
 
 Design skill system rebuild with anti-pattern enforcement and aesthetic direction.

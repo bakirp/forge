@@ -110,6 +110,16 @@ Review and verify reports include two freshness fields written at report time:
 
 Before shipping, `/ship` validates these against the current HEAD. If the working tree has advanced since the report was written, `/ship` rejects the artifacts as stale and requires `/review` and `/verify` to be re-run. `scripts/artifact-check.sh` performs the same check and can be run manually at any point.
 
+## Quality Gates as Infrastructure
+
+Test detection, coverage enforcement, and path analysis are delegated to `scripts/quality-gate.sh` rather than inlined in skill Markdown. Three agents independently validated this design choice:
+
+- **Deterministic enforcement**: A bash script that exits non-zero when coverage is below threshold is a hard gate. Claude cannot skip a failing exit code — the output is visible and unambiguous. Prompt-level delegation (a sub-skill saying "check coverage") can be skipped or paraphrased.
+- **Single source of truth**: 15+ framework detection rules live in one script. Adding a new framework means editing one file, not three skills. This eliminates the DRY violation where `/build` Step 4a and `context-prune.sh` had diverging detection logic.
+- **Follows existing patterns**: `context-prune.sh`, `telemetry.sh`, `manifest.sh` all use the same subcommand dispatcher pattern. Skills call scripts for detection; scripts return structured output; skills make policy decisions.
+
+The 7 subcommands (`detect-runner`, `detect-coverage`, `coverage`, `reusability-search`, `dry-check`, `path-map`, `path-diff`) are consumed by `/build`, `/review`, and `/verify` at specific integration points. The script handles sensing; skills handle judgment.
+
 ## Evidence-Before-Claims (Phase 2)
 
 Every success or failure claim in FORGE must cite evidence: the command run, its output, and what was asserted. This prevents hallucinated results — a persistent risk with AI-generated verification claims.

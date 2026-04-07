@@ -1,7 +1,7 @@
 {
   "name": "forge",
-  "version": "2.4.0",
-  "description": "Structured skill framework: plan, build, review, verify, ship — with TDD enforcement, cross-project memory, and adaptive complexity routing",
+  "version": "2.6.0",
+  "description": "Structured skill framework: plan, build, review, verify, ship — with TDD enforcement, quality gates, universal test detection, coverage enforcement, and adaptive complexity routing",
   "author": {
     "name": "Bakir"
   },

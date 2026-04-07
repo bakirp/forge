@@ -102,6 +102,21 @@ Every push runs CI that validates:
 - YAML frontmatter is well-formed
 - No broken internal references
 
+## Helper Scripts
+
+Scripts in `scripts/` provide shared infrastructure for skills. Skills delegate detection and enforcement to scripts; scripts return structured output; skills make policy decisions.
+
+| Script | Purpose |
+|--------|---------|
+| `quality-gate.sh` | Test detection (15+ frameworks), coverage enforcement, reusability search, DRY check, path coverage mapping, change impact analysis |
+| `context-prune.sh` | Architecture doc section extraction, project conventions detection, token estimation |
+| `telemetry.sh` | Skill invocation logging to `~/.forge/telemetry.jsonl` |
+| `artifact-check.sh` | Artifact freshness validation (commit_sha vs HEAD) |
+| `manifest.sh` | Run manifest tracking |
+| `autopilot-guard.sh` | Iteration limit enforcement for `/autopilot` |
+
+When writing a new skill that needs test runner detection, coverage checking, or code quality analysis, delegate to `scripts/quality-gate.sh` rather than reimplementing the logic. See `quality-gate.sh help` for available subcommands.
+
 ## Guidelines
 
 - Keep skills focused — one skill, one job

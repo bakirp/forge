@@ -108,7 +108,20 @@ FORGE reads optional overrides from `.forge/config.json` if present:
 | Field | Default | Purpose |
 |-------|---------|---------|
 | `token_budget` | 40000 | Token warning threshold for /build |
-| `test_command` | auto-detect | Explicit test runner command |
+| `test_command` | auto-detect | Explicit test runner command (15+ frameworks supported) |
+| `coverage_command` | auto-detect | Explicit coverage tool command |
+| `coverage_threshold` | none | Minimum coverage % — hard gate blocking /build, /review, /verify, /ship |
 | `default_branch` | auto-detect | Override git default branch |
 
 All fields optional. Precedence: explicit user arguments > .forge/config.json > FORGE defaults. Project CLAUDE.md governs coding conventions separately.
+
+## Helper Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `quality-gate.sh` | Test/coverage detection, threshold enforcement, reusability search, DRY check, path coverage |
+| `context-prune.sh` | Architecture doc section extraction, project conventions |
+| `telemetry.sh` | Skill invocation logging |
+| `artifact-check.sh` | Artifact freshness validation |
+| `manifest.sh` | Run manifest tracking |
+| `autopilot-guard.sh` | Iteration limits for /autopilot |

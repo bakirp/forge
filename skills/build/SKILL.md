@@ -124,17 +124,32 @@ Based on the architecture doc's test strategy:
 - Tests must cover: happy path, error cases, edge cases from the architecture doc
 - Tests must be runnable with the project's test framework
 
-Detect the project test runner using this priority order:
-1. If .forge/config.json has "test_command" → use that
-2. Read package.json "scripts.test" if it exists → use that exact command
-3. If bun.lockb exists → bun test
-4. If vitest.config.* exists → npx vitest run
-5. If jest.config.* exists or jest is in package.json dependencies → npx jest
-6. If pytest.ini exists or pyproject.toml has [tool.pytest] → pytest
-7. If go.mod exists → go test ./...
-8. If Cargo.toml exists → cargo test
-9. If none detected → ask the user for the test command. Do not guess.
+Detect the project test runner using the shared detection script:
+```bash
+TEST_CMD=$(bash scripts/quality-gate.sh detect-runner)
+```
+This detects 15+ frameworks: Jest, Vitest, Mocha, Cypress, Playwright, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test, and Bun. Config override via `.forge/config.json` `test_command` takes highest priority.
+If the script returns `unknown` → ask the user for the test command. Do not guess.
 For monorepos: prefer the runner closest to the files being modified.
+
+**Path Coverage Protocol**
+
+Before writing tests, enumerate all condition paths in the code being tested:
+```bash
+bash scripts/quality-gate.sh path-map . [target-source-files]
+```
+For each path in the output, write exactly **one test case**. Rules:
+- Every path_id must have exactly one corresponding test — no untested paths, no duplicate coverage
+- Name tests to reflect the path: `test_[function]_[path_description]` (e.g., `test_auth_token_missing_returns_401`)
+- If modifying existing code, run change impact analysis first:
+  ```bash
+  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+  bash scripts/quality-gate.sh path-diff . ${DEFAULT_BRANCH}
+  ```
+  - `ADD_TEST` paths → write new test cases
+  - `MODIFY_TEST` paths → update the existing test (do NOT add a second test for the same path)
+  - `REMOVE_TEST` paths → delete the orphaned test
+  - `NO_ACTION` paths → leave existing tests untouched
 
 Run the tests.
 
@@ -148,6 +163,14 @@ Tests written: [count]
 Status: FAILING (expected)
 Proceeding to implementation.
 ```
+
+### 4a.5 Reusability Search
+
+Before writing implementation code, search for existing functions that may already solve part of the task:
+```bash
+bash scripts/quality-gate.sh reusability-search . [function-names-from-arch-doc]
+```
+If candidates are found, review them. Reuse existing code instead of writing new code when the existing implementation satisfies the architecture contract. Log what was reused vs. written fresh.
 
 ### 4b. Implement
 
@@ -164,6 +187,14 @@ Tests: [passed]/[total] passing
 ```
 
 If tests fail, fix the implementation (not the tests) until they pass.
+
+### 4c.5 Coverage Gate
+
+If the project has a coverage threshold configured, enforce it:
+```bash
+bash scripts/quality-gate.sh coverage --threshold $(jq -r '.coverage_threshold // ""' .forge/config.json 2>/dev/null)
+```
+If coverage is below threshold, treat it like a test failure — fix before proceeding. Show the actual coverage output (evidence-before-claims). Add tests for uncovered paths identified by the coverage report.
 
 ### 4d. 2-Stage Review
 

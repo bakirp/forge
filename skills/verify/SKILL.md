@@ -25,6 +25,18 @@ Unit tests are failing. Run /build to fix before verifying.
 Failing tests: [list]
 ```
 
+Check coverage threshold (if configured):
+```bash
+bash scripts/quality-gate.sh coverage
+```
+If coverage is below the configured threshold, block verification:
+```
+FORGE /verify — Blocked
+
+Coverage: XX% (threshold: YY%)
+Fix coverage before verifying. Add tests for uncovered paths.
+```
+
 ## Step 2: Detect Domain
 
 Determine the project type to choose the right verification strategy. Check `$ARGUMENTS` first — if the user specified a domain, use it.
@@ -181,6 +193,11 @@ Write the verification report to `.forge/verify/report.md`:
 - Architecture components verified: [list]
 - Components NOT verified: [list, with reason]
 - Edge cases tested: [count from architecture doc]
+
+## Coverage Metrics
+- Line coverage: [XX%]
+- Threshold: [YY% or "not configured"]
+- Coverage status: [PASS | FAIL | NOT_MEASURED]
 ```
 
 ## Step 6: Report Result

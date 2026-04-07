@@ -148,6 +148,19 @@ Input -> [Step 1] -> [Step 2] -> Output
 ## Security Surface
 [Injection, auth, data exposure -- lightweight pre-check before /ship's full audit]
 
+## Coverage
+- Coverage tool: [detected or configured]
+- Line coverage: [XX%]
+- Threshold: [YY% or "not configured"]
+- Status: [PASS | FAIL | NOT_MEASURED]
+
+## Path Coverage
+- Total paths: [N]
+- Tested: [N]
+- Untested: [N] (list)
+- Duplicate tests: [N] (list)
+- Orphaned tests: [N] (list)
+
 ## Issues
 
 ### [Issue 1]
@@ -230,6 +243,11 @@ Input -> [Step 1] -> [Step 2] -> Output
 - Architecture components verified: [list]
 - Components NOT verified: [list, with reason]
 - Edge cases tested: [count from architecture doc]
+
+## Coverage Metrics
+- Line coverage: [XX%]
+- Threshold: [YY% or "not configured"]
+- Coverage status: [PASS | FAIL | NOT_MEASURED]
 ```
 
 ### Required Fields

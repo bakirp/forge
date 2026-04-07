@@ -82,9 +82,14 @@ Implements the architecture doc with strict TDD enforcement.
 
 **TDD Loop** (per task):
 1. Write failing tests first — tests MUST fail
-2. Implement minimum code to pass
-3. Run tests — all must pass
-4. 2-stage review: spec compliance, then code quality
+2. **Path Coverage Protocol**: Enumerates condition paths via `quality-gate.sh path-map`, writes exactly one test per path. For code modifications, `path-diff` classifies paths as ADD_TEST/MODIFY_TEST/REMOVE_TEST
+3. **Reusability Search**: Searches for existing functions via `quality-gate.sh reusability-search` before implementing
+4. Implement minimum code to pass
+5. Run tests — all must pass
+6. **Coverage Gate**: Enforces configured threshold via `quality-gate.sh coverage`
+7. 2-stage review: spec compliance, then code quality
+
+**Test Framework Detection**: Delegates to `scripts/quality-gate.sh detect-runner` supporting 15+ frameworks (Jest, Vitest, Mocha, Cypress, Playwright, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test, Bun). Config override via `.forge/config.json` `test_command`.
 
 **Subagents**: For 3+ independent tasks, spawns agents in isolated worktrees. After each subagent completes, a checkpoint pauses execution to verify output against the architecture doc (API contracts, component boundaries, data flow) and logs PASS/FAIL — the next subagent only starts on PASS. Merges and runs full test suite after all complete.
 
@@ -109,7 +114,9 @@ Verifies build output actually works. Produces a pass/fail report for `/ship`.
 
 **On Failure**: Captures annotated screenshots (web), detailed error info. Each failure includes expected vs actual.
 
-**Output**: Report at `.forge/verify/report.md` with status (PASS/FAIL), test counts, failure details. `commit_sha` and `tree_hash` are stamped into the report at write time for freshness tracking by `/ship`.
+**Coverage Gate**: Before verification, checks coverage threshold via `quality-gate.sh coverage`. Blocks verification if below configured threshold.
+
+**Output**: Report at `.forge/verify/report.md` with status (PASS/FAIL), test counts, failure details, coverage metrics. `commit_sha` and `tree_hash` are stamped into the report at write time for freshness tracking by `/ship`.
 
 **Rules**: Never marks FAIL as PASS. Never modifies application code. Screenshots mandatory on web failures.
 
@@ -151,15 +158,19 @@ Code review gate between `/build` and `/verify`. Checks spec compliance, code qu
 1. Loads architecture doc and git diff
 2. Spec compliance review (API contracts, component boundaries, edge cases, test strategy)
 3. Code quality review (readability, duplication, complexity, error handling)
-4. Security surface review (lightweight pre-check — not the full /ship audit)
-5. Writes report to `.forge/review/report.md`, stamping `commit_sha` (`git rev-parse HEAD`) and `tree_hash` (`git rev-parse HEAD^{tree}`) into the report at write time
+4. **DRY check**: Automated duplication detection via `quality-gate.sh dry-check`
+5. **Path coverage audit**: Enumerates all condition paths via `quality-gate.sh path-map`, verifies each has exactly one test — flags untested paths (critical), duplicate tests (major), orphaned tests (minor)
+6. **Reusability audit**: Searches for existing code via `quality-gate.sh reusability-search` that could have been reused
+7. **Coverage measurement**: Runs `quality-gate.sh coverage` to measure and report line coverage against threshold
+8. Security surface review (lightweight pre-check — not the full /ship audit)
+9. Writes report to `.forge/review/report.md`, stamping `commit_sha` (`git rev-parse HEAD`) and `tree_hash` (`git rev-parse HEAD^{tree}`) into the report at write time
 
 **Verdicts**:
 - **PASS**: Only minor issues or suggestions. Ready for `/verify`.
 - **NEEDS_CHANGES**: Major issues found. Fix and re-run `/review`.
-- **FAIL**: Critical issues or fundamental problems. May need `/architect` revisit.
+- **FAIL**: Critical issues or fundamental problems. May need `/architect` revisit. Coverage below threshold or untested condition paths = automatic FAIL.
 
-**Rules**: Critical issues = automatic FAIL. Never modifies code. Report must be machine-parseable by `/ship`.
+**Rules**: Critical issues = automatic FAIL. Coverage below threshold = critical. Untested condition path = critical. Duplicate tests = major. Never modifies code. Report must be machine-parseable by `/ship`.
 
 ### /review request — Prepare Review Request
 
@@ -524,3 +535,43 @@ Takes a one-line product description and runs the entire FORGE pipeline — brai
 **Usage**: `/forge`
 
 FORGE workflow overview and help. Lists all available skills, routing rules, and phase dependencies. Use as a quick reference or starting point. Includes a **Red Flags** table of rationalization patterns agents use to skip ceremony (e.g. "I'll skip `/verify`, it looks fine") — agents and reviewers should treat any such pattern as a process violation.
+
+---
+
+## Quality Gates — `scripts/quality-gate.sh`
+
+Shared infrastructure script consumed by `/build`, `/review`, and `/verify`. Centralizes test framework detection, coverage enforcement, and code quality analysis so skills don't duplicate logic.
+
+### Subcommands
+
+| Command | Purpose | Used by |
+|---------|---------|---------|
+| `detect-runner [root]` | Detect test framework (15+ supported) | `/build`, `context-prune.sh` |
+| `detect-coverage [root]` | Detect coverage tool | `/build`, `/review`, `/verify` |
+| `coverage [root] [--threshold N]` | Run coverage, enforce threshold (exit 1 on failure) | `/build`, `/review`, `/verify` |
+| `reusability-search [root] [patterns...]` | Find existing functions matching patterns | `/build`, `/review` |
+| `dry-check [root] [files...]` | Detect duplicate code blocks | `/review` |
+| `path-map [root] [files...]` | Extract condition paths (if/else/switch/loop/try/catch) | `/build`, `/review` |
+| `path-diff [root] [base-branch]` | Change impact: ADD_TEST/MODIFY_TEST/REMOVE_TEST/NO_ACTION | `/build` |
+
+### Supported Test Frameworks
+
+Jest, Vitest, Mocha, Cypress, Playwright, Bun, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test. Config override: `.forge/config.json` `test_command`.
+
+### Supported Coverage Tools
+
+Istanbul/nyc, c8, Vitest coverage, Jest coverage, coverage.py, pytest-cov, go cover, cargo-tarpaulin, JaCoCo (Maven/Gradle), SimpleCov, PHPUnit coverage, dotnet coverage. Config override: `.forge/config.json` `coverage_command`.
+
+### Path Coverage
+
+`path-map` extracts branching constructs across 7 language families (JS/TS, Python, Go, Rust, Java/Kotlin, Ruby, PHP/C#): if/else chains, switch/case, loops, try/catch, ternary expressions, guard/early returns. Output format: `file:line|path_type|path_id|description`.
+
+`path-diff` compares paths between base branch and HEAD to classify each as needing a new test, test modification, test removal, or no action.
+
+### Configuration
+
+| Field | In `.forge/config.json` | Purpose |
+|-------|------------------------|---------|
+| `test_command` | `"test_command": "npm test"` | Override auto-detected test runner |
+| `coverage_command` | `"coverage_command": "npm run coverage"` | Override auto-detected coverage tool |
+| `coverage_threshold` | `"coverage_threshold": 80` | Minimum coverage % (hard gate) |

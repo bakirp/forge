@@ -1,9 +1,27 @@
 # FORGE Troubleshooting Guide
 
 ## Tests fail during /build TDD loop
-- Verify test runner detection: check package.json "scripts.test" or set `test_command` in .forge/config.json
+- Verify test runner detection: `bash scripts/quality-gate.sh detect-runner`
+- If wrong runner detected: set `test_command` in `.forge/config.json`
 - Run the test command manually to see full output
 - If the test framework itself is broken: fix it first, then re-run /build
+
+## Quality gate detects wrong test runner
+- Check detection: `bash scripts/quality-gate.sh detect-runner`
+- Override in `.forge/config.json`: `{"test_command": "your-command"}`
+- Supported frameworks: Jest, Vitest, Mocha, Cypress, Playwright, Bun, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test
+
+## Coverage threshold blocking /build or /verify
+- Check current coverage: `bash scripts/quality-gate.sh coverage`
+- Check configured threshold: `jq .coverage_threshold .forge/config.json`
+- Adjust threshold: edit `coverage_threshold` in `.forge/config.json`
+- Override coverage tool: set `coverage_command` in `.forge/config.json`
+- If coverage tool not detected: `bash scripts/quality-gate.sh detect-coverage`
+
+## Path coverage audit flags false positives in /review
+- Run `bash scripts/quality-gate.sh path-map . [files]` to see detected paths
+- path-map uses grep-based heuristics, not AST parsing — it may flag comments or strings containing keywords
+- For complex cases, the skill-level judgment in `/review` should filter false positives
 
 ## /verify reports FAIL but the app works manually
 - Check if the correct port/URL is being tested

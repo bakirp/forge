@@ -199,44 +199,9 @@ cmd_conventions() {
 
   echo "## Project Conventions"
 
-  # Test runner detection (same priority as /build Step 4a)
-  local test_runner="unknown"
-
-  if [[ -f "$root/.forge/config.json" ]]; then
-    local tc=""
-    if command -v jq &>/dev/null; then
-      tc=$(jq -r '.test_command // empty' "$root/.forge/config.json" 2>/dev/null)
-    else
-      tc=$(python3 -c "import json; d=json.load(open('$root/.forge/config.json')); print(d.get('test_command',''))" 2>/dev/null || true)
-    fi
-    [[ -n "$tc" ]] && test_runner="$tc"
-  fi
-
-  if [[ "$test_runner" == "unknown" ]]; then
-    if [[ -f "$root/package.json" ]]; then
-      local test_cmd=""
-      if command -v jq &>/dev/null; then
-        test_cmd=$(jq -r '.scripts.test // empty' "$root/package.json" 2>/dev/null)
-      else
-        test_cmd=$(python3 -c "import json; d=json.load(open('$root/package.json')); print(d.get('scripts',{}).get('test',''))" 2>/dev/null || true)
-      fi
-      if [[ -n "$test_cmd" ]]; then
-        test_runner="$test_cmd"
-      elif [[ -f "$root/bun.lockb" ]]; then
-        test_runner="bun test"
-      elif ls "$root"/vitest.config.* &>/dev/null 2>&1; then
-        test_runner="npx vitest run"
-      elif ls "$root"/jest.config.* &>/dev/null 2>&1; then
-        test_runner="npx jest"
-      fi
-    elif [[ -f "$root/pytest.ini" ]] || [[ -f "$root/pyproject.toml" ]]; then
-      test_runner="pytest"
-    elif [[ -f "$root/go.mod" ]]; then
-      test_runner="go test ./..."
-    elif [[ -f "$root/Cargo.toml" ]]; then
-      test_runner="cargo test"
-    fi
-  fi
+  # Test runner detection — delegated to quality-gate.sh for expanded framework support
+  local test_runner
+  test_runner=$(bash "$(dirname "$0")/quality-gate.sh" detect-runner "$root" 2>/dev/null || echo "unknown")
 
   echo "- Test runner: $test_runner"
 

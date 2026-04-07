@@ -102,6 +102,31 @@ Review all changed files for:
 - Are there copy-paste patterns that should be extracted into shared functions?
 - Is the same logic implemented in multiple places?
 
+Run automated duplication detection on changed files:
+```bash
+bash scripts/quality-gate.sh dry-check . $(git diff --name-only ${DEFAULT_BRANCH}...HEAD)
+```
+Include any findings in the Duplication section of the review report.
+
+**Path Coverage Completeness**
+
+Verify that tests cover all condition paths without duplication:
+```bash
+bash scripts/quality-gate.sh path-map . $(git diff --name-only ${DEFAULT_BRANCH}...HEAD | grep -vE '(test|spec|__test__|_test\.)')
+```
+For each path in the output, confirm a corresponding test exists. Flag:
+- **Untested path** (critical): condition branch at [file:line] has no test → must add test
+- **Duplicate test** (major): path [path_id] is tested by multiple test cases → consolidate into one
+- **Orphaned test** (minor): test exists for a path that was removed → delete test
+
+**Reusability**
+
+For each new function/class in the diff, check if similar implementations already exist:
+```bash
+bash scripts/quality-gate.sh reusability-search . [new-function-names-from-diff]
+```
+If the search finds existing code that could have been reused, flag it as a major issue: "Duplicate implementation — existing function at [file:line] provides equivalent functionality."
+
 **Complexity**
 - Are there deeply nested conditionals or loops that should be flattened?
 - Are there god functions doing too many things?
@@ -213,6 +238,19 @@ git rev-parse HEAD^{tree}
 ## Security Surface
 [Pre-check findings or "No issues found"]
 
+## Coverage
+- Coverage tool: [detected or configured]
+- Line coverage: [XX%]
+- Threshold: [YY% or "not configured"]
+- Status: [PASS | FAIL | NOT_MEASURED]
+
+## Path Coverage
+- Total paths: [N]
+- Tested: [N]
+- Untested: [N] (list)
+- Duplicate tests: [N] (list)
+- Orphaned tests: [N] (list)
+
 ## Issues
 
 ### Issue 1: [title]
@@ -255,6 +293,9 @@ Report: .forge/review/report.md
 - Any **critical** issue makes the review automatically **FAIL**
 - Any **major** issue (with no criticals) makes the review **NEEDS_CHANGES**
 - Only **minor** issues and **suggestions** allow a **PASS**
+- Coverage below configured threshold is a **critical** issue (automatic FAIL)
+- Any untested condition path is a **critical** issue (automatic FAIL)
+- Duplicate tests covering the same path is a **major** issue (NEEDS_CHANGES)
 - Never modify code — review is read-only observation
 - Always check against the architecture doc when one exists
 - If no architecture doc and no git diff, report an error — do not fabricate a review

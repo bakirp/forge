@@ -28,9 +28,9 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 |---------|-------------|-------|
 | `/think` | Classifies task complexity (tiny/feature/epic), routes to right depth. `--auto` chains the full pipeline. | Planning |
 | `/architect` | Locks architecture — data flow, API contracts, test strategy | Planning |
-| `/build` | TDD-enforced implementation with subagents and model routing | Build |
-| `/review` | Code review gate — spec compliance, quality, security surface | Review |
-| `/verify` | Cross-platform QA — web (Playwright), API, data pipeline | QA |
+| `/build` | TDD-enforced implementation with subagents, model routing, reusability search, and path coverage | Build |
+| `/review` | Code review gate — spec compliance, quality, security, DRY check, path coverage audit, coverage enforcement | Review |
+| `/verify` | Cross-platform QA — web (Playwright), API, data pipeline, coverage threshold gate | QA |
 | `/ship` | OWASP + STRIDE security audit, auto-fix, PR creation | Ship |
 | `/debug` | Root-cause-first debugging with evidence collection | Debug |
 | `/memory` | Cross-project decision memory (`/remember`, `/recall`, `/forget`) | All |
@@ -94,6 +94,10 @@ Meta:        /forge (overview + red-flags table)
 
 ## Quality and Reliability
 
+- **Quality gates** — `scripts/quality-gate.sh` provides centralized test detection (15+ frameworks), coverage enforcement, reusability search, DRY checking, and path coverage analysis. Used by `/build`, `/review`, and `/verify`.
+- **Coverage enforcement** — configurable threshold in `.forge/config.json` that acts as a hard gate across `/build`, `/review`, `/verify`, and `/ship`. Coverage below threshold = automatic FAIL.
+- **Path coverage validation** — every condition path (if/else, switch/case, loops, try/catch) must have exactly one test. No untested paths, no duplicate test coverage. Change impact analysis (`path-diff`) guides whether to add, modify, or remove tests.
+- **Code reusability** — `/build` searches for existing functions before writing new code; `/review` flags duplicate implementations as major issues.
 - **Artifact freshness protocol** — `/review` and `/verify` stamp `commit_sha` + `tree_hash` into their reports. `/ship` validates both against current HEAD before shipping, blocking with `STALE:` on mismatch. After any auto-fix, both reports must be regenerated.
 - **Subagent checkpoints in `/build`** — explicit checkpoint after each subagent verifies output against the architecture doc before the next subagent starts. Final verification is two-stage: architecture compliance first, then the test suite. Tests alone are not sufficient to pass the gate.
 - **Evidence-before-claims** — `/ship`, `/architect`, and `/review` require showing actual output as evidence before claiming work is complete.
@@ -102,7 +106,7 @@ Meta:        /forge (overview + red-flags table)
 
 ## Testing
 
-FORGE includes 13 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, and context-prune.
+FORGE includes 14 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, and quality-gate.
 
 ```bash
 # Run all tests
