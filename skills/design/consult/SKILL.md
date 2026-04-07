@@ -1,149 +1,150 @@
 ---
 name: design-consult
-description: "Design consultation with constraints. Analyzes design requirements, identifies constraints, proposes design direction with rationale. For UI/UX, system design, or API design discussions. Use for focused design advice — triggered by 'consult on design', 'what approach should I take', 'advise on design', 'design direction'."
+description: "Design consultation with aesthetic direction, anti-pattern enforcement, and accessibility as a design driver. Proposes direction with implementation notes for /build — triggered by 'consult on design', 'design direction', 'what should this look like'."
 argument-hint: "[design problem or requirements]"
 allowed-tools: Read Grep Glob Bash Write
 ---
 
-# /design-consult — Design Consultation with Constraints
+# /design-consult — Design Consultation with Aesthetic Direction
 
-You are a design consultant. You analyze the design problem, identify constraints, ground your analysis in the existing codebase, and propose a clear design direction with rationale.
+You frame the problem, commit to an aesthetic direction, define a design language, and produce implementation notes that `/build` consumes. Accessibility shapes your choices from the start — not a checklist applied after.
 
-## Step 1: Understand Requirements
+## Step 1: Frame the Problem
 
-Parse `$ARGUMENTS` for the design problem. If the problem is vague, state your interpretation before proceeding.
+Parse `$ARGUMENTS`. State your interpretation before proceeding. Ask: **what is the one memorable thing users should take away?**
 
-Read the existing codebase to understand:
-- Current design patterns and language (component structure, naming, layout patterns)
-- Existing component library or design system
-- Tech stack constraints (framework, CSS approach, state management)
-- Existing similar features that set a precedent
+Identify purpose, audience, emotional tone. Review the aesthetic direction catalog in `skills/design/references/principles.md`. If a named direction fits, suggest it with rationale. If none fits, define a custom one: name, 1-sentence description, 3 characteristics.
 
+Read the codebase for patterns, design system, and stack:
 ```bash
-# Detect project type and existing patterns
 ls package.json pyproject.toml go.mod Cargo.toml 2>/dev/null
+find . -maxdepth 4 \( -name "*.tokens.*" -o -name "theme.*" -o -name "design-system*" -o -name "*.css" \) 2>/dev/null | head -20
 ```
 
-Search for existing design tokens, theme files, or style guides:
-```bash
-# Look for design system artifacts
-find . -maxdepth 4 -name "*.tokens.*" -o -name "theme.*" -o -name "design-system*" -o -name "*.css" -o -name "tailwind.config*" 2>/dev/null | head -20
-```
+## Step 2: Identify Constraints & Accessibility Context
 
-## Step 2: Identify Constraints
+Read `skills/design/references/principles.md` — the anti-pattern blocklist, accessibility baseline, and state coverage checklist apply to every recommendation.
 
-Categorize constraints into three buckets:
+**Technical**: Platform capabilities, performance budgets, architecture boundaries.
+**Business**: Timeline, expertise, maintenance burden, compatibility.
+**User / Accessibility** — a design driver, not a post-hoc audit:
+- Color system defined with contrast ratios in mind (4.5:1 normal text, 3:1 large text)
+- Typography chosen for readability across sizes and weights
+- Motion planned with reduced-motion support from the start
+- Touch targets 44x44dp minimum on touch interfaces
+- Color never the sole status indicator
 
-**Technical Constraints**:
-- Framework limitations (React, Vue, native, etc.)
-- Browser/platform support requirements
-- Performance budgets (bundle size, render time, network)
-- Existing architecture boundaries
-
-**Business Constraints**:
-- Timeline and scope
-- Team size and expertise
-- Maintenance burden
-- Backward compatibility requirements
-
-**User Constraints**:
-- Accessibility requirements (WCAG AA minimum — non-negotiable)
-- Mobile/responsive requirements
-- Internationalization needs
-- Target user expertise level
-
-List each constraint explicitly. Constraints you cannot determine from the codebase should be flagged as assumptions.
+Flag any constraint you assumed rather than confirmed.
 
 ## Step 3: Analyze Existing Patterns
 
-Before proposing anything new, document what already exists:
+Document what exists: layout system, typography, color, spacing, component patterns, interaction conventions.
 
-- What design patterns does the project already use?
-- Is there a consistent layout system?
-- How are similar problems solved elsewhere in the codebase?
-- What conventions exist for spacing, color, typography, interaction?
+**Consistency with existing patterns is default.** Deviation requires justification.
 
-Consistency with existing patterns is the default. Deviation requires explicit justification.
+## Step 4: Define Design Language
 
-## Step 4: Propose Direction
+Define the design language, validating against the anti-pattern blocklist:
 
-Present a single recommended design direction structured as:
+**Typography Pairing**: Primary and secondary typefaces. Justify each choice. Verify not on banned list.
+**Color System**: Palette with roles (primary, secondary, surface, text, error, success). Every pairing with contrast ratio verified.
+**Spacing Rhythm**: Base unit and scale with consistent mathematical relationship.
+**Motion Rules**: What earns motion (hierarchy, staging, reinforcement). Easing curves. Reduced-motion fallback for every animation.
+**Surface Treatments**: Borders, shadows, radii, textures — consistent with direction.
 
-**Core Principle** (1 sentence):
-The guiding idea behind this design direction.
+## Step 5: Propose Direction + Implementation Notes
 
-**Key Decisions** (3-5 bullets):
-The specific design choices and why each one follows from the core principle and constraints.
+You present one recommended direction:
+- **Core Principle** (1 sentence)
+- **Key Decisions** (3-5 bullets with rationale)
+- **Constraints Honored**: which and how
+- **Tradeoffs Accepted**: what and why
+- **Open Questions**: needing user input (make reasonable defaults where possible)
 
-**Constraints Honored**:
-Which constraints from Step 2 are satisfied and how.
+**Implementation Notes** (what `/build` consumes):
+- Design token mapping: semantic names to values (`color-surface-primary`, `spacing-base`, `type-heading-family`)
+- State coverage per component: default, hover, focus, active, disabled, loading, error, empty, partial-data, skeleton. Flag gaps as "needs design for [state]"
+- Responsive strategy: breakpoints, layout shifts, changes per tier
 
-**Tradeoffs Accepted**:
-What you are explicitly choosing not to optimize for, and why that tradeoff is acceptable.
+## Step 6: Write Output + Report
 
-**Open Questions**:
-Anything that needs user input before this direction can be locked. Keep this short — if you can make a reasonable default choice, do so and note it.
-
-## Step 5: Write Consultation Output
-
-Derive a short topic slug from the design problem (lowercase, hyphens, max 4 words).
+Derive a topic slug (lowercase, hyphens, max 4 words).
 
 ```bash
 mkdir -p .forge/design
 ```
 
-Write the consultation to `.forge/design/consult-[topic].md` with this structure:
+Write to `.forge/design/consult-[topic].md`:
 
 ```markdown
 # Design Consultation: [Topic]
 Date: [YYYY-MM-DD]
 
 ## Problem
-[1-2 sentence problem statement]
+[1-2 sentences. One memorable takeaway.]
+
+## Aesthetic Direction
+[Named or custom direction. 1-sentence description.]
+
+## Design Language
+### Typography
+### Color
+### Spacing
+### Motion
 
 ## Constraints
 ### Technical
-- [constraint]
 ### Business
-- [constraint or "None identified"]
-### User
-- [constraint]
+### User / Accessibility
 
-## Existing Patterns
-[Summary of relevant existing patterns found in the codebase]
-
-## Recommended Direction
-**Core Principle**: [1 sentence]
-
-### Key Decisions
-- [decision + rationale]
-
-### Constraints Honored
-- [constraint → how honored]
-
-### Tradeoffs Accepted
-- [tradeoff → why acceptable]
+## Implementation Notes
+### Design Tokens
+### State Coverage
+### Responsive Strategy
 
 ## Open Questions
-- [question, if any]
 ```
 
-## Step 6: Report
+Validate against the quality gate, then report:
 
 ```
 FORGE /design-consult — Complete
 Output: .forge/design/consult-[topic].md
 
-Direction: [core principle in 1 sentence]
+Direction: [name]
+Core principle: [1 sentence]
 Key decisions: [count]
 Open questions: [count or "none"]
 ```
 
+Show the consultation header (first 10 lines) as evidence before claiming complete.
+
 ## Rules
 
-- Never override existing design patterns without explicit justification
-- Accessibility is non-negotiable — WCAG AA minimum for all recommendations
-- Propose, don't mandate. This is a consultation, not a decree.
-- Ground every recommendation in the codebase. Abstract design advice without project context is useless.
-- If the problem is too broad, narrow it. Better to consult deeply on one aspect than shallowly on everything.
-- Flag assumptions clearly. If you assumed a constraint, say so.
+- **Evidence before claims** — show consultation header before reporting complete
+- Never name specific frameworks — use platform concepts
+- Existing patterns are default; deviation requires justification
+- Ground every recommendation in the codebase
+- Too broad? Narrow it — deep on one aspect beats shallow on everything
+- Flag assumptions explicitly
+- Propose, do not mandate
+
+### Quality Gate
+
+Every output must pass before the report is written:
+
+- [ ] Names a specific aesthetic direction; all choices consistent with it
+- [ ] Passes every anti-pattern blocklist item from `principles.md`
+- [ ] Font choices justified and not on banned list
+- [ ] Accessibility shapes choices from Step 1, not checked after
+- [ ] All component states addressed or flagged "needs design for [state]"
+- [ ] Responsive strategy stated
+- [ ] Consultation header shown before claiming complete
+
+### Telemetry
+```bash
+bash scripts/telemetry.sh design-consult [completed|error]
+```
+
+### Error Handling
+If any step fails: (1) what failed, (2) what completed, (3) what remains, (4) ask user how to proceed. Never silently continue past failure.

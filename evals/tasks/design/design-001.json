@@ -1,0 +1,10 @@
+{
+  "id": "design-001",
+  "input": "Design a dashboard layout for an analytics app",
+  "category": "design",
+  "expected_skill_route": "/design consult",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/design/consult-dashboard-analytics.md"],
+  "red_flags": ["no aesthetic direction selected", "no anti-pattern validation", "missing implementation notes"],
+  "notes": "Should select an aesthetic direction (likely industrial or Swiss minimal), define design language, produce implementation notes."
+}

@@ -1,5 +1,29 @@
 # Changelog
 
+## v2.5.0 — 2026-04-07
+
+Design skill system rebuild with anti-pattern enforcement and aesthetic direction.
+
+### `/design` — Rebuilt Design Skill Suite
+- Complete rewrite of `/design consult`, `/design explore`, `/design review`
+- New `references/principles.md`: 10 design principles, 12 named aesthetic directions, 32-item anti-pattern blocklist across 8 dimensions, WCAG AA accessibility baseline with cognitive a11y, component state coverage checklist
+- Anti-pattern blocklist: explicit "AI slop" signatures banned by dimension (typography, color, layout, motion, content, interaction, images, forms)
+- Quality gate inlined in every sub-skill's Rules section — measurable, references blocklist
+- Aesthetic direction catalog: 12 named directions offered (not mandated) during consultation
+- Accessibility elevated from afterthought to design driver — shapes choices, not just checks them
+- Stack-adaptive approach: web-first baseline, adapts to detected project stack
+- Pipeline integration: `/design consult` -> `/architect` -> `/build` -> `/design review`
+- Implementation Notes in consult output — bridges design decisions to `/build`
+
+### Testing
+- New `tests/test-design.sh` with 9 structural compliance tests
+- Updated `tests/test-completeness.sh` with design evidence requirements
+- 5 design eval scenarios in `evals/tasks/design/`
+
+### Documentation
+- Updated `docs/skills-reference.md` with new `/design` documentation
+- Updated `docs/artifact-schema.md` with design artifact contracts
+
 ## v2.4.0 — 2026-04-06
 
 Autonomous product builder and context pruning for build subagents.

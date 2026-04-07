@@ -23,7 +23,9 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
     report.md                       <- /browse
     screenshots/                    <- /browse
   design/
-    [artifact].md                   <- /design (consult/explore/review)
+    consult-[topic].md              <- /design consult
+    explore-[topic].md              <- /design explore
+    review-[topic].md               <- /design review
   benchmark/
     report.md                       <- /benchmark
   context/
@@ -459,7 +461,7 @@ Skills read artifacts from prior phases. The dependency chain is strict.
 | `/debug` | source code, error output | debug report | -- |
 | `/browse` | -- | screenshots, logs | -- |
 | `/benchmark` | baselines | benchmark report | -- |
-| `/design` | -- | design artifacts | -- |
+| `/design` | codebase, principles.md | design artifacts | -- (recommends `/design review` before `/ship` for frontend) |
 | `/ship` | review report, verify report | release summary, PR | review report, verify report |
 | `/canary` | build output | canary report | -- |
 | `/deploy` | merged PR | deploy report | -- |

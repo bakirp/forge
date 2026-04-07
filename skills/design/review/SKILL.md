@@ -1,115 +1,74 @@
 ---
 name: design-review
-description: "Design review against principles. Evaluates an existing design or implementation against design principles, consistency, accessibility, and user experience. Use to evaluate existing designs — triggered by 'review the design', 'check accessibility', 'is this consistent', 'design quality check'."
+description: "Design review against principles. Scans for anti-patterns, audits accessibility, checks state coverage, and evaluates visual and interaction quality. Use to evaluate existing designs — triggered by 'review the design', 'check accessibility', 'is this consistent', 'design quality check'."
 argument-hint: "[file paths, component names, or PR to review]"
 allowed-tools: Read Grep Glob Bash Write
 ---
 
 # /design-review — Design Review Against Principles
 
-You evaluate existing designs or implementations against design principles. This is a design review, not a code review — you focus on user-facing design quality, not implementation correctness.
+You evaluate designs or implementations against design principles. This is a design review, not a code review — you focus on user-facing design quality. You never modify code; you observe, judge, and report.
 
-## Step 1: Load Design Context
+## Step 1: Load Context
 
-Parse `$ARGUMENTS` to determine what to review:
+Parse `$ARGUMENTS` to identify review targets (file paths, component names, directory, or PR via `gh pr diff`). Load the project's design context: design system, tokens, theme definitions, and similar components for consistency comparison.
 
-- **File paths**: Read the specified files directly
-- **Component names**: Search the codebase for matching components
-- **Directory**: Review all design-relevant files in the directory
-- **PR reference**: Use `gh pr view` and `gh pr diff` to load the changes
+Read `skills/design/references/principles.md` — this is the contract you evaluate against. Internalize the full anti-pattern blocklist, state coverage checklist, and accessibility baseline before proceeding.
 
-```bash
-# If reviewing specific files, read them
-# If reviewing a component by name, find it first
-find . -maxdepth 5 -type f \( -name "*.tsx" -o -name "*.vue" -o -name "*.svelte" -o -name "*.html" -o -name "*.css" \) 2>/dev/null | head -30
-```
+## Step 2: Anti-Pattern Scan
 
-Also load the project's design context:
-- Design system or component library (if any)
-- Style guide or design tokens
-- Existing similar components for consistency comparison
+Check every file against the **full blocklist** from `principles.md` — typography, color, layout, motion, content/copy, interaction, images/media, and forms.
 
-```bash
-# Look for design system artifacts
-find . -maxdepth 4 -name "*.tokens.*" -o -name "theme.*" -o -name "design-system*" -o -name "tailwind.config*" -o -name ".storybook" 2>/dev/null | head -20
-```
+Record every match with `file:line` and the specific anti-pattern triggered. This runs first because anti-pattern matches are the highest-signal findings. Do not skip categories. A clean scan is a valid result.
 
-## Step 2: Evaluate Against Principles
+## Step 3: Accessibility Audit
 
-Review the design against each principle. For each principle, note specific findings.
+Dedicated step — not a subsection of another check. Every a11y issue is at least **Major**; violations preventing usage are **Critical**.
 
-### Consistency
-- Does it match existing design patterns in the project?
-- Are naming conventions consistent with the rest of the codebase?
-- Does spacing, typography, and color usage follow established patterns?
-- If it introduces new patterns, is there justification?
+- **Contrast**: 4.5:1 normal text, 3:1 large text
+- **Keyboard nav**: All interactive elements reachable and operable
+- **Semantic markup**: Semantic elements first; ARIA only when semantics are insufficient
+- **Focus management**: Visible indicators, logical order, trapping in modals
+- **Touch targets**: 44x44dp minimum
+- **Color-only status**: Color must not be sole indicator (WCAG 1.4.1)
+- **Motion**: `prefers-reduced-motion` honored, no auto-play without pause
+- **Cognitive a11y**: Consistent navigation, error prevention, clear reading level
 
-### Simplicity
-- Is the design as simple as it could be while meeting requirements?
-- Are there unnecessary layers of abstraction or visual complexity?
-- Could a user understand the interface without instruction?
-- Is the information hierarchy clear?
+If a value cannot be determined from code (e.g., rendered contrast), flag as "needs manual verification."
 
-### Accessibility (WCAG AA Minimum)
-- **Color contrast**: Text meets 4.5:1 ratio (3:1 for large text)
-- **Keyboard navigation**: All interactive elements reachable and operable via keyboard
-- **Screen reader support**: Semantic HTML, ARIA labels where needed, meaningful alt text
-- **Focus management**: Visible focus indicators, logical focus order, focus trapping in modals
-- **Motion**: Respects `prefers-reduced-motion`, no auto-playing animations without pause
-- **Touch targets**: Minimum 44x44px for mobile interactive elements
+## Step 4: Interaction & State Coverage
 
-### Responsiveness
-- Does the layout work across viewport sizes (mobile, tablet, desktop)?
-- Are breakpoints handled gracefully (no content overflow, no hidden functionality)?
-- Do images and media scale appropriately?
-- Is touch interaction considered for mobile viewports?
+Check every interactive component against: **default, hover, focus, active, disabled, loading, error, empty, partial-data, skeleton**.
 
-### Performance
-- Are there obvious performance anti-patterns? (large unoptimized images, layout thrashing, excessive DOM nodes)
-- Are animations GPU-accelerated where possible (transform/opacity vs. top/left)?
-- Is content loading strategy appropriate (lazy loading, skeleton screens, progressive enhancement)?
+Flag missing states by component. Missing error/loading states are at least **Major**; missing skeleton/partial-data are **Minor**.
 
-## Step 3: Check Design System Adherence
+## Step 5: Visual & Content Quality
 
-If the project has a design system, component library, or style guide:
+**Aesthetic coherence**: Does the design commit to a direction? Evaluate typography, color system, spatial composition, and whether motion earns its place.
 
-- Are the correct design tokens being used (colors, spacing, typography)?
-- Are existing components being reused where appropriate, or are new ones being created unnecessarily?
-- Does the implementation match the design system's documented patterns?
-- Are deviations from the design system documented and justified?
+**Copy quality** (copy is design):
+- Active voice over passive
+- Specific labels ("Create Account" not "Submit")
+- Error messages with a next step
+- Micro-rules: ellipsis character not three dots, curly quotes, `tabular-nums` for number columns
 
-If no design system exists, note this and evaluate against the project's implicit patterns.
+## Step 6: Responsiveness, Theming & Performance
 
-## Step 4: Write Review
+**Viewports**: Layout works across mobile, tablet, desktop — no overflow or hidden functionality.
 
-Structure findings by severity:
+**User preferences**: Dark mode / color scheme, reduced motion, zoom not disabled.
 
-**Critical** — Blocks shipping. Accessibility violations that prevent usage, broken core functionality.
-**Major** — Should fix before shipping. Significant consistency issues, poor UX that confuses users, accessibility gaps.
-**Minor** — Fix when convenient. Small inconsistencies, polish items, minor improvements.
-**Suggestion** — Nice to have. Ideas for enhancement, not problems with current implementation.
+**Performance**: Font loading strategy and weight count; animations use `transform`/`opacity` only; no layout shift from dynamic content; images optimized; virtualization for long lists.
 
-For each finding:
-```
-[SEVERITY] [Principle]: [Description]
-  Location: [file:line or component name]
-  Issue: [What is wrong]
-  Recommendation: [How to fix it]
-```
+## Step 7: Write Review + Report
 
-Determine overall result:
-- **PASS**: No critical or major findings
-- **NEEDS_CHANGES**: One or more critical or major findings
-
-## Step 5: Write Review Output
-
-Derive a short topic slug from the review target (lowercase, hyphens, max 4 words).
+Derive a topic slug (lowercase, hyphens, max 4 words). Determine overall result: **PASS** (no critical/major) or **NEEDS_CHANGES** (any critical/major).
 
 ```bash
 mkdir -p .forge/design
 ```
 
-Write the review to `.forge/design/review-[topic].md`:
+Write to `.forge/design/review-[topic].md`:
 
 ```markdown
 # Design Review: [Topic]
@@ -117,9 +76,18 @@ Date: [YYYY-MM-DD]
 Result: [PASS | NEEDS_CHANGES]
 
 ## Summary
-[2-3 sentence summary of overall design quality]
+[2-3 sentences. Note 1-2 things done well.]
 
-## Findings
+## Anti-Pattern Findings
+- [finding with file:line, or "None"]
+
+## Accessibility Audit
+- [finding with file:line and severity, or "All checks passed"]
+
+## State Coverage
+- [component: missing states, or "All components covered"]
+
+## Findings by Severity
 
 ### Critical
 - [finding, or "None"]
@@ -132,34 +100,29 @@ Result: [PASS | NEEDS_CHANGES]
 
 ### Suggestions
 - [finding, or "None"]
-
-## Design System Compliance
-[Summary of adherence to design system, or note that no design system was found]
-
-## Scores
-| Principle | Rating |
-|-----------|--------|
-| Consistency | [strong/adequate/weak] |
-| Simplicity | [strong/adequate/weak] |
-| Accessibility | [strong/adequate/weak] |
-| Responsiveness | [strong/adequate/weak] |
-| Performance | [strong/adequate/weak] |
 ```
 
-## Step 6: Report
+Before claiming complete, show evidence:
+```bash
+head -6 .forge/design/review-[topic].md
+```
 
 ```
 FORGE /design-review — [PASS | NEEDS_CHANGES]
 Output: .forge/design/review-[topic].md
-
 Findings: [N] critical, [N] major, [N] minor, [N] suggestions
 ```
 
 ## Rules
 
-- Accessibility issues are always at least **major** severity. Accessibility failures that prevent usage are **critical**.
-- Do not nitpick styling preferences. "I would have chosen a different shade of blue" is not a finding.
-- Design review is not code review. Focus on user-facing design quality, not code style or architecture.
-- If you cannot determine something from the code alone (e.g., actual rendered color contrast), flag it as "needs manual verification" rather than guessing.
-- Be specific. "The design is inconsistent" is not actionable. "The card component uses 16px padding while all other cards use 24px" is actionable.
-- Praise what works well. A review that only lists problems is demoralizing and incomplete. Note 1-2 things done well in the summary.
+**Severity**: Critical = blocks shipping (a11y preventing usage, broken core interaction). Major = fix before shipping (a11y gaps, missing error/loading states, consistency violations). Minor = fix when convenient. Suggestion = enhancement idea, not a problem.
+
+**Quality gates**: Any critical or major finding means NEEDS_CHANGES. Only minor/suggestion findings allow PASS. Accessibility issues are always at least Major.
+
+**Conduct**:
+- Design review is NOT code review — user-facing design quality only.
+- Do not nitpick preferences ("different shade of blue" is not a finding).
+- Be specific and actionable ("card uses 16px padding while others use 24px" not "inconsistent").
+- Praise 1-2 things done well in the summary — a review that only lists problems is incomplete.
+- **Evidence before claims**: show the report header before claiming complete. Every finding must cite file and line.
+- If a file cannot be read, note "NOT REVIEWED: [reason]" and continue.

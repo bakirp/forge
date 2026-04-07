@@ -45,7 +45,7 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 | `/worktree` | Isolated git worktree setup for tasks | Lifecycle |
 | `/finish` | Branch completion, merge, and cleanup | Lifecycle |
 | `/browse` | Playwright-based browser automation (standalone or from /verify) | Browser |
-| `/design` | Design consultation, exploration, and review | Design |
+| `/design` | Design with anti-pattern enforcement, aesthetic direction, and accessibility | Design |
 | `/benchmark` | Performance benchmarking and regression detection | Performance |
 | `/canary` | Canary deployment with monitoring and rollback | Deploy |
 | `/deploy` | Post-merge deployment and health verification | Deploy |

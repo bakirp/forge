@@ -21,7 +21,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ── 1. Evidence-before-claims: core skills should contain the principle ──
 
-EVIDENCE_REQUIRED=(build review verify ship)
+EVIDENCE_REQUIRED=(build review verify ship design/review)
 
 for skill in "${EVIDENCE_REQUIRED[@]}"; do
   path="$ROOT/skills/$skill/SKILL.md"
@@ -62,7 +62,7 @@ fi
 
 # ── 2. Artifact directory creation: skills that write artifacts should create dirs ──
 
-DIR_CREATION_SKILLS=(architect review verify browse ship)
+DIR_CREATION_SKILLS=(architect review verify browse ship design/consult design/explore design/review)
 
 for skill in "${DIR_CREATION_SKILLS[@]}"; do
   path="$ROOT/skills/$skill/SKILL.md"

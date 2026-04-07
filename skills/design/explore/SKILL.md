@@ -1,110 +1,90 @@
 ---
 name: design-explore
-description: "Design variant exploration. Generates multiple design alternatives for comparison. Produces side-by-side variants with tradeoffs to help choose the best approach. Use to compare design alternatives — triggered by 'explore design variants', 'compare design approaches', 'show me design options', 'design alternatives'."
+description: "Variant exploration with aesthetic direction differentiation. Generates 3-4 distinct alternatives validated against the anti-pattern blocklist, compares across measurable dimensions, and recommends. Use to expand the solution space — triggered by 'explore design variants', 'compare design approaches', 'show me design options'."
 argument-hint: "[design problem or component to explore]"
 allowed-tools: Read Grep Glob Bash Write
 ---
 
 # /design-explore — Variant Exploration
 
-You generate genuinely distinct design alternatives for a given problem, compare them honestly, and let the user choose. Your job is to expand the solution space, not narrow it prematurely.
+You generate genuinely distinct design alternatives, compare them honestly, and let the user choose. Expand the solution space — do not confirm the obvious choice.
 
 ## Step 1: Scope the Exploration
 
-Parse `$ARGUMENTS` to determine what we are designing variants for. This could be:
-- A UI component or layout
-- An interaction pattern or user flow
-- A data model or schema
-- An API surface or endpoint design
-- A system architecture component
-
-Read the codebase to understand existing patterns and constraints:
+Parse `$ARGUMENTS`. Read the codebase for existing patterns and constraints:
 
 ```bash
-# Detect project type
 ls package.json pyproject.toml go.mod Cargo.toml 2>/dev/null
 ```
 
-Identify the boundaries of the exploration: what is fixed (constraints) and what is variable (the design space). State these explicitly before generating variants.
+Read `skills/design/references/principles.md`.
 
-**Fixed** (not up for exploration):
-- [list what cannot change]
+State boundaries before generating anything:
 
-**Variable** (the design space):
-- [list what we are exploring alternatives for]
+**Fixed**: [platform, existing patterns, accessibility requirements, integration points]
+
+**Variable**: [what differs across variants — layout, interaction model, hierarchy, visual treatment]
 
 ## Step 2: Generate Variants
 
-Create **3-4 distinct design variants**. Each variant must be genuinely different in approach, not minor tweaks of the same idea.
+You create **3-4 genuinely distinct variants**. Each SHOULD commit to a different aesthetic direction from the catalog in `principles.md` where the problem maps naturally. If it does not, variants can differ in other ways — direction is offered, not forced.
 
-Guidelines for variant generation:
-- Variant A: The conventional/expected approach (what most developers would reach for first)
-- Variant B: A pragmatic alternative that makes a different core tradeoff
-- Variant C: An unconventional or creative approach (challenge assumptions)
-- Variant D (optional): A minimal/constrained approach (what if we had half the budget?)
+Validate each variant against the anti-pattern blocklist during generation. Fix blocklist violations before including a variant.
 
-For each variant, document:
+For each variant:
 
 ### Variant [Letter]: [Name]
-**1-line description**: What makes this variant distinct.
+**Aesthetic direction**: [from catalog or custom]
 
-**Design sketch** (ASCII art, pseudocode, or structured outline):
-```
-[ASCII diagram, component tree, API shape, data flow, or layout sketch]
-```
+**Design language**: Type [choices/scale] | Color [palette/contrast] | Spacing [density/rhythm] | Motion [strategy/timing]
 
 **Key characteristics**:
-- [What makes this variant unique — the core idea]
+- [Core idea — what makes this distinct]
 - [Primary structural or behavioral choice]
-- [Notable implementation detail]
+- [State coverage — loading, error, empty handling]
 
-**Pros**:
-- [genuine advantage]
-- [genuine advantage]
-
-**Cons**:
-- [honest disadvantage]
-- [honest disadvantage]
-
-**Best for**: [Which use cases, team sizes, timelines, or constraints favor this variant]
+**Pros**: [genuine advantages]
+**Cons**: [honest disadvantages — no softening]
+**Best for**: [use cases, constraints, timelines favoring this]
 
 ## Step 3: Compare
 
-Create a side-by-side comparison table across key dimensions:
+You build a side-by-side comparison table:
 
 | Dimension | Variant A | Variant B | Variant C | Variant D |
-|-----------|-----------|-----------|-----------|-----------|
-| Complexity | [low/med/high] | ... | ... | ... |
-| Flexibility | [low/med/high] | ... | ... | ... |
-| Performance | [low/med/high] | ... | ... | ... |
-| Consistency | [how well it fits existing patterns] | ... | ... | ... |
-| Accessibility | [WCAG compliance level] | ... | ... | ... |
-| Time to implement | [relative estimate] | ... | ... | ... |
-| Maintenance burden | [low/med/high] | ... | ... | ... |
+|---|---|---|---|---|
+| Complexity | low/med/high | ... | ... | ... |
+| Flexibility | low/med/high | ... | ... | ... |
+| Accessibility | WCAG level + notes | ... | ... | ... |
+| Aesthetic distinctiveness | commitment strength | ... | ... | ... |
+| State coverage | completeness | ... | ... | ... |
+| Time to implement | relative estimate | ... | ... | ... |
+| Maintenance burden | low/med/high | ... | ... | ... |
+
+Assess honestly. Do not inflate the recommended variant or deflate others.
 
 ## Step 4: Recommend
 
-State which variant you would recommend and why, but frame it as a recommendation, not a decision:
+You state your recommendation, held loosely:
 
 ```
 Recommendation: Variant [X] — [Name]
-Reason: [1-2 sentences explaining why this balances the constraints best]
-However: [1 sentence on when you'd choose differently]
+Reason: [1-2 sentences on why this balances constraints best]
+When I'd choose differently: [context shift that would change this pick]
 ```
 
-The user makes the final call. Your recommendation should be well-reasoned but held loosely.
+The user makes the final call.
 
-## Step 5: Write Exploration Output
+## Step 5: Write Output + Report
 
-Derive a short topic slug from the design problem (lowercase, hyphens, max 4 words).
+Derive a topic slug (lowercase, hyphens, max 4 words).
 
 ```bash
 mkdir -p .forge/design
 ```
 
-Write the exploration to `.forge/design/explore-[topic].md` with the full variant analysis from Steps 1-4.
+Write to `.forge/design/explore-[topic].md`:
 
-Structure:
 ```markdown
 # Design Exploration: [Topic]
 Date: [YYYY-MM-DD]
@@ -117,22 +97,19 @@ Date: [YYYY-MM-DD]
 
 ## Variants
 ### Variant A: [Name]
-[full variant detail from Step 2]
+[direction, design language, characteristics, pros, cons, best-for]
 
 ### Variant B: [Name]
-[full variant detail from Step 2]
-
-### Variant C: [Name]
-[full variant detail from Step 2]
+...
 
 ## Comparison
 [table from Step 3]
 
 ## Recommendation
-[recommendation from Step 4]
+[from Step 4]
 ```
 
-## Step 6: Report
+Show the exploration file header, then report:
 
 ```
 FORGE /design-explore — Complete
@@ -144,10 +121,13 @@ Recommendation: Variant [X] — [Name]
 
 ## Rules
 
-- Every variant must be genuinely different. If two variants only differ in minor details, merge them or replace one.
-- Include at least one unconventional option. The purpose of exploration is to expand thinking, not confirm the obvious choice.
-- Do not bias toward the "safe" choice. Present each variant's pros and cons with equal honesty.
-- ASCII art is fine for design sketches. Do not apologize for low fidelity.
-- If a variant has a fatal flaw, still include it but flag the flaw clearly in cons. Understanding why an approach fails is valuable.
-- All variants must meet WCAG AA accessibility. A variant that cannot be made accessible is not a valid variant.
-- Ground variants in the actual codebase. A variant that ignores the project's tech stack or existing patterns is not useful.
+- Every variant names its aesthetic direction and makes consistent choices. Type, color, spacing, and motion must not contradict the stated direction.
+- Every variant passes the anti-pattern blocklist from `principles.md`. Validate during generation, not after.
+- Variants are genuinely different. If two differ only in minor details, merge or replace.
+- At least one unconventional option included.
+- All variants meet WCAG AA. A variant that cannot be made accessible is not valid.
+- No bias toward the "safe" choice. Present pros and cons with equal honesty.
+- **Evidence before claims** — show the exploration file header before reporting complete.
+- Ground variants in the actual codebase. Ignoring project patterns makes a variant useless.
+- Fatal flaws: still include the variant but flag clearly in cons.
+- Never name specific frameworks, libraries, or CSS utilities. Use platform concepts.

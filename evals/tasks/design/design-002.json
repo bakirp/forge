@@ -1,0 +1,10 @@
+{
+  "id": "design-002",
+  "input": "Show me 3 different design approaches for a settings page",
+  "category": "design",
+  "expected_skill_route": "/design explore",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/design/explore-settings-page.md"],
+  "red_flags": ["fewer than 3 variants", "variants not genuinely different", "no comparison table"],
+  "notes": "Should produce 3+ variants with distinct aesthetic directions and honest comparison."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "design-004",
+  "input": "Make this landing page look less generic",
+  "category": "design",
+  "expected_skill_route": "/design consult",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/design/consult-landing-page.md"],
+  "red_flags": ["generic recommendations", "no anti-pattern blocklist enforcement", "no aesthetic direction"],
+  "notes": "Anti-generic focus. Should identify AI slop patterns and propose a committed aesthetic direction."
+}

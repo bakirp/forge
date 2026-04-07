@@ -1,0 +1,10 @@
+{
+  "id": "design-005",
+  "input": "What design direction should we use for a mobile banking app?",
+  "category": "design",
+  "expected_skill_route": "/design consult",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/design/consult-mobile-banking.md"],
+  "red_flags": ["no accessibility considerations", "direction not from catalog or custom-defined", "no touch target guidance"],
+  "notes": "Accessibility-driven. Should emphasize trust, clarity, and mobile-specific constraints."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "design-003",
+  "input": "Review the design of src/components/Header.tsx",
+  "category": "design",
+  "expected_skill_route": "/design review",
+  "expected_classification": "feature",
+  "expected_artifacts": [".forge/design/review-header.md"],
+  "red_flags": ["no anti-pattern scan", "accessibility not a dedicated step", "no severity ratings"],
+  "notes": "Should run anti-pattern scan first, dedicated a11y audit, severity-rated findings."
+}

@@ -339,25 +339,27 @@ Dedicated Playwright browser automation. Extracted from `/verify` in Phase 3 to 
 
 ---
 
-## /design — Design Consultation Suite
+## /design — Design Workflow Hub
 
-**Phase**: Design
+**Phase**: Design (after `/brainstorm`, before or alongside `/architect`)
 **Usage**: `/design [consult|explore|review] [context]`
 
-Design hub with three sub-skills for different design needs.
+Design hub with anti-pattern enforcement and aesthetic direction. All sub-skills load `skills/design/references/principles.md` — the shared foundation containing 10 design principles, 12 named aesthetic directions, a 32-item anti-pattern blocklist, and WCAG AA accessibility baseline.
 
 ### /design consult
-Open-ended design consultation. Analyzes requirements, proposes design directions, discusses trade-offs. Good for early-stage "how should we approach this?" questions.
+Design consultation with aesthetic direction. Frames the problem (purpose, audience, tone, one memorable thing), selects an aesthetic direction from the catalog (or defines a custom one), defines a design language (typography, color, spacing, motion), validates against the anti-pattern blocklist, and produces Implementation Notes that `/build` consumes.
 
 ### /design explore
-Generates design variants. Given a design direction, produces 2-4 concrete alternatives with mockup descriptions, component breakdowns, and interaction flows.
+Variant exploration with aesthetic differentiation. Generates 3-4 genuinely distinct alternatives, each with a different aesthetic direction and design language. Compares across measurable dimensions (complexity, accessibility, state coverage, maintenance burden) and recommends.
 
 ### /design review
-Reviews existing design artifacts (mockups, component trees, style guides) against usability heuristics and consistency criteria. Produces actionable feedback.
+Design review with anti-pattern scanning as the first step. Checks against the full blocklist, runs a dedicated accessibility audit (every a11y issue is at least Major), evaluates state coverage, visual/content quality, responsiveness, and performance. Reports PASS/NEEDS_CHANGES with severity-rated findings.
 
 **Output**: Design artifacts at `.forge/design/`.
 
-**Rules**: Always cites design rationale. Explore mode must produce at least 2 variants. Review mode must reference specific heuristics.
+**Pipeline**: `/design consult` produces a direction artifact that `/architect` consumes. `/design review` runs after `/build` to evaluate design quality (separate from `/review` which evaluates code quality).
+
+**Rules**: Every recommendation names an aesthetic direction. Generic output is a failure mode. WCAG AA minimum. Anti-pattern blocklist enforced. Evidence before claims.
 
 ---
 
