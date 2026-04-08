@@ -8,7 +8,7 @@ source "$(dirname "$0")/lib/test-helpers.sh"
 
 # ── 1. Evidence-before-claims: core skills should contain the principle ──
 
-EVIDENCE_REQUIRED=(build review verify ship design/review)
+EVIDENCE_REQUIRED=(build review verify ship design/review design/audit design/polish)
 
 for skill in "${EVIDENCE_REQUIRED[@]}"; do
   path="$ROOT/skills/$skill/SKILL.md"
@@ -49,7 +49,7 @@ fi
 
 # ── 2. Artifact directory creation: skills that write artifacts should create dirs ──
 
-DIR_CREATION_SKILLS=(architect review verify browse ship design/consult design/explore design/review)
+DIR_CREATION_SKILLS=(architect review verify browse ship design/consult design/explore design/review design/audit design/polish)
 
 for skill in "${DIR_CREATION_SKILLS[@]}"; do
   path="$ROOT/skills/$skill/SKILL.md"

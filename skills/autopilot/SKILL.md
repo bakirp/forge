@@ -222,7 +222,7 @@ bash scripts/manifest.sh artifact "$RUN_ID" future-enhancements ".forge/autopilo
 
 ## Step 9: Memory
 
-Store key session decisions via `/memory-remember` logic using `jq` for safe JSON construction (never raw `echo` with interpolation):
+Store key session decisions using `jq` for safe JSON construction. Note: this writes directly to `memory.jsonl` instead of invoking `/memory-remember` to avoid interactive prompts in autonomous mode.
 
 ```bash
 ID="$(date +%Y%m%d_%H%M%S)_$(xxd -l2 -p /dev/urandom)"

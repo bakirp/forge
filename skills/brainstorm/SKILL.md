@@ -289,3 +289,8 @@ Ready for /architect. The brainstorm artifact provides context for architecture 
 - Never write implementation code — ideation only
 - **Grill mode**: always provide a recommended answer with every question — don't just ask, show what you'd decide and why
 - **Grill mode**: self-resolve from the codebase before asking the user — don't waste their time on answerable questions
+
+### Telemetry
+```bash
+bash scripts/telemetry.sh brainstorm [completed|error]
+```

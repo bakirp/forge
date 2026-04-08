@@ -103,23 +103,6 @@ Implements the architecture doc with strict TDD enforcement.
 
 ---
 
-## /review — Code Review Gate
-
-**Phase**: Review (between `/build` and `/verify`)
-**Usage**: `/review [optional: specific files or focus area]`
-
-Reviews build output against the architecture doc. Never modifies code — observes, judges, and reports.
-
-**Review Dimensions**: Spec compliance, runtime behavior analysis, code quality (readability, duplication, complexity, error handling), security surface.
-
-**Runtime Behavior Analysis**: Step 3 requires tracing each component's execution path — initialization timing, environment assumptions, trigger ordering, resource cleanup. Bugs diagnosable from code reading are review findings, not deferred to `/verify`.
-
-**Output**: Report at `.forge/review/report.md` with status (PASS/NEEDS_CHANGES/FAIL), issue counts by severity, and structured findings.
-
-**Rules**: Critical issues = automatic FAIL. Major issues = NEEDS_CHANGES. Coverage below threshold = critical. Never modifies code. Evidence before claims.
-
----
-
 ## /verify — Cross-Platform QA
 
 **Phase**: QA
@@ -410,23 +393,29 @@ Dedicated Playwright browser automation. Extracted from `/verify` in Phase 3 to 
 
 ## /design — Design Workflow Hub
 
-**Phase**: Design (after `/brainstorm`, before or alongside `/architect`)
-**Usage**: `/design [consult|explore|review] [context]`
+**Phase**: Design (standalone — invoke before or after main pipeline phases as needed)
+**Usage**: `/design [consult|explore|review|audit|polish] [context]`
 
-Design hub with anti-pattern enforcement and aesthetic direction. All sub-skills load `skills/design/references/principles.md` — the shared foundation containing 10 design principles, 12 named aesthetic directions, a 32-item anti-pattern blocklist, and WCAG AA accessibility baseline.
+Design hub with anti-pattern enforcement and aesthetic direction. All sub-skills load `skills/design/references/principles.md` — the shared foundation containing 10 design principles, 12 named aesthetic directions, a 32-item anti-pattern blocklist, WCAG AA accessibility baseline, usability heuristics, and review angles. Skills selectively load additional domain references (typography, color, motion, interaction, responsive) based on their needs.
 
 ### /design consult
-Design consultation with aesthetic direction. Frames the problem (purpose, audience, tone, one memorable thing), selects an aesthetic direction from the catalog (or defines a custom one), defines a design language (typography, color, spacing, motion), validates against the anti-pattern blocklist, and produces Implementation Notes that `/build` consumes.
+Design consultation with aesthetic direction. Frames the problem (purpose, audience, tone, one memorable thing), selects an aesthetic direction from the catalog (or defines a custom one), defines a design language (typography, color, spacing, motion), validates against the anti-pattern blocklist, and produces Implementation Notes that `/build` consumes. Loads `typography.md`, `color-and-contrast.md`, and `motion-design.md` for detailed design language specs — typography uses modular scales and fluid `clamp()` values, color uses OKLCH for perceptual uniformity, motion specifies named easing curves with `cubic-bezier()` values.
 
 ### /design explore
-Variant exploration with aesthetic differentiation. Generates 3-4 genuinely distinct alternatives, each with a different aesthetic direction and design language. Compares across measurable dimensions (complexity, accessibility, state coverage, maintenance burden) and recommends.
+Variant exploration with aesthetic differentiation. Generates 3-4 genuinely distinct alternatives, each with a different aesthetic direction and design language. Compares across measurable dimensions (complexity, accessibility, state coverage, maintenance burden) and recommends. Loads `typography.md` and `color-and-contrast.md` — variant design language format uses OKLCH palettes and modular scale ratios.
 
 ### /design review
-Design review with anti-pattern scanning as the first step. Checks against the full blocklist, runs a dedicated accessibility audit (every a11y issue is at least Major), evaluates state coverage, visual/content quality, responsiveness, and performance. Reports PASS/NEEDS_CHANGES with severity-rated findings.
+Design review with anti-pattern scanning as the first step. Checks against the full blocklist plus AI Design Fingerprint detection (flags compound patterns like Inter + purple gradient + uniform cards as "AI slop"). Runs a dedicated accessibility audit (every a11y issue is at least Major), evaluates state coverage, visual/content quality, responsiveness, and performance. Includes usability heuristics check (Nielsen's 10 heuristics with FORGE severity levels) and review angle stress test (power user, first-time, accessibility, edge case, mobile/touch). Reports PASS/NEEDS_CHANGES with severity-rated findings.
 
-**Output**: Design artifacts at `.forge/design/`.
+### /design audit
+Technical design quality audit — measurement, not a gate. Scores 5 dimensions (0-10 each): accessibility, responsiveness, interaction completeness, anti-pattern density, and performance. Every finding cites `file:line`. Loads `interaction-design.md` and `responsive-design.md` for structured evaluation criteria. Report includes per-dimension scores, findings, and Top 5 Improvements. A typical production UI scores 6-8.
 
-**Pipeline**: `/design consult` produces a direction artifact that `/architect` consumes. `/design review` runs after `/build` to evaluate design quality (separate from `/review` which evaluates code quality).
+### /design polish
+Final visual polish pass before `/ship`. Runs a 6-check sweep: typography rendering, color consistency, spacing rhythm, motion quality, state completeness, and copy quality. Makes fixes directly — this is not a review. Loads `typography.md` and `color-and-contrast.md` for specific values. Report lists changes made per dimension.
+
+**Output**: Design artifacts at `.forge/design/`: `consult-[topic].md`, `explore-[topic].md`, `review-[topic].md`, `audit-[topic].md`, `polish-[topic].md`.
+
+**Pipeline**: `/design` is a standalone suite — no main pipeline skill reads `.forge/design/` artifacts automatically. `/design consult` produces a direction artifact; pass its path to `/architect` if you want architecture to respect design direction. `/design review` evaluates visual/UX quality (complementary to code `/review`). `/design audit` measures technical quality. `/design polish` makes final visual fixes.
 
 **Rules**: Every recommendation names an aesthetic direction. Generic output is a failure mode. WCAG AA minimum. Anti-pattern blocklist enforced. Evidence before claims.
 
@@ -516,7 +505,7 @@ Gradual rollout with monitoring. Deploys to a small percentage of traffic, monit
 4. Promotes to full deployment if healthy, or rolls back if degraded
 5. Reports deployment outcome
 
-**Output**: Canary report at `.forge/releases/`.
+**Output**: Monitoring data during canary period (no persistent artifact).
 
 **Rules**: Always monitors before promoting. Automatic rollback on error rate spike. Never promotes without baseline comparison.
 
@@ -536,7 +525,7 @@ Post-merge deployment and health verification. Runs after a PR is merged to depl
 4. Verifies key functionality with smoke tests
 5. Reports deployment status
 
-**Output**: Deploy report at `.forge/releases/`.
+**Output**: Deploy record at `.forge/deploy/last-deploy.json`.
 
 **Rules**: Never deploys from an unmerged branch. Health checks must pass before marking deployment as successful. Supports rollback if health checks fail.
 

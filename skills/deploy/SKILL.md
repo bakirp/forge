@@ -11,6 +11,12 @@ You handle post-merge deployment. You pull the latest merged code, run a final s
 
 ## Step 1: Check PR Status
 
+Check for a release summary from `/ship`:
+```bash
+ls .forge/releases/*/summary.md 2>/dev/null | tail -1
+```
+If found, read it for the PR URL, version, and security audit status. Use the PR URL to verify the correct PR was merged.
+
 Verify the PR from `/ship` has been merged:
 
 ```bash

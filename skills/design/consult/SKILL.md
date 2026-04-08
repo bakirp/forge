@@ -23,7 +23,11 @@ find . -maxdepth 4 \( -name "*.tokens.*" -o -name "theme.*" -o -name "design-sys
 
 ## Step 2: Identify Constraints & Accessibility Context
 
-Read `skills/design/references/principles.md` — the anti-pattern blocklist, accessibility baseline, and state coverage checklist apply to every recommendation.
+Read these references — they inform every recommendation:
+- `skills/design/references/principles.md` — anti-pattern blocklist, accessibility baseline, state coverage, AI fingerprints
+- `skills/design/references/typography.md` — modular scales, fluid patterns, font selection, loading strategy
+- `skills/design/references/color-and-contrast.md` — OKLCH palettes, contrast requirements, tinted neutrals, dark mode
+- `skills/design/references/motion-design.md` — easing curves, duration ranges, stagger patterns, reduced-motion
 
 **Technical**: Platform capabilities, performance budgets, architecture boundaries.
 **Business**: Timeline, expertise, maintenance burden, compatibility.
@@ -46,10 +50,14 @@ Document what exists: layout system, typography, color, spacing, component patte
 
 Define the design language, validating against the anti-pattern blocklist:
 
-**Typography Pairing**: Primary and secondary typefaces. Justify each choice. Verify not on banned list.
-**Color System**: Palette with roles (primary, secondary, surface, text, error, success). Every pairing with contrast ratio verified.
-**Spacing Rhythm**: Base unit and scale with consistent mathematical relationship.
-**Motion Rules**: What earns motion (hierarchy, staging, reinforcement). Easing curves. Reduced-motion fallback for every animation.
+**Typography Pairing**: Primary and secondary typefaces from `typography.md` guidance. Justify each choice. Verify not on banned list. Specify modular scale ratio and fluid `clamp()` values for responsive sizing. Include `font-display` strategy and OpenType features to enable.
+
+**Color System**: Palette with roles (primary, neutral, semantic, surface) per `color-and-contrast.md`. Build in OKLCH for perceptual uniformity. Tint neutrals (0.01 chroma of brand hue). Every text/background pairing with contrast ratio verified (4.5:1 normal, 3:1 large). Include dark mode strategy (reduce contrast, desaturate, elevate with lightness).
+
+**Spacing Rhythm**: Base unit and scale with consistent mathematical relationship. Use 4pt grid (4, 8, 12, 16, 24, 32, 48, 64px). Vertical rhythm tied to body line-height.
+
+**Motion Rules**: Per `motion-design.md` — specify easing curves by name and `cubic-bezier()` value. Duration ranges per interaction type (micro: 100-150ms, standard: 200-300ms, complex: 300-500ms). Stagger rules for lists. `prefers-reduced-motion` fallback for every animation.
+
 **Surface Treatments**: Borders, shadows, radii, textures — consistent with direction.
 
 ## Step 5: Propose Direction + Implementation Notes

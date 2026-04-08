@@ -17,6 +17,18 @@ If `/memory-recall` surfaces relevant entries, treat them as constraints or prio
 
 If the memory bank is empty or no relevant entries are found, proceed silently.
 
+## Step 1.5: Load Brainstorm Artifact (if exists)
+
+Check for a brainstorm artifact from a prior `/brainstorm` run:
+
+```bash
+ls .forge/brainstorm/*.md 2>/dev/null | head -1
+```
+
+If found, read it. Extract: selected approach, rejected alternatives (and why), discovered constraints, trade-offs. These inform your architecture decisions — the brainstorm artifact narrows the solution space so you do not re-explore paths already rejected.
+
+If no artifact exists, proceed — brainstorm is optional.
+
 ## Step 2: Analyze the Codebase
 
 Before designing, understand what exists:

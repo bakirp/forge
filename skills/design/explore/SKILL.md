@@ -17,7 +17,10 @@ Parse `$ARGUMENTS`. Read the codebase for existing patterns and constraints:
 ls package.json pyproject.toml go.mod Cargo.toml 2>/dev/null
 ```
 
-Read `skills/design/references/principles.md`.
+Read these references:
+- `skills/design/references/principles.md` — anti-pattern blocklist, aesthetic catalog, AI fingerprints
+- `skills/design/references/typography.md` — font selection, modular scales, fluid patterns
+- `skills/design/references/color-and-contrast.md` — OKLCH palettes, contrast, tinted neutrals
 
 State boundaries before generating anything:
 
@@ -36,7 +39,7 @@ For each variant:
 ### Variant [Letter]: [Name]
 **Aesthetic direction**: [from catalog or custom]
 
-**Design language**: Type [choices/scale] | Color [palette/contrast] | Spacing [density/rhythm] | Motion [strategy/timing]
+**Design language**: Type [family + modular scale ratio + clamp() range] | Color [OKLCH palette + contrast ratios] | Spacing [grid unit + density] | Motion [easing curve + duration range]
 
 **Key characteristics**:
 - [Core idea — what makes this distinct]

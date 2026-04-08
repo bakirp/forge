@@ -19,6 +19,8 @@ If argument starts with "response", or user says "fix review comments", "address
 If argument starts with "adversarial", or user says "red team this", "attack the code", "break this change":
 → Delegate to `/review-adversarial`
 
+For UI/frontend projects, also consider running `/design review` for visual/UX quality — it evaluates design principles, not code quality. Complementary, not interchangeable.
+
 # /review — Code Review Gate
 
 You review what `/build` produced before `/verify` runs. You never modify code — you observe, judge, and report. Your review report is consumed by `/ship`, so the format matters.

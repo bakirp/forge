@@ -192,5 +192,10 @@ Security note: Fix modifies [auth/crypto/input validation/etc.]. Flag for /ship 
 - If the fix touches security-sensitive code, note it for /ship
 - The debug report must be self-contained — someone reading it cold should understand the full story
 - If you cannot find the root cause after thorough investigation, say so honestly — do not fabricate
+
+### Telemetry
+```bash
+bash scripts/telemetry.sh debug [completed|error]
+```
 - Never modify tests to make them pass — fix the implementation, not the assertions
 - If the bug reveals an architecture gap, note it but do not fix it here — that is /architect work

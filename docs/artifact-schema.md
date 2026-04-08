@@ -10,7 +10,8 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
 .forge/
   architecture/
     [task-name-slugified].md        <- /architect
-    [task-name]-brainstorm.md       <- /brainstorm
+  brainstorm/
+    [task-name-slugified].md        <- /brainstorm
   review/
     report.md                       <- /review
     adversarial.md                  <- /review adversarial
@@ -27,6 +28,8 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
     consult-[topic].md              <- /design consult
     explore-[topic].md              <- /design explore
     review-[topic].md               <- /design review
+    audit-[topic].md                <- /design audit
+    polish-[topic].md               <- /design polish
   benchmark/
     report.md                       <- /benchmark
   build/
@@ -39,6 +42,11 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
   releases/
     [version]/
       summary.md                    <- /ship
+  deploy/
+    last-deploy.json                <- /deploy
+  autopilot/
+    state.json                      <- autopilot-guard.sh
+    future-enhancements.md          <- /autopilot
 ```
 
 All paths are relative to the project root. Skills must create directories as needed before writing.
@@ -518,9 +526,9 @@ blocked -> active      (blocker resolved)
 
 ## Brainstorm Artifact
 
-**Produced by:** `/think` (for feature/epic tasks when multiple approaches exist)
-**Consumed by:** `/architect`
-**Path:** `.forge/architecture/[task-name-slugified]-brainstorm.md`
+**Produced by:** `/brainstorm`
+**Consumed by:** `/architect` (Step 1.5 reads brainstorm artifact if present)
+**Path:** `.forge/brainstorm/[task-name-slugified].md`
 
 ```markdown
 # FORGE Brainstorm: [Task Name]
@@ -624,8 +632,8 @@ Skills read artifacts from prior phases. The dependency chain is strict.
 | Skill | Reads | Writes | Blocks if missing |
 |-------|-------|--------|-------------------|
 | `/think` | -- | run manifest | -- |
-| `/brainstorm` | codebase | brainstorm doc | -- |
-| `/architect` | memory bank, brainstorm doc | architecture doc | -- |
+| `/brainstorm` | codebase, memory bank | brainstorm doc at `.forge/brainstorm/` | -- |
+| `/architect` | memory bank, brainstorm doc (`.forge/brainstorm/*.md` if exists) | architecture doc | -- |
 | `/build` | architecture doc | source code, tests | architecture doc |
 | `/review` | architecture doc, source code | review report | -- |
 | `/review adversarial` | architecture doc, build report, source code | adversarial review report | -- |
@@ -633,7 +641,7 @@ Skills read artifacts from prior phases. The dependency chain is strict.
 | `/debug` | source code, error output | debug report | -- |
 | `/browse` | -- | screenshots, logs | -- |
 | `/benchmark` | baselines | benchmark report | -- |
-| `/design` | codebase, principles.md | design artifacts | -- (recommends `/design review` before `/ship` for frontend) |
+| `/design` | codebase, principles.md, domain references (typography, color, interaction, motion, responsive) | design artifacts (consult, explore, review, audit, polish) | -- (recommends `/design review` before `/ship` for frontend) |
 | `/ship` | review report, verify report | release summary, PR | review report, verify report |
 | `/canary` | build output | canary report | -- |
 | `/deploy` | merged PR | deploy report | -- |

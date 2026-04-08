@@ -1,5 +1,93 @@
 # Changelog
 
+## v2.10.0 — 2026-04-08
+
+Design skill expansion — technical audit, visual polish, 5 domain reference files, usability heuristics, and AI slop detection.
+
+### `/design audit` — New Sub-Skill
+- New technical design quality audit at `skills/design/audit/SKILL.md`
+- Scores 5 dimensions: accessibility, responsiveness, interaction completeness, anti-pattern density, performance
+- Each dimension scored 0-10 with per-issue `file:line` citations
+- Measurement tool, not a gate — reports numbers, not pass/fail (that's `/design review`'s job)
+- Loads domain references: `interaction-design.md`, `responsive-design.md`
+- Report at `.forge/design/audit-[topic].md` with Top 5 Improvements section
+
+### `/design polish` — New Sub-Skill
+- New final visual polish pass at `skills/design/polish/SKILL.md`
+- 6-check sweep: typography rendering, color consistency, spacing rhythm, motion quality, state completeness, copy quality
+- Makes fixes directly — this is not a review, it changes code
+- Pipeline position: after `/design review`, before `/ship`
+- Loads domain references: `typography.md`, `color-and-contrast.md`
+- Report at `.forge/design/polish-[topic].md` with changes made per dimension
+
+### Reference Library — 5 New Domain Files
+- `skills/design/references/typography.md` — modular scales, fluid type with `clamp()`, font selection criteria, loading strategy, OpenType features
+- `skills/design/references/color-and-contrast.md` — OKLCH color system, contrast requirements (WCAG AA), tinted neutrals, dark mode strategy, semantic palette roles
+- `skills/design/references/interaction-design.md` — 8-state model (default/hover/focus/active/disabled/loading/error/success), form patterns, focus management, feedback timing
+- `skills/design/references/motion-design.md` — easing curves by name and `cubic-bezier()`, duration ranges by interaction type, stagger patterns, `prefers-reduced-motion` fallbacks
+- `skills/design/references/responsive-design.md` — layout patterns (fluid grids, container queries), breakpoint strategy, mobile-first hierarchy, safe areas
+
+### `/design review` — Enhanced
+- New Step 6b: Usability Heuristics Check — walks Nielsen's 10 heuristics from `principles.md` with FORGE severity levels
+- New Step 6c: Review Angle Stress Test — evaluates from 5 perspectives (power user, first-time, accessibility, edge case, mobile/touch)
+- Step 2 enhanced: AI Design Fingerprints detection — flags compound patterns (e.g., Inter + purple gradient + uniform cards) as "AI slop"
+- Report template expanded with Usability Heuristics and Review Angles sections
+
+### `/design consult` — Enhanced
+- Now loads `typography.md`, `color-and-contrast.md`, `motion-design.md` alongside `principles.md`
+- Typography specs now include modular scale ratio, fluid `clamp()` values, `font-display` strategy, OpenType features
+- Color system specs use OKLCH for perceptual uniformity, tinted neutrals (0.01 chroma), explicit dark mode strategy
+- Motion specs reference named easing curves with `cubic-bezier()` values and duration ranges per interaction type
+
+### `/design explore` — Enhanced
+- Now loads `typography.md` and `color-and-contrast.md` alongside `principles.md`
+- Variant design language format now uses OKLCH palette + modular scale ratio + `clamp()` range
+
+### `principles.md` — Enhanced
+- New "AI Design Fingerprints" section — 11 common patterns in AI-generated frontends (2024-2025)
+- New "Usability Heuristics Checklist" — Nielsen's 10 heuristics adapted with FORGE severity levels
+- New "Review Angles" — 5 stress-test perspectives for design evaluation
+
+### `/design` Hub — Routing Update
+- Added `audit` and `polish` to routing table and sub-command help
+- New design lifecycle: consult → explore → build → review (gate) → audit (measurement) → polish (final fixes) → ship
+- Hub description updated: skills selectively load domain references based on needs
+
+### Documentation
+- Updated `docs/skills-reference.md` with `/design audit` and `/design polish` documentation
+- Updated `docs/artifact-schema.md` with audit and polish artifact entries
+- Updated `README.md` with expanded `/design` description
+
+### Testing
+- Extended `tests/test-design.sh`: audit/polish sub-skill checks, reference file existence, new principles sections, updated word count budgets, review enhancement checks
+
+### System-Wide Integration Audit (33 issues fixed)
+
+Adversarial review of the entire FORGE system uncovered 5 critical, 14 major, and 14 minor integration gaps.
+
+#### Critical Fixes
+- **`/design` hub** — removed false integration claims. Design is a standalone suite; no main pipeline skill reads `.forge/design/` automatically. Documentation now reflects reality.
+- **Brainstorm → architect artifact flow** — `/architect` now reads `.forge/brainstorm/*.md` in new Step 1.5. Previously the brainstorm artifact was written but never consumed.
+- **`/finish` gate enforcement** — now reads review/verify report Status fields and blocks merge on FAIL/NEEDS_CHANGES (previously only checked file existence)
+- **`/canary` and `/deploy`** — now read `.forge/releases/*/summary.md` from `/ship` for version and PR context
+- **`/careful` and `/freeze`** — documented as advisory and session-scoped (no programmatic enforcement by other skills)
+
+#### Major Fixes
+- **`/think`** — added brainstorm routing for FEATURE tasks with ambiguous solution paths
+- **`/review` hub** — added note about `/design review` as complementary for UI/frontend projects
+- **`/forge` overview** — workflow diagram now shows brainstorm for FEATURE path
+- **`docs/skills-reference.md`** — deleted duplicate `/review` section (was at lines 106 AND 173), fixed `/canary` and `/deploy` artifact path lies, updated `/design` phase to "standalone"
+- **`docs/artifact-schema.md`** — fixed brainstorm artifact path (was `.forge/architecture/` now `.forge/brainstorm/`), fixed "Produced by" (was `/think` now `/brainstorm`), added `.forge/deploy/` and `.forge/autopilot/` to directory tree
+- **`tests/test-routing.sh`** — expanded KNOWN_SKILLS from 9 to 21 skills, fixed orphan check depth from `-maxdepth 2` to `-maxdepth 3` to catch sub-skills
+- **`tests/test-completeness.sh`** — added `design/audit` and `design/polish` to evidence and directory creation checks
+- **`docs/skill-trigger-map.md`** — updated brainstorm flow (no longer "implicit"), updated design section to reflect standalone status
+
+#### Minor Fixes
+- **`/brainstorm`** and **`/debug`** — added missing telemetry sections
+- **`/autopilot`** — documented that Step 9 intentionally bypasses `/memory-remember` for autonomous mode
+
+---
+
 ## v2.9.0 — 2026-04-08
 
 Adversarial red-team review — challenges the implementation from an attacker's perspective.

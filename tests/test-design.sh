@@ -13,7 +13,7 @@ PRINCIPLES="$DESIGN/references/principles.md"
 if [[ -f "$PRINCIPLES" ]]; then
   pass "principles.md exists"
 
-  for section in "Anti-Pattern" "Aesthetic Direction" "Accessibility Baseline" "State Coverage" "Design Token"; do
+  for section in "Anti-Pattern" "Aesthetic Direction" "Accessibility Baseline" "State Coverage" "Design Token" "AI Design Fingerprints" "Usability Heuristics" "Review Angles"; do
     if grep -qi "$section" "$PRINCIPLES"; then
       pass "principles.md contains '$section' section"
     else
@@ -26,7 +26,7 @@ fi
 
 # ── 2. Each sub-skill references principles.md via explicit Read ──
 
-for sub in consult explore review; do
+for sub in consult explore review audit polish; do
   path="$DESIGN/$sub/SKILL.md"
   if [[ -f "$path" ]]; then
     if grep -q 'skills/design/references/principles.md' "$path"; then
@@ -41,7 +41,7 @@ done
 
 # ── 3. Each sub-skill has a Rules section with quality gate ──
 
-for sub in consult explore review; do
+for sub in consult explore review audit polish; do
   path="$DESIGN/$sub/SKILL.md"
   if [[ -f "$path" ]]; then
     if grep -qi 'quality gate\|anti-pattern blocklist' "$path"; then
@@ -58,7 +58,7 @@ done
 
 BANNED_TERMS="React|Vue|Svelte|Angular|Tailwind|styled-components|Next\.js|Nuxt"
 
-for file in "$DESIGN/SKILL.md" "$DESIGN/consult/SKILL.md" "$DESIGN/explore/SKILL.md" "$DESIGN/review/SKILL.md" "$PRINCIPLES"; do
+for file in "$DESIGN/SKILL.md" "$DESIGN/consult/SKILL.md" "$DESIGN/explore/SKILL.md" "$DESIGN/review/SKILL.md" "$DESIGN/audit/SKILL.md" "$DESIGN/polish/SKILL.md" "$PRINCIPLES"; do
   if [[ -f "$file" ]]; then
     basename=$(basename "$(dirname "$file")")/$(basename "$file")
     if grep -qE "$BANNED_TERMS" "$file"; then
@@ -71,7 +71,7 @@ done
 
 # ── 5. Frontmatter compliance: all SKILL.md have required fields ──
 
-for file in "$DESIGN/SKILL.md" "$DESIGN/consult/SKILL.md" "$DESIGN/explore/SKILL.md" "$DESIGN/review/SKILL.md"; do
+for file in "$DESIGN/SKILL.md" "$DESIGN/consult/SKILL.md" "$DESIGN/explore/SKILL.md" "$DESIGN/review/SKILL.md" "$DESIGN/audit/SKILL.md" "$DESIGN/polish/SKILL.md"; do
   if [[ -f "$file" ]]; then
     basename=$(basename "$(dirname "$file")")/$(basename "$file")
     missing=""
@@ -102,16 +102,18 @@ check_words() {
   fi
 }
 
-check_words "$DESIGN/SKILL.md" 400 "hub"
-check_words "$DESIGN/consult/SKILL.md" 800 "consult"
-check_words "$DESIGN/explore/SKILL.md" 700 "explore"
-check_words "$DESIGN/review/SKILL.md" 800 "review"
-check_words "$PRINCIPLES" 600 "principles"
+check_words "$DESIGN/SKILL.md" 600 "hub"
+check_words "$DESIGN/consult/SKILL.md" 1000 "consult"
+check_words "$DESIGN/explore/SKILL.md" 800 "explore"
+check_words "$DESIGN/review/SKILL.md" 1100 "review"
+check_words "$DESIGN/audit/SKILL.md" 1100 "audit"
+check_words "$DESIGN/polish/SKILL.md" 1000 "polish"
+check_words "$PRINCIPLES" 1100 "principles"
 
 # ── 7. Hub routes match existing sub-skill directories ──
 
 if [[ -f "$DESIGN/SKILL.md" ]]; then
-  for sub in consult explore review; do
+  for sub in consult explore review audit polish; do
     if grep -q "$sub" "$DESIGN/SKILL.md" && [[ -d "$DESIGN/$sub" ]]; then
       pass "hub routes to /$sub and directory exists"
     else
@@ -144,6 +146,56 @@ if [[ -f "$PRINCIPLES" ]]; then
     pass "aesthetic direction table has $dir_count entries (>= 12)"
   else
     fail "aesthetic direction table has $dir_count entries (expected >= 12)"
+  fi
+fi
+
+# ── 10. Domain reference files exist ──
+
+for ref in typography.md color-and-contrast.md interaction-design.md motion-design.md responsive-design.md; do
+  if [[ -f "$DESIGN/references/$ref" ]]; then
+    pass "reference $ref exists"
+  else
+    fail "reference $ref not found"
+  fi
+done
+
+# ── 11. Audit and polish reference domain-specific files ──
+
+if [[ -f "$DESIGN/audit/SKILL.md" ]]; then
+  if grep -q 'interaction-design.md' "$DESIGN/audit/SKILL.md" && grep -q 'responsive-design.md' "$DESIGN/audit/SKILL.md"; then
+    pass "/design-audit references interaction-design.md and responsive-design.md"
+  else
+    fail "/design-audit missing domain reference files"
+  fi
+fi
+
+if [[ -f "$DESIGN/polish/SKILL.md" ]]; then
+  if grep -q 'typography.md' "$DESIGN/polish/SKILL.md" && grep -q 'color-and-contrast.md' "$DESIGN/polish/SKILL.md"; then
+    pass "/design-polish references typography.md and color-and-contrast.md"
+  else
+    fail "/design-polish missing domain reference files"
+  fi
+fi
+
+# ── 12. Review skill has usability heuristics and review angles ──
+
+if [[ -f "$DESIGN/review/SKILL.md" ]]; then
+  if grep -qi 'Usability Heuristics' "$DESIGN/review/SKILL.md"; then
+    pass "/design-review has Usability Heuristics step"
+  else
+    fail "/design-review missing Usability Heuristics step"
+  fi
+
+  if grep -qi 'Review Angle' "$DESIGN/review/SKILL.md"; then
+    pass "/design-review has Review Angles step"
+  else
+    fail "/design-review missing Review Angles step"
+  fi
+
+  if grep -qi 'AI.*[Ss]lop\|AI Design Fingerprint' "$DESIGN/review/SKILL.md"; then
+    pass "/design-review has AI slop/fingerprint detection"
+  else
+    fail "/design-review missing AI slop/fingerprint detection"
   fi
 fi
 

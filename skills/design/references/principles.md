@@ -65,3 +65,48 @@ Every interactive component: default, hover, focus, active, disabled, loading, e
 ## Design Tokens
 
 Semantic names (`color-primary` not `blue-500`) | primitive vs semantic separation | theme-able via tokens | hierarchy: global > category > component
+
+## AI Design Fingerprints
+
+Common patterns in AI-generated frontends (2024-2025). If your output matches multiple items, it reads as generic AI slop:
+
+- Inter/Roboto as the sole font with no intentional pairing
+- Purple-to-blue gradient on white background
+- Cards nested inside cards (double elevation)
+- Gray text on colored backgrounds (unpredictable contrast)
+- Uniform card grids with identical spacing and no hierarchy
+- Skeleton screens more complex than the actual loaded content
+- "Micro-interactions" that serve no informational purpose (wobble on hover, pulse on idle)
+- Excessive border-radius (fully rounded everything)
+- Glassmorphism without contrast fallback
+- Stock illustration style (flat, purple-haired characters)
+- Every section full-width with alternating background colors
+
+The anti-pattern blocklist (above) catches most of these. This section names the compound pattern: several mild violations together create an unmistakably AI-generated feel.
+
+## Usability Heuristics Checklist
+
+Based on Nielsen's 10 heuristics. Use as a structured review framework — evaluate each, do not score numerically.
+
+1. **Visibility of system status** — Does the user always know what is happening? Loading indicators, progress, confirmations.
+2. **Match between system and real world** — Does the UI use the user's language and concepts? Logical order, familiar icons.
+3. **User control and freedom** — Can the user undo, go back, escape? Emergency exits at every stage.
+4. **Consistency and standards** — Same action, same result everywhere? Platform conventions respected.
+5. **Error prevention** — Are dangerous actions guarded? Constraints that prevent errors before they happen.
+6. **Recognition rather than recall** — Are options visible? Labels, breadcrumbs, recent items — minimize memory load.
+7. **Flexibility and efficiency of use** — Are there accelerators for experts? Keyboard shortcuts, bulk actions, defaults.
+8. **Aesthetic and minimalist design** — Does every element earn its place? No irrelevant or rarely needed information.
+9. **Help users recognize, diagnose, and recover from errors** — Are error messages specific? What happened, why, how to fix.
+10. **Help and documentation** — Is help available in context? Searchable, task-oriented, concise.
+
+Severity levels (use existing FORGE levels, not numeric scores): **Critical** (blocks usage), **Major** (fix before shipping), **Minor** (fix when convenient), **Suggestion** (enhancement).
+
+## Review Angles
+
+Five perspectives to stress-test a design. Evaluate from each angle; do not create persona fiction.
+
+1. **Power user efficiency** — Can an expert complete tasks quickly? Are there shortcuts, bulk operations, keyboard access?
+2. **First-time clarity** — Can a newcomer understand what to do without instruction? Is the onboarding progressive?
+3. **Accessibility compliance** — Can a screen reader user, keyboard-only user, or user with low vision operate this? (See Accessibility Baseline above.)
+4. **Edge case resilience** — What happens with empty data, long strings, API errors, slow connections, unexpected input?
+5. **Mobile/touch usability** — Does this work on a phone with one thumb? Touch targets adequate? No hover-dependent functionality?

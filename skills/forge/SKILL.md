@@ -32,7 +32,7 @@ FORGE orchestrates Claude Code into a structured workflow: plan → build → re
 | `/document-release` | Docs | Post-ship documentation sync |
 | `/careful` | Guard | Warns before destructive operations |
 | `/freeze` | Guard | Scoped edit locks on files/directories |
-| `/design` | Design | Design consultation, exploration, review |
+| `/design` | Design | Design suite: consult, explore, review, audit, polish |
 | `/benchmark` | Perf | Performance benchmarking and regression detection |
 | `/canary` | Deploy | Canary deployment with monitoring |
 | `/deploy` | Deploy | Post-merge deployment and health verification |
@@ -59,7 +59,7 @@ User task
   │                         ▲
   ├── needs ideation ── /brainstorm ── /architect ── /build ...
   │
-  ├── feature ── /architect ┘
+  ├── feature ── /brainstorm (if ambiguous) ── /architect ┘
   │
   ├── debug task ── /debug
   │

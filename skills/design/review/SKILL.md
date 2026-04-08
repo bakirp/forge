@@ -15,9 +15,11 @@ Parse `$ARGUMENTS` to identify review targets (file paths, component names, dire
 
 Read `skills/design/references/principles.md` — this is the contract you evaluate against. Internalize the full anti-pattern blocklist, state coverage checklist, and accessibility baseline before proceeding.
 
-## Step 2: Anti-Pattern Scan
+## Step 2: Anti-Pattern & AI Slop Scan
 
 Check every file against the **full blocklist** from `principles.md` — typography, color, layout, motion, content/copy, interaction, images/media, and forms.
+
+Additionally, run the **AI Design Fingerprints** check from `principles.md`. If multiple AI fingerprint patterns appear together (e.g., Inter font + purple gradient + uniform card grid + nested cards), flag as "AI slop compound pattern" — the combination is worse than individual violations.
 
 Record every match with `file:line` and the specific anti-pattern triggered. This runs first because anti-pattern matches are the highest-signal findings. Do not skip categories. A clean scan is a valid result.
 
@@ -60,6 +62,24 @@ Flag missing states by component. Missing error/loading states are at least **Ma
 
 **Performance**: Font loading strategy and weight count; animations use `transform`/`opacity` only; no layout shift from dynamic content; images optimized; virtualization for long lists.
 
+## Step 6b: Usability Heuristics Check
+
+Walk through the **10 usability heuristics** from `principles.md`. For each heuristic, note whether the design satisfies it or has issues. Use severity levels (Critical/Major/Minor/Suggestion), not numeric scores.
+
+Focus on heuristics most relevant to the target — not every heuristic applies equally to every component.
+
+## Step 6c: Review Angle Stress Test
+
+Evaluate from the **5 review angles** in `principles.md`:
+
+1. **Power user efficiency** — shortcuts, bulk operations, keyboard access
+2. **First-time clarity** — can a newcomer understand without instruction?
+3. **Accessibility compliance** — screen reader, keyboard-only, low vision
+4. **Edge case resilience** — empty data, long strings, errors, slow connections
+5. **Mobile/touch usability** — one-thumb operation, touch targets, no hover dependency
+
+Flag issues found from each angle with `file:line`. Not every angle will surface issues — that is fine.
+
 ## Step 7: Write Review + Report
 
 Derive a topic slug (lowercase, hyphens, max 4 words). Determine overall result: **PASS** (no critical/major) or **NEEDS_CHANGES** (any critical/major).
@@ -80,12 +100,19 @@ Result: [PASS | NEEDS_CHANGES]
 
 ## Anti-Pattern Findings
 - [finding with file:line, or "None"]
+- AI Slop: [compound pattern detected / clean]
 
 ## Accessibility Audit
 - [finding with file:line and severity, or "All checks passed"]
 
 ## State Coverage
 - [component: missing states, or "All components covered"]
+
+## Usability Heuristics
+- [heuristic: finding with severity, or "Satisfactory"]
+
+## Review Angles
+- [angle: finding, or "No issues from this perspective"]
 
 ## Findings by Severity
 

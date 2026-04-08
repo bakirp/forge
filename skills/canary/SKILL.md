@@ -11,6 +11,12 @@ You deploy changes to a small subset of infrastructure, monitor for errors, and 
 
 ## Step 1: Check Prerequisites
 
+Check for a release summary from `/ship`:
+```bash
+ls .forge/releases/*/summary.md 2>/dev/null | tail -1
+```
+If found, read it for version, security audit status, and PR URL. Use this as the source of truth for what version is being deployed.
+
 Verify deployment configuration exists. Scan for:
 
 - Kubernetes manifests (`k8s/`, `deploy/`, `*.yaml` with `kind: Deployment`)

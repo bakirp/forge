@@ -118,3 +118,4 @@ Destructive operation guardrails disabled. Standard safety defaults still apply.
 - **Do not be annoying** — only flag genuinely destructive operations. Regular `git add`, `git commit`, `git push` (without force), `git pull`, `git checkout <branch>`, `rm` on single files, etc. should pass through without interruption.
 - **Log intercepted commands** — keep a mental count of how many destructive operations were caught during the session for the deactivation summary.
 - **Respect user overrides** — if the user confirms "yes" after a warning, proceed. Careful mode advises; it does not block.
+- **Advisory and session-scoped** — no other FORGE skill programmatically checks whether careful mode is active. Enforcement relies on conversation context within a single session.

@@ -76,7 +76,7 @@ fi
 # ── 5. All skills listed in the Skills table actually exist as files ──
 #    Only match the command column pattern: "| `/name`" in the Skills table
 
-KNOWN_SKILLS=(think architect build verify ship memory evolve retro autopilot)
+KNOWN_SKILLS=(think architect build verify ship memory evolve retro autopilot brainstorm debug worktree finish browse design benchmark canary deploy careful freeze document-release)
 for ref in "${KNOWN_SKILLS[@]}"; do
   skill_dir="$ROOT/skills/$ref"
   if [[ -f "$skill_dir/SKILL.md" ]]; then
@@ -93,11 +93,16 @@ existing=""
 while IFS= read -r f; do
   s=$(echo "$f" | sed "s|$ROOT/skills/||;s|/SKILL.md||")
   existing="$existing $s"
-done < <(find "$ROOT/skills" -maxdepth 2 -name SKILL.md -not -path '*/memory/*')
+done < <(find "$ROOT/skills" -maxdepth 3 -name SKILL.md -not -path '*/memory/*')
 
 for skill in $existing; do
+  # Sub-skills (e.g., design/consult, review/request) are routed through their hub skill.
+  # Check if the parent hub is reachable from root instead of requiring direct reference.
+  parent=$(echo "$skill" | cut -d'/' -f1)
   if grep -qiE "/$skill[ |)\`]" "$ROOT_SKILL"; then
     pass "Skill /$skill is reachable from root SKILL.md"
+  elif [[ "$skill" == */* ]] && grep -qiE "/$parent[ |)\`]" "$ROOT_SKILL"; then
+    pass "Skill /$skill is reachable via hub /$parent in root SKILL.md"
   else
     fail "Orphan skill /$skill exists but is not referenced in root SKILL.md"
   fi

@@ -166,3 +166,4 @@ No active locks. Use /freeze [patterns] to lock files.
 - **Pattern matching uses glob syntax** — `*` matches any characters in a filename, `**` matches across directories, `?` matches a single character. Patterns are matched against paths relative to the project root.
 - **Track blocked attempts** — keep a count of how many modifications were blocked during the session for reporting in `/freeze list` and on deactivation.
 - **Do not freeze `.git/` internals** — git operations (commit, branch, merge) should always work even if the repo root is frozen. Only user-facing files are subject to freeze.
+- **Advisory and session-scoped** — no other FORGE skill programmatically checks whether freeze locks are active. Enforcement relies on conversation context within a single session.

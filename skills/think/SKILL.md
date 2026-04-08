@@ -122,7 +122,8 @@ Model routing is advisory — if the preferred model is unavailable, use whateve
   - Before spawning each post-build subagent, confirm: "FORGE: Spawn isolated [phase] agent? (y/n)"
   - If user declines, invoke the skill inline instead
 
-### FEATURE → /architect first
+### FEATURE → /brainstorm (if needed) then /architect
+- If the task has ambiguous solution paths or multiple viable approaches, route to `/brainstorm` first for alternative exploration before committing to architecture
 - Invoke `/architect $ARGUMENTS` (model: opus)
 - /architect produces a locked architecture doc
 - Then proceed to build:

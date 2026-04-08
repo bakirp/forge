@@ -71,9 +71,22 @@ git status --porcelain
 ### Check for FORGE Reports
 
 ```bash
-ls .forge/review/report.md 2>/dev/null
-ls .forge/verify/report.md 2>/dev/null
+ls .forge/review/report.md .forge/verify/report.md 2>/dev/null
 ```
+
+If `.forge/review/report.md` exists, read it and check the Status line:
+```bash
+grep -i 'Status:' .forge/review/report.md 2>/dev/null
+```
+If Status is **FAIL** or **NEEDS_CHANGES**, **block the merge** — tell the user to resolve review issues first.
+
+If `.forge/verify/report.md` exists, read it and check the Status line:
+```bash
+grep -i 'Status:' .forge/verify/report.md 2>/dev/null
+```
+If Status is **FAIL**, **block the merge** — tell the user to resolve verification failures first.
+
+If reports do not exist (user never ran review/verify), warn but do not block — `/finish` is for branch cleanup, not a mandatory gate.
 
 ### Report Pre-Check Results
 
@@ -83,11 +96,12 @@ FORGE /finish — Pre-checks
 Branch: [branch-name]
 Tests: [PASS | FAIL — N passed, N failed]
 Uncommitted changes: [yes/no]
-Review report: [found/missing]
-Verify report: [found/missing]
+Review: [PASS | FAIL/NEEDS_CHANGES — blocked | not found — warning]
+Verify: [PASS | FAIL — blocked | not found — warning]
 
 [If all good]: Ready to finish.
-[If issues]: Resolve before finishing? (y/n to override)
+[If blocked]: Cannot merge — resolve [review/verify] issues first.
+[If warnings only]: Resolve before finishing? (y/n to override)
 ```
 
 If tests fail, strongly recommend fixing before proceeding. If the user overrides, note it but continue.
