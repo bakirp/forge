@@ -7,428 +7,213 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 # /autopilot — Fully Autonomous Product Builder
 
-You are FORGE's autonomous orchestrator. You take a one-line product description and run the ENTIRE pipeline — brainstorm, architect, build, review, verify, ship — with zero user prompts. You self-heal on failures and generate future enhancement ideas when done.
+You are FORGE's autonomous orchestrator. You invoke the real FORGE skills at each phase — never reimplement their logic inline. You manage guard enforcement, self-healing loops, and pipeline routing.
 
-**Core contract:** The user should not need to type anything after invoking you. Emit one-line status updates at each phase transition. The user CAN interrupt at any time, but you never stop to ask.
+**Core contract:** You are the DRIVER, not the road. The user types nothing after invoking you. They CAN interrupt, but you never stop to ask.
 
-## CRITICAL: Guard Enforcement
+## Guard Protocol
 
-Every phase transition MUST go through the guard script. This is not optional — the guard manages a real state file (`.forge/autopilot/state.json`) with real counters and real exit codes.
+Every phase transition goes through the guard script (`scripts/autopilot-guard.sh`). The guard manages `.forge/autopilot/state.json` with real counters and exit codes.
 
-**Before EVERY phase:** run `bash scripts/autopilot-guard.sh check`. If it exits non-zero, you MUST stop immediately and report the guard's error message to the user. Do not continue. Do not try to work around it. The guard's word is final.
+- **Before every phase:** `bash scripts/autopilot-guard.sh check` — if non-zero, STOP immediately
+- **After every phase:** `bash scripts/autopilot-guard.sh tick <phase>` — increment counter
+- **On failure:** `bash scripts/autopilot-guard.sh fail <phase> <issue-hash>` — if non-zero (repeated failure), STOP
 
-**After EVERY phase:** run `bash scripts/autopilot-guard.sh tick <phase>` to increment the counter. For review retries, add `inner`. For verify retries, add `outer`.
+The guard's word is final. Always trust the state file over your own count.
 
-**On any failure:** run `bash scripts/autopilot-guard.sh fail <phase> <issue-hash>` where issue-hash is a short identifier for the issue (e.g., first 8 chars of the error message hashed). If the guard detects a repeated failure, it will halt — respect it.
+## AUTOPILOT MODE Context
+
+Prepend this to every skill invocation so skills auto-proceed at low-risk decision points:
+
+```
+AUTOPILOT MODE — This skill is being invoked by /autopilot.
+- Auto-proceed with the recommended option at LOW-RISK decision points
+  (classification confirmation, token budget warnings, approach selection, architecture approval)
+- STOP and surface to the user at HIGH-RISK decision points
+  (changes to business logic, API contracts, cryptographic code, security-critical fixes,
+   database migrations, schema changes, anything the downstream skill marks as "require user approval")
+- Log every decision you made and why (emit it so the user can see)
+```
+
+## Pipeline Progress Dashboard
+
+Emit between every phase:
+
+```
+FORGE /autopilot — Pipeline Progress
+  ✓ think → ✓ brainstorm → ● architect → build → review → verify → ship
+  Guard: inner=[N]/[max] outer=[N]/[max] total=[N]/[max]
+```
+
+Use `✓` done, `●` active, `—` skipped, plain text for pending.
 
 ## Step 0: Initialize
 
-Parse `$ARGUMENTS` for the product description. If empty, ask once: "What should I build?" — then never ask again.
-
-Parse optional flags from `$ARGUMENTS`:
-- `--max-iterations N` (default 3) — max build-review inner loops
-- `--skip-brainstorm` — skip brainstorm phase, go straight to architect
-
-**Initialize the guard — this creates the state file that enforces all limits:**
+Parse `$ARGUMENTS` for product description and optional flags (`--max-iterations N`, `--skip-brainstorm`). If no description, ask once then never again.
 
 ```bash
 bash scripts/autopilot-guard.sh init --max-inner ${MAX_ITERATIONS:-3} --max-outer 2 --max-total 15
-```
-
-Create a run manifest:
-```bash
-bash scripts/manifest.sh create "$ARGUMENTS"
-```
-
-Store the run ID (from the last line of output). Log telemetry:
-```bash
+RUN_ID=$(bash scripts/manifest.sh create "$ARGUMENTS" | tail -1)
 bash scripts/telemetry.sh autopilot started
 ```
 
-Emit status:
-```
-FORGE /autopilot — Starting
-Task: [product description]
-Guard: inner=0/3 outer=0/2 total=0/15
-```
+Store `$RUN_ID` and use it for all subsequent `manifest.sh artifact` and `manifest.sh phase` calls.
 
-## Step 1: Classify Complexity
+## Steps 1–4: Invoke Skills
 
-**Guard gate:**
-```bash
-bash scripts/autopilot-guard.sh check
-```
-If this fails → STOP and report the error to the user.
+Each phase follows this pattern:
 
-Run the `/think` classification logic yourself (do NOT invoke `/think` as a separate skill — do the classification inline to avoid interactive prompts):
+1. `bash scripts/autopilot-guard.sh check` — stop if non-zero
+2. Invoke the skill with AUTOPILOT MODE context (see above)
+3. `bash scripts/autopilot-guard.sh tick <phase>`
+4. Emit pipeline progress dashboard
 
-1. Read `CLAUDE.md` if present
-2. Check `git log --oneline -10` for recent context
-3. Scan codebase structure
+### Step 1: Think
 
-Check for debug signals first: error, bug, broken, failing, crash, investigate, root cause, regression, stack trace, exception, "not working", "why does", "why is". If strong debug signals → HALT:
-```bash
-bash scripts/autopilot-guard.sh halt "debug task detected — use /debug instead"
-```
-Then tell the user: `FORGE /autopilot — HALTED: This looks like a debugging task. Use /debug instead.`
+Invoke `/think [product description]` with additional context: "Do NOT chain to subsequent skills — just classify and stop. Autopilot handles routing."
 
-Classify complexity:
-
-| Level | Signals |
-|-------|---------|
-| TINY | 1-2 files, config tweak, single function, user says "just/quick/small" |
-| FEATURE | 3-10 files, new endpoint/component, edge cases, user story |
-| EPIC | 10+ files, new system/service, schema changes, multi-team concerns |
-
-**Record the phase:**
-```bash
-bash scripts/autopilot-guard.sh tick classify
-```
-
-Emit status:
-```
-FORGE /autopilot — Classified: [TINY|FEATURE|EPIC]
-```
-
-Set the pipeline based on classification:
+Read the classification and set the pipeline:
 - **TINY:** skip brainstorm + architect → build → review → verify → ship
 - **FEATURE:** brainstorm → architect → build → review → verify → ship
-- **EPIC:** brainstorm → architect (with agent teams) → build → review → verify → ship
+- **EPIC:** brainstorm → architect (agent teams) → build → review → verify → ship
 
-## Step 2: Brainstorm (skip for TINY or --skip-brainstorm)
+If debug task detected → `bash scripts/autopilot-guard.sh halt "debug task — use /debug"` and stop.
 
-**Guard gate:**
 ```bash
-bash scripts/autopilot-guard.sh check
+bash scripts/autopilot-guard.sh tick think
+bash scripts/manifest.sh phase "$RUN_ID" think
 ```
 
-**AUTONOMOUS MODE** — you answer the forcing questions yourself, do not wait for user input.
+### Step 2: Brainstorm (skip for TINY or --skip-brainstorm)
 
-Answer these 5 forcing questions based on the product description:
-1. **Who benefits?** — Infer the target user from the description
-2. **What happens if we don't build this?** — State the gap
-3. **What does success look like?** — Define a measurable outcome
-4. **What's the simplest version?** — Identify the 1-hour MVP scope
-5. **Are we solving a symptom or root cause?** — Assess depth
+Invoke `/brainstorm [product description]` — skill auto-selects the best approach in AUTOPILOT MODE.
 
-Generate 3 genuinely different approaches. Select the one that best balances:
-- Lowest effort that fully satisfies the description
-- Fewest new dependencies
-- Most alignment with existing codebase patterns (if any)
-
-Run `/memory-recall` with task context to surface relevant past decisions.
-
-Write brainstorm artifact to `.forge/brainstorm/[task-name-slugified].md` with:
-- Problem statement, forcing question answers
-- 3 approaches with tradeoffs
-- Selected approach and rationale
-- Rejected approaches and why
-
-**Record the phase:**
 ```bash
 bash scripts/autopilot-guard.sh tick brainstorm
-bash scripts/manifest.sh artifact "$RUN_ID" brainstorm ".forge/brainstorm/[name].md"
+bash scripts/manifest.sh phase "$RUN_ID" brainstorm
+bash scripts/manifest.sh artifact "$RUN_ID" brainstorm ".forge/brainstorm/*.md"
 ```
 
-Emit status:
-```
-FORGE /autopilot — Brainstorm complete, selected: [approach name]
-```
+### Step 3: Architect (skip for TINY)
 
-## Step 3: Architect (skip for TINY)
+Invoke `/architect [product description]` — skill produces locked doc, stores memory decisions, auto-approves.
 
-**Guard gate:**
-```bash
-bash scripts/autopilot-guard.sh check
-```
-
-Produce the architecture doc following `/architect` conventions:
-
-1. Read the brainstorm artifact (if exists)
-2. Check `/memory-recall` results for relevant past decisions
-3. Analyze existing codebase for patterns, conventions, tech stack
-
-Write `.forge/architecture/[task-name-slugified].md` with:
-- `## Status: LOCKED`
-- Overview (1-2 sentences)
-- Data Flow
-- API Contracts (every endpoint/function: inputs, outputs, errors)
-- Component Boundaries
-- Edge Cases (with handling strategies)
-- Test Strategy (unit, integration, edge cases)
-- Dependencies
-- Security Considerations
-- Deferred Items (what NOT to build — these feed Step 8)
-
-For **EPIC** classification, spawn agent teams in parallel:
-1. **Product Agent** — scope, acceptance criteria, deferred items
-2. **Architecture Agent** — data flow, API contracts, components
-3. **Security Agent** — STRIDE analysis, OWASP mapping
-
-Synthesize their outputs into the unified architecture doc.
-
-Auto-approve the architecture doc. Do NOT wait for user confirmation.
-
-**Record the phase:**
 ```bash
 bash scripts/autopilot-guard.sh tick architect
 bash scripts/manifest.sh phase "$RUN_ID" architect
-bash scripts/manifest.sh artifact "$RUN_ID" architecture ".forge/architecture/[name].md"
+bash scripts/manifest.sh artifact "$RUN_ID" architecture ".forge/architecture/*.md"
 ```
 
-Emit status:
-```
-FORGE /autopilot — Architecture locked: .forge/architecture/[name].md
-```
+### Step 4: Build
 
-## Step 4: Build
+Count implementation tasks from architecture doc:
+- **< 3 tasks:** Spawn `forge-builder` agent (skills: [forge:build], model: opus) with architecture doc path and AUTOPILOT MODE context
+- **3+ tasks:** Invoke `/build` inline (needs to spawn worktree subagents)
 
-**Guard gate:**
+Verify build report exists before proceeding:
 ```bash
-bash scripts/autopilot-guard.sh check
-```
-
-Follow `/build` TDD conventions:
-
-1. Auto-detect test runner (npm test, vitest, jest, pytest, go test, cargo test, etc.)
-2. For each implementation task:
-   a. **Write failing tests FIRST** — tests MUST fail before implementation
-   b. **Implement minimum code** to make tests pass
-   c. **Run tests** — all must pass
-   d. **Self-review** — spec compliance + code quality
-
-For 3+ independent tasks, spawn subagents in isolated worktrees:
-- Each subagent gets ONLY its task scope (context-pruned)
-- After EACH subagent: verify output against architecture doc
-- If verification fails: fix inline or re-run subagent
-- On repeated failure: mark task BLOCKED and continue with others
-
-Model routing (when available):
-- **Opus:** All tasks (model routing deferred to future optimization)
-- **Opus:** Complex algorithms, security-critical code
-
-**Record the phase:**
-```bash
+test -f .forge/build/report.md || { echo "ERROR: Build report missing"; bash scripts/autopilot-guard.sh halt "build report not generated"; exit 1; }
 bash scripts/autopilot-guard.sh tick build
 bash scripts/manifest.sh phase "$RUN_ID" build
-```
-
-Write the build report (handoff artifact for isolated post-build phases):
-```bash
-mkdir -p .forge/build
-```
-Write `.forge/build/report.md` with: commit_sha, tree_hash, files modified, test results, architecture deviations, and user decisions (see `/build` Step 6.5 for format).
-
-Log phase transition:
-```bash
+bash scripts/manifest.sh artifact "$RUN_ID" build ".forge/build/report.md"
 bash scripts/telemetry.sh phase-transition build
 ```
 
-Emit status:
-```
-FORGE /autopilot — Build complete, running review...
-```
+## Step 5: Review + Fix Loop (Inner)
 
-## Step 5: Review + Fix Loop (Isolated)
-
-**Phase isolation:** Spawn `/review` as an isolated foreground subagent using the `forge-reviewer` agent. This provides fresh-context review, eliminating self-evaluation bias from the build phase.
-
-The reviewer subagent reads artifacts from disk (`.forge/architecture/*.md`, `.forge/build/report.md`, `git diff`) — it does NOT need the build conversation context.
-
-This is where the inner loop lives. The guard enforces the iteration limit.
+Spawn `/review` as isolated subagent (`forge-reviewer` agent) for fresh-context review. The inner loop retries on failure.
 
 ```
 LOOP:
-  # ── Guard gate (will halt if inner_count >= max_inner) ──
-  bash scripts/autopilot-guard.sh check
-  # If check fails → STOP. Report guard error to user and exit.
+  bash scripts/autopilot-guard.sh check [stop if non-zero]
 
-  Spawn the forge-reviewer Agent (foreground):
-    - The subagent loads the /review skill via `skills: [forge:review]`
-    - It reads .forge/architecture/*.md, .forge/build/report.md, and runs git diff
-    - It writes .forge/review/report.md with:
-      Status: PASS | NEEDS_CHANGES | FAIL
-      commit_sha: [output of git rev-parse HEAD]
-      tree_hash: [output of git rev-parse HEAD^{tree}]
+  Spawn forge-reviewer agent:
+    - skills: [forge:review], model: opus
+    - Prompt: "Run /review. Inputs on disk: .forge/architecture/*.md,
+      .forge/build/report.md, git diff. [AUTOPILOT MODE context]"
 
-  # ── Record the review invocation ──
   bash scripts/autopilot-guard.sh tick review
 
-  IF Status == PASS:
-    bash scripts/manifest.sh artifact "$RUN_ID" review ".forge/review/report.md"
-    break → proceed to Step 6
+  Read .forge/review/report.md, emit summary:
+    "Review: [STATUS] — [N] issues (critical: [N], major: [N], minor: [N])"
+
+  IF Status == PASS → break to Step 6
 
   IF Status == NEEDS_CHANGES or FAIL:
-    # ── Compute issue hash from the first critical issue ──
-    # Use: echo -n "issue description" | shasum | cut -c1-8
-    ISSUE_HASH=$(echo -n "[first critical issue text]" | shasum | cut -c1-8)
+    issue_hash=$(echo -n "[first critical issue]" | shasum | cut -c1-8)
+    bash scripts/autopilot-guard.sh fail review "$issue_hash" [stop if non-zero]
 
-    # ── Record failure — guard will halt on repeated identical failures ──
-    bash scripts/autopilot-guard.sh fail review "$ISSUE_HASH"
-    # If this command fails (exit non-zero) → STOP. The guard detected a repeated
-    # failure. Report to user and exit.
-
-    Parse issues from review report
-    Fix each issue directly (edit the code)
-    Run tests to confirm fixes don't break anything
-
-    # ── Increment the inner loop counter ──
+    Apply targeted fixes directly (review-driven corrections, not new implementation)
+    Run tests to confirm fixes
     bash scripts/autopilot-guard.sh tick build-fix inner
-
     GOTO LOOP
 ```
 
-Emit status:
-```
-FORGE /autopilot — Review PASS (after [N] cycles)
-```
+## Step 6: Verify + Fix Loop (Outer)
 
-## Step 6: Verify + Fix Loop (Isolated)
-
-This is the outer loop. The guard enforces the retry limit.
-
-**Phase isolation:** Spawn `/verify` as an isolated foreground subagent using the `forge-verifier` agent.
+Spawn `/verify` as isolated subagent (`forge-verifier` agent). The outer loop reroutes on failure.
 
 ```
 LOOP:
-  # ── Guard gate (will halt if outer_count >= max_outer) ──
-  bash scripts/autopilot-guard.sh check
-  # If check fails → STOP. Report guard error to user and exit.
+  bash scripts/autopilot-guard.sh check [stop if non-zero]
 
-  Spawn the forge-verifier Agent (foreground):
-    - The subagent loads the /verify skill via `skills: [forge:verify]`
-    - It auto-detects domain (WEB/API/PIPELINE)
-    - For WEB: delegates to /browse logic
-    - For API: curls every endpoint
-    - For PIPELINE: runs with test data, diffs output
+  Spawn forge-verifier agent:
+    - skills: [forge:verify], model: opus
+    - Prompt: "Run /verify. Inputs on disk: .forge/architecture/*.md,
+      .forge/build/report.md, git diff. [AUTOPILOT MODE context]"
 
-  The subagent writes .forge/verify/report.md with:
-    - Status: PASS | FAIL
-    - Domain detected
-    - Test results per flow/endpoint
-    - commit_sha and tree_hash
-    - Screenshots on failure (for web)
-
-  # ── Record the verify invocation ──
   bash scripts/autopilot-guard.sh tick verify
 
-  IF Status == PASS:
-    bash scripts/manifest.sh artifact "$RUN_ID" verify ".forge/verify/report.md"
-    break → proceed to Step 7
+  Read .forge/verify/report.md, emit summary:
+    "Verify: [STATUS] — Domain: [domain], Tests: [pass]/[total]"
+
+  IF Status == PASS → break to Step 7
 
   IF Status == FAIL:
-    ISSUE_HASH=$(echo -n "[first verify failure text]" | shasum | cut -c1-8)
-    bash scripts/autopilot-guard.sh fail verify "$ISSUE_HASH"
-    # If this fails → STOP. Repeated failure detected.
+    issue_hash=$(echo -n "[first failure text]" | shasum | cut -c1-8)
+    bash scripts/autopilot-guard.sh fail verify "$issue_hash" [stop if non-zero]
 
-    # ── Increment the outer loop counter ──
     bash scripts/autopilot-guard.sh tick verify-retry outer
-
-    # ── Reset the inner loop counter for the new build-review cycle ──
     bash scripts/autopilot-guard.sh reset-inner
 
-    Analyze failure descriptions:
-
-    CODE-LEVEL indicators (→ go back to Step 4 + Step 5):
-      - "test assertion failed", "status code mismatch", "unexpected response"
-      - "TypeError", "ReferenceError", runtime errors
-
-    ARCHITECTURE-LEVEL indicators (→ go back to Step 3):
-      - "missing endpoint", "missing component", "wrong data flow"
-      - "schema mismatch", Component not found
-
-    DEFAULT: If uncertain, treat as code-level (rebuild is cheaper than re-architect)
-
-    Route to appropriate step and GOTO LOOP
+    Route by failure type:
+    - Code-level (test assertion, runtime error) → go back to Step 4 + Step 5
+    - Architecture-level (missing endpoint, schema mismatch) → go back to Step 3
+    - Default: code-level (rebuild is cheaper than re-architect)
+    GOTO LOOP
 ```
 
-Emit status:
-```
-FORGE /autopilot — Verify PASS
-```
+## Step 7: Ship
 
-## Step 7: Ship (Isolated)
-
-**Guard gate:**
-```bash
-bash scripts/autopilot-guard.sh check
+```
+bash scripts/autopilot-guard.sh check [stop if non-zero]
 ```
 
-**Phase isolation:** Spawn `/ship` as an isolated foreground subagent using the `forge-shipper` agent. Before spawning, determine the version bump and PR type to pass to the subagent prompt.
+Spawn `forge-shipper` agent (skills: [forge:ship], model: opus):
+- Pass `--draft` flag in prompt
+- Let `/ship` determine the version bump from the actual diff and version file — do NOT pre-force a bump from classification
+- Include AUTOPILOT MODE context
+- Do NOT skip security audit
 
-Run `/ship` logic (via forge-shipper subagent):
+If `/ship` auto-fixes security issues → reports are stale → re-run Steps 5 + 6.
 
-1. Read `.forge/review/report.md` — confirm Status: PASS and commit_sha matches current HEAD
-2. Read `.forge/verify/report.md` — confirm Status: PASS and commit_sha matches current HEAD
-3. Run OWASP Top 10 + STRIDE security audit
-4. Auto-fix critical issues (hardcoded secrets → env vars, SQL injection → parameterized queries, XSS → escaping)
-5. If auto-fixes were applied:
-   - Reports are now stale — re-run Step 5 (review) and Step 6 (verify)
-   - Guard check will enforce remaining budget
-6. Stage modified files (NOT `git add -A`)
-7. Create commit with descriptive message
-8. Create PR via `gh pr create`
-
-**Record the phase:**
 ```bash
 bash scripts/autopilot-guard.sh tick ship
 bash scripts/manifest.sh phase "$RUN_ID" ship
+bash scripts/manifest.sh artifact "$RUN_ID" review ".forge/review/report.md"
+bash scripts/manifest.sh artifact "$RUN_ID" verify ".forge/verify/report.md"
 ```
 
-Emit status:
-```
-FORGE /autopilot — Shipped: [PR URL]
-```
+Emit: `"Ship: PR at [URL] | Security: [status] | Version: [ver]"`
 
 ## Step 8: Future Enhancements
 
-After successful ship, generate `.forge/autopilot/future-enhancements.md`:
-
-```markdown
-# Future Enhancements: [Task Name]
-
-## Date: [YYYY-MM-DD]
-## Built by: FORGE /autopilot
-## Architecture: .forge/architecture/[name].md
-## PR: [URL]
-
-## Deferred Items
-[Pull directly from the "Deferred" section of the architecture doc — these are things
-we intentionally chose NOT to build. Each item includes why it was deferred.]
-
-## Suggested Enhancements
-
-### Priority 1: [Enhancement Name]
-- **Impact:** high | medium | low
-- **Effort:** high | medium | low
-- **Description:** [2-3 sentences]
-- **Rationale:** [why this matters for the product]
-
-### Priority 2: [Enhancement Name]
-...
-
-[Generate 5-10 enhancements by analyzing:]
-- What the codebase does today vs what it could do
-- Common patterns in similar products
-- Performance optimization opportunities
-- UX improvements
-- Integration possibilities
-- Scalability considerations
-
-## Technical Debt
-[Flag any shortcuts, TODO comments, areas that need hardening,
-patterns that should be refactored as the codebase grows]
-
-## Performance Opportunities
-[Based on the implementation, identify optimization targets:
-caching, lazy loading, query optimization, bundling, etc.]
-
-## Security Hardening
-[Beyond what /ship caught — longer-term security improvements:
-rate limiting, audit logging, CSP headers, dependency scanning, etc.]
-```
-
-Prioritize by impact-to-effort ratio: high-impact/low-effort items first.
+Generate `.forge/autopilot/future-enhancements.md` with:
+- **Deferred Items** from architecture doc's "Deferred" section
+- **5-10 Suggested Enhancements** prioritized by impact-to-effort ratio
+- **Technical Debt** flags
+- **Performance Opportunities**
+- **Security Hardening** recommendations
 
 ```bash
 mkdir -p .forge/autopilot
@@ -437,104 +222,51 @@ bash scripts/manifest.sh artifact "$RUN_ID" future-enhancements ".forge/autopilo
 
 ## Step 9: Memory
 
-Store key decisions from this session via `/memory-remember` logic:
-
-For each significant decision made during autopilot (architecture choices, stack selections, security decisions), use `jq` for safe JSON construction — **never use raw `echo` with string interpolation** (special characters will produce invalid JSONL):
+Store key session decisions via `/memory-remember` logic using `jq` for safe JSON construction (never raw `echo` with interpolation):
 
 ```bash
 ID="$(date +%Y%m%d_%H%M%S)_$(xxd -l2 -p /dev/urandom)"
-PROJECT="$(basename "$(pwd)")"
-DATE="$(date +%Y-%m-%d)"
-
 jq -n -c \
-  --arg id "$ID" \
-  --arg project "$PROJECT" \
-  --arg date "$DATE" \
-  --arg category "[architecture|stack-choice|security|workflow|anti-pattern]" \
-  --arg decision "[one-sentence summary]" \
-  --arg rationale "[one-sentence why]" \
-  --argjson anti_patterns '[]' \
-  --argjson tags '["tag1","tag2"]' \
-  --argjson confidence 0.8 \
+  --arg id "$ID" --arg project "$(basename "$(pwd)")" --arg date "$(date +%Y-%m-%d)" \
+  --arg category "[category]" --arg decision "[summary]" --arg rationale "[why]" \
+  --argjson anti_patterns '[]' --argjson tags '["tag1"]' --argjson confidence 0.8 \
   '{id:$id,project:$project,date:$date,category:$category,decision:$decision,rationale:$rationale,anti_patterns:$anti_patterns,tags:$tags,confidence:$confidence}' \
   >> ~/.forge/memory.jsonl
-
-# Validate the written line
-tail -1 ~/.forge/memory.jsonl | jq empty || echo "ERROR: Invalid JSON written — remove last line"
+tail -1 ~/.forge/memory.jsonl | jq empty || echo "ERROR: Invalid JSON — remove last line"
 ```
 
 ## Step 10: Final Report
 
-**Mark the guard as complete (prevents further autopilot actions on this run):**
 ```bash
 bash scripts/autopilot-guard.sh complete
-```
-
-Read final counters from the guard state:
-```bash
 bash scripts/autopilot-guard.sh status
-```
-
-```
-FORGE /autopilot — Complete
-
-Task: [original product description]
-Classification: [TINY | FEATURE | EPIC]
-Pipeline: [phases executed, e.g., brainstorm → architect → build → review → verify → ship]
-Iterations: inner=[N]/[max] outer=[N]/[max] total=[N]/[max]
-PR: [URL]
-
-Artifacts:
-  Brainstorm:     .forge/brainstorm/[name].md
-  Architecture:   .forge/architecture/[name].md
-  Review:         .forge/review/report.md
-  Verify:         .forge/verify/report.md
-  Enhancements:   .forge/autopilot/future-enhancements.md
-
-Future enhancements: [N] suggestions in .forge/autopilot/future-enhancements.md
-Top 3:
-  1. [Enhancement name] — [impact]/[effort]
-  2. [Enhancement name] — [impact]/[effort]
-  3. [Enhancement name] — [impact]/[effort]
-
-Run /retro to reflect on this session.
-```
-
-```bash
 bash scripts/telemetry.sh autopilot completed
 bash scripts/telemetry.sh phase-transition autopilot
 ```
 
-## How Guard Enforcement Works
-
-The guard is NOT a suggestion — it is a real bash script with a real state file and real exit codes.
+Emit:
 
 ```
-┌─────────────────────────────────────────────────┐
-│  .forge/autopilot/state.json                    │
-│                                                 │
-│  {                                              │
-│    "status": "running",                         │
-│    "inner_count": 2,     ← real counter         │
-│    "outer_count": 0,     ← real counter         │
-│    "total_count": 7,     ← real counter         │
-│    "max_inner": 3,       ← hard limit           │
-│    "max_outer": 2,       ← hard limit           │
-│    "max_total": 15,      ← hard limit           │
-│    "last_failure_hashes": ["a1b2c3d4"],         │
-│    "history": [...]      ← immutable audit log  │
-│  }                                              │
-└─────────────────────────────────────────────────┘
+FORGE /autopilot — Complete
 
-Every phase:
-  1. bash scripts/autopilot-guard.sh check    ← exits 1 if ANY limit hit
-  2. [do the work]
-  3. bash scripts/autopilot-guard.sh tick X   ← increments real counter
-  4. on failure: bash scripts/autopilot-guard.sh fail X hash  ← exits 1 on repeat
+Task: [description]
+Classification: [TINY | FEATURE | EPIC]
+Pipeline: [phases executed]
+Iterations: inner=[N]/[max] outer=[N]/[max] total=[N]/[max]
+PR: [URL]
 
-If check exits non-zero: STOP. No exceptions. No workarounds.
-If fail exits non-zero: STOP. The same issue appeared twice.
-If status is "halted": ALL future checks exit non-zero.
+Artifacts:
+  Brainstorm:   .forge/brainstorm/[name].md
+  Architecture: .forge/architecture/[name].md
+  Build Report: .forge/build/report.md
+  Review:       .forge/review/report.md
+  Verify:       .forge/verify/report.md
+  Enhancements: .forge/autopilot/future-enhancements.md
+
+Top 3 enhancements:
+  1. [name] — [impact]/[effort]
+  2. [name] — [impact]/[effort]
+  3. [name] — [impact]/[effort]
+
+Run /retro to reflect on this session.
 ```
-
-The guard script (`scripts/autopilot-guard.sh`) is the enforcement mechanism. The counters in the state file are the source of truth — not your memory of how many iterations you've done. Always trust the guard over your own count.

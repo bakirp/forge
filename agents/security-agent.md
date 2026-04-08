@@ -1,4 +1,5 @@
 ---
+name: forge-security
 description: "FORGE Security Agent — identifies threat surfaces using STRIDE and OWASP Top 10 analysis during epic task classification. Produces security requirements consumed by /build."
 whenToUse: "In parallel with the Architecture Agent during epic task classification. Requires only scope output from the Product Agent (not architecture). Spawned as part of the Agent Teams workflow."
 tools: ["Read", "Grep", "Glob", "Bash"]

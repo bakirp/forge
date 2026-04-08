@@ -1,4 +1,5 @@
 ---
+name: forge-product
 description: "FORGE Product Agent — defines scope boundaries and acceptance criteria during epic task classification. Determines what ships and what doesn't."
 whenToUse: "Proactively during epic task classification when /think identifies a task as epic-complexity. Spawned first in the Agent Teams workflow to define scope before architecture and security analysis begin."
 tools: ["Read", "Grep", "Glob"]
