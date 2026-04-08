@@ -13,6 +13,7 @@ Canonical specification for all artifacts produced and consumed by FORGE skills.
     [task-name]-brainstorm.md       <- /brainstorm
   review/
     report.md                       <- /review
+    adversarial.md                  <- /review adversarial
   verify/
     report.md                       <- /verify
     screenshots/
@@ -198,6 +199,74 @@ Input -> [Step 1] -> [Step 2] -> Output
 | `major` | Should fix before shipping. Logic errors, missing error handling. |
 | `minor` | Improve if time allows. Style, naming, minor duplication. |
 | `suggestion` | Non-blocking recommendation for future improvement. |
+
+---
+
+## Adversarial Review Report
+
+**Produced by:** `/review adversarial`
+**Consumed by:** `/ship` (advisory — included in PR if present), human review
+**Path:** `.forge/review/adversarial.md`
+
+```markdown
+# FORGE Adversarial Review
+
+## Status: [SHIP | NO-SHIP | SHIP-WITH-CAVEATS]
+## Date: [ISO 8601 timestamp]
+## Reviewer: FORGE /review adversarial
+## Focus: [user focus area or "general"]
+## commit_sha: [output of `git rev-parse HEAD`]
+## tree_hash: [output of `git rev-parse HEAD^{tree}`]
+
+## Summary
+[Terse ship/no-ship assessment. 1-3 sentences max.]
+
+## Attack Surface Coverage
+
+| # | Surface | Result | Finding |
+|---|---------|--------|---------|
+| 1 | Auth / permissions / tenant isolation | [CLEAR / FINDING] | [ref or "—"] |
+| 2 | Data loss / corruption / irreversible state | [CLEAR / FINDING] | [ref or "—"] |
+| 3 | Rollback safety / retries / idempotency | [CLEAR / FINDING] | [ref or "—"] |
+| 4 | Race conditions / ordering / stale state | [CLEAR / FINDING] | [ref or "—"] |
+| 5 | Empty-state / null / timeout / degraded deps | [CLEAR / FINDING] | [ref or "—"] |
+| 6 | Version skew / schema drift / migration | [CLEAR / FINDING] | [ref or "—"] |
+| 7 | Observability gaps | [CLEAR / FINDING] | [ref or "—"] |
+
+## Findings
+
+### Finding 1: [title]
+- Severity: critical | major
+- Confidence: [0.0 - 1.0]
+- File: [path]
+- Lines: [start - end]
+- What can go wrong: [scenario]
+- Why vulnerable: [code-level explanation]
+- Likely impact: [blast radius]
+- Recommendation: [concrete fix]
+
+## Verdict
+[SHIP | NO-SHIP | SHIP-WITH-CAVEATS with rationale]
+```
+
+### Status Values
+
+| Status | Meaning |
+|--------|---------|
+| `SHIP` | No material findings. Change is defensible against adversarial scrutiny. |
+| `NO-SHIP` | Material findings require attention before shipping. |
+| `SHIP-WITH-CAVEATS` | Findings noted but potentially acceptable. Engineer judgment required. |
+
+### Required Fields
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `commit_sha` | Yes | `git rev-parse HEAD` at write time |
+| `tree_hash` | Yes | `git rev-parse HEAD^{tree}` at write time |
+| Attack Surface Coverage | Yes | All 7 surfaces must have a result |
+| Confidence | Per finding | Float 0.0 to 1.0 |
+
+**Note:** Status values (SHIP/NO-SHIP/SHIP-WITH-CAVEATS) are intentionally distinct from `/review`'s (PASS/FAIL/NEEDS_CHANGES) to prevent parser confusion in `/ship`. The adversarial review is advisory — it does not block the pipeline.
 
 ---
 
@@ -559,6 +628,7 @@ Skills read artifacts from prior phases. The dependency chain is strict.
 | `/architect` | memory bank, brainstorm doc | architecture doc | -- |
 | `/build` | architecture doc | source code, tests | architecture doc |
 | `/review` | architecture doc, source code | review report | -- |
+| `/review adversarial` | architecture doc, build report, source code | adversarial review report | -- |
 | `/verify` | architecture doc | verify report, screenshots | -- |
 | `/debug` | source code, error output | debug report | -- |
 | `/browse` | -- | screenshots, logs | -- |

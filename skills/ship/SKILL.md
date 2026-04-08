@@ -194,6 +194,27 @@ Run the OWASP Top 10 and STRIDE threat model checks. See `references/security-ch
 
 Read `skills/ship/references/security-checks.md` for the detailed OWASP Top 10 checklist, STRIDE threat model questions, and secrets archaeology process. Apply each check to the changed files.
 
+### Adversarial Review (If Available)
+
+Check if an adversarial review exists:
+
+```bash
+test -f .forge/review/adversarial.md && echo "ADVERSARIAL_REVIEW_EXISTS"
+```
+
+If found, read it and incorporate findings into the security report. If the adversarial review has `Status: NO-SHIP`, note it prominently but do NOT block shipping — the adversarial review is advisory:
+
+```
+FORGE /ship — Note: Adversarial review flagged issues
+
+The adversarial review at .forge/review/adversarial.md has Status: NO-SHIP.
+This does NOT block shipping (adversarial review is advisory), but findings
+should be considered:
+- [summarize top findings from adversarial report]
+```
+
+If the adversarial review has `Status: SHIP` or `Status: SHIP-WITH-CAVEATS`, note it as additional confidence in the security posture.
+
 ### Report Findings
 
 ```
@@ -273,6 +294,11 @@ Produce a human-readable summary grouped by type:
 - Domain: [from verify report]
 - Tests: [pass count from verify report]
 - Security audit: [PASS with N warnings | N critical fixed]
+
+## Adversarial Review
+- Status: [SHIP | NO-SHIP | SHIP-WITH-CAVEATS | "Not performed"]
+- Findings: [count or "N/A"]
+- [If findings exist, list them briefly]
 
 ## Test Plan
 - [ ] [Key scenarios to verify in review]

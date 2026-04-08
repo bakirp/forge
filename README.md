@@ -30,6 +30,7 @@ See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 | `/architect` | Locks architecture — data flow, API contracts, test strategy | Planning |
 | `/build` | TDD-enforced implementation with subagents, model routing, reusability search, and path coverage | Build |
 | `/review` | Code review gate — spec compliance, quality, security, DRY check, path coverage audit, coverage enforcement | Review |
+| `/review adversarial` | Adversarial red-team review — challenges the implementation against 7 attack surfaces | Review |
 | `/verify` | Cross-platform QA — web (Playwright), API, data pipeline, coverage threshold gate | QA |
 | `/ship` | OWASP + STRIDE security audit, auto-fix, PR creation | Ship |
 | `/debug` | Root-cause-first debugging with evidence collection | Debug |
@@ -89,6 +90,7 @@ Meta:        /forge (overview + red-flags table)
 | Production incident | `/debug [error or stack trace]` | Urgent root-cause-first |
 | Performance issue | `/benchmark [target]` | Baseline + regression detection |
 | Review a PR | `/review request` / `/review` / `/review response` | Anti-sycophancy guardrails |
+| Stress-test high-risk code | `/review adversarial [focus area]` | Advisory red-team review |
 | Deploy to production | `/ship` → `/deploy` or `/canary` | Security audit gates deployment |
 
 See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each scenario.
@@ -118,11 +120,12 @@ See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each s
 - **Phase isolation** — post-build phases (`/review`, `/verify`, `/ship`) can run as isolated foreground subagents with fresh context, eliminating self-evaluation bias and context rot. `/build` writes a structured handoff artifact (`.forge/build/report.md`) that captures files modified, test results, architecture deviations, and user decisions for downstream phases.
 - **Evidence-before-claims** — `/ship`, `/architect`, and `/review` require showing actual output as evidence before claiming work is complete.
 - **Anti-sycophancy in `/review response`** — review feedback is technically verified against the actual codebase before implementation. Incorrect suggestions are pushed back on, not blindly applied.
+- **Adversarial review** — `/review adversarial` challenges the implementation from an attacker's perspective, checking 7 attack surfaces (auth, data loss, race conditions, rollback safety, degraded deps, schema drift, observability gaps). Advisory — does not block the pipeline, but findings are included in the PR if present.
 - **Local telemetry** — skill invocations are logged to `~/.forge/telemetry.jsonl` for data-driven improvement via `/evolve`.
 
 ## Testing
 
-FORGE includes 16 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, and handover.
+FORGE includes 17 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, handover, and adversarial review.
 
 ```bash
 # Run all tests

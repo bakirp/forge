@@ -18,6 +18,7 @@ FORGE orchestrates Claude Code into a structured workflow: plan → build → re
 | `/architect [task]` | Planning | Locks architecture doc before building |
 | `/build` | Build | TDD-enforced implementation with subagents |
 | `/review` | Review | Code review gate — spec compliance, quality, security surface |
+| `/review adversarial` | Review | Adversarial red-team review — challenges the implementation against 7 attack surfaces |
 | `/verify` | QA | Cross-platform testing with Playwright |
 | `/ship` | Ship | OWASP + STRIDE security audit, PR creation |
 | `/debug` | Any | Root-cause-first debugging |

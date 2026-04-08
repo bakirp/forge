@@ -1,5 +1,45 @@
 # Changelog
 
+## v2.9.0 — 2026-04-08
+
+Adversarial red-team review — challenges the implementation from an attacker's perspective.
+
+### `/review adversarial` — New Sub-Skill
+- New adversarial review sub-skill at `skills/review/adversarial/SKILL.md`
+- Challenges the implementation by actively trying to break it — default skepticism posture
+- Systematically checks 7 attack surfaces: auth/permissions, data loss/corruption, rollback/idempotency, race conditions, null/timeout/degraded deps, version skew/schema drift, observability gaps
+- Finding bar: only material findings with 4 required questions (what can go wrong, why vulnerable, likely impact, concrete fix)
+- Confidence scores (0.0-1.0) per finding — new to FORGE, preserves signal from source methodology
+- Calibration: prefers one strong finding over several weak ones; clean review with zero findings is valid
+- Grounding: every finding must be defensible from code context — no invented code paths
+- Status values: SHIP / NO-SHIP / SHIP-WITH-CAVEATS (distinct from `/review`'s PASS/FAIL/NEEDS_CHANGES)
+- Report written to `.forge/review/adversarial.md` with `commit_sha` + `tree_hash` freshness stamps
+
+### `forge-adversarial-reviewer` — New Agent
+- New isolated execution agent at `agents/forge-adversarial-reviewer.md`
+- Follows `forge-reviewer` pattern: opus model, fresh context, no build-phase bias
+- Red color coding to distinguish from standard reviewer (blue)
+
+### `/review` — Routing Update
+- Added `adversarial` to Quick Routing and routing table
+- Trigger phrases: "adversarial review", "red team this", "attack the code", "break this change"
+
+### `/ship` — Adversarial Report Awareness
+- Security audit step checks for `.forge/review/adversarial.md` if present
+- NO-SHIP status noted but does NOT block shipping (advisory)
+- PR description includes adversarial review section when report exists
+
+### Documentation
+- Updated `docs/artifact-schema.md` with adversarial review report schema and cross-artifact dependencies
+- Updated `docs/skills-reference.md` with `/review adversarial` documentation
+- Updated `README.md` with skill listing, common scenario, and quality description
+- Updated `skills/forge/SKILL.md` overview table
+
+### Testing
+- New `tests/test-adversarial.sh` with tests covering skill structure, agent definition, routing, artifact paths, and cross-skill consistency
+
+---
+
 ## v2.8.1 — 2026-04-08
 
 Agents must reason about runtime behavior, not just check structure. Functional testing is never optional.

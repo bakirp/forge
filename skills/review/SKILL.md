@@ -16,6 +16,9 @@ If argument starts with "request", or user says "prepare a review", "scope the r
 If argument starts with "response", or user says "fix review comments", "address feedback", "respond to review":
 → Delegate to `/review-response`
 
+If argument starts with "adversarial", or user says "red team this", "attack the code", "break this change":
+→ Delegate to `/review-adversarial`
+
 # /review — Code Review Gate
 
 You review what `/build` produced before `/verify` runs. You never modify code — you observe, judge, and report. Your review report is consumed by `/ship`, so the format matters.
@@ -44,6 +47,7 @@ If `$ARGUMENTS` starts with a sub-command, delegate:
 |----------|--------|
 | `request [context]` | Invoke `/review-request` with the remaining arguments |
 | `response [context]` | Invoke `/review-response` with the remaining arguments |
+| `adversarial [context]` | Invoke `/review-adversarial` with the remaining arguments |
 | *(anything else or no argument)* | Proceed to Step 1 below (run code review) |
 
 ## Step 1: Load Context

@@ -209,6 +209,35 @@ Prepares a scoped review request for human reviewers or `/review` execution. Def
 
 Processes and acts on review feedback with anti-sycophancy guardrails. Before extracting action items, technically verifies each piece of feedback against the actual codebase — pushes back on incorrect suggestions and reclassifies subjective opinions. Then prioritizes verified items as blocking, recommended, or suggestions.
 
+### /review adversarial — Red-Team Review
+
+**Usage**: `/review adversarial [optional: focus area or --base <ref>]`
+
+Adversarial review that challenges the implementation by actively trying to break it. Default posture is skepticism — assumes the change can fail in subtle, high-cost, or user-visible ways until evidence says otherwise.
+
+**Attack Surfaces** (checked systematically):
+1. Auth / permissions / tenant isolation
+2. Data loss / corruption / irreversible state
+3. Rollback safety / retries / idempotency
+4. Race conditions / ordering / stale state
+5. Empty-state / null / timeout / degraded dependencies
+6. Version skew / schema drift / migration hazards
+7. Observability gaps
+
+**Finding Bar**: Only material findings. Each must answer: What can go wrong? Why is this code vulnerable? What is the likely impact? What concrete change would reduce the risk? No style feedback, naming suggestions, or speculative concerns.
+
+**Calibration**: Prefers one strong finding over several weak ones. If the change is safe, says so directly — a clean adversarial review is a valid result.
+
+**Confidence Scores**: Each finding includes a 0.0-1.0 confidence score. Inferences are stated explicitly.
+
+**Output**: Report at `.forge/review/adversarial.md` with status (SHIP/NO-SHIP/SHIP-WITH-CAVEATS), attack surface coverage table, and structured findings with confidence scores. Includes `commit_sha` and `tree_hash` for freshness.
+
+**Phase Isolation**: Can run as an isolated subagent (`forge-adversarial-reviewer` agent) for fresh-context adversarial review. When isolated, reads `.forge/build/report.md` and `.forge/architecture/*.md` from disk.
+
+**Integration with `/ship`**: Advisory, not mandatory. `/ship` reads the adversarial report if present and includes findings in the PR description, but does NOT block on it.
+
+**Rules**: Never modifies code. Evidence before claims. Every finding must be defensible from the provided code context. Status values (SHIP/NO-SHIP/SHIP-WITH-CAVEATS) are distinct from `/review`'s (PASS/FAIL/NEEDS_CHANGES).
+
 ---
 
 ## /debug — Root-Cause Debugging
