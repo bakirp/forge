@@ -103,6 +103,23 @@ Implements the architecture doc with strict TDD enforcement.
 
 ---
 
+## /review — Code Review Gate
+
+**Phase**: Review (between `/build` and `/verify`)
+**Usage**: `/review [optional: specific files or focus area]`
+
+Reviews build output against the architecture doc. Never modifies code — observes, judges, and reports.
+
+**Review Dimensions**: Spec compliance, runtime behavior analysis, code quality (readability, duplication, complexity, error handling), security surface.
+
+**Runtime Behavior Analysis**: Step 3 requires tracing each component's execution path — initialization timing, environment assumptions, trigger ordering, resource cleanup. Bugs diagnosable from code reading are review findings, not deferred to `/verify`.
+
+**Output**: Report at `.forge/review/report.md` with status (PASS/NEEDS_CHANGES/FAIL), issue counts by severity, and structured findings.
+
+**Rules**: Critical issues = automatic FAIL. Major issues = NEEDS_CHANGES. Coverage below threshold = critical. Never modifies code. Evidence before claims.
+
+---
+
 ## /verify — Cross-Platform QA
 
 **Phase**: QA
@@ -111,7 +128,7 @@ Implements the architecture doc with strict TDD enforcement.
 Verifies build output actually works. Produces a pass/fail report for `/ship`.
 
 **Domain Detection**:
-- **Web App**: Playwright browser tests for key user flows
+- **Web App**: Playwright browser tests for key user flows (including projects with no server — functional testing is never skipped)
 - **API**: Endpoint contract validation (status codes, response shapes, error cases, auth)
 - **Data Pipeline**: Output diffing, schema validation, error handling
 - **Hybrid**: Runs all applicable strategies
@@ -121,6 +138,8 @@ Verifies build output actually works. Produces a pass/fail report for `/ship`.
 **Coverage Gate**: Before verification, checks coverage threshold via `quality-gate.sh coverage`. Blocks verification if below configured threshold.
 
 **Output**: Report at `.forge/verify/report.md` with status (PASS/FAIL), test counts, failure details, coverage metrics. `commit_sha` and `tree_hash` are stamped into the report at write time for freshness tracking by `/ship`.
+
+**Runtime Pre-Check**: Before running tests, reads source code and reasons about runtime behavior. Issues diagnosable from code alone are flagged before browser/curl testing.
 
 **Rules**: Never marks FAIL as PASS. Never modifies application code. Screenshots mandatory on web failures.
 
@@ -348,10 +367,11 @@ Completes work in a worktree: merges the branch back, runs tests, and cleans up 
 Dedicated Playwright browser automation. Extracted from `/verify` in Phase 3 to separate test execution from test orchestration. Also usable standalone for any browser task.
 
 **Steps**:
-1. Launches Playwright in headless mode (or headed if requested)
-2. Navigates to the target URL or executes the described flow
-3. Captures screenshots at key steps
-4. Reports results with evidence (screenshots, console output, network requests)
+1. Resolves the base URL — figures out how to run the project (dev server, direct open, etc.) and never skips testing because of unfamiliar hosting
+2. Launches Playwright in headless mode (or headed if requested)
+3. Navigates to the target URL or executes the described flow
+4. Captures screenshots at key steps
+5. Reports results with evidence (screenshots, console output, network requests)
 
 **Output**: Screenshots and logs at `.forge/browse/`.
 

@@ -108,4 +108,44 @@ if [ -f "$BROWSE" ]; then
   fi
 fi
 
+# ── 10. /verify has runtime behavior pre-check step ──
+
+if [ -f "$VERIFY" ]; then
+  if grep -qiE 'runtime behavior|what happens when this.*runs|how it behaves at runtime' "$VERIFY"; then
+    pass "/verify has runtime behavior pre-check step"
+  else
+    fail "/verify missing runtime behavior pre-check"
+  fi
+fi
+
+# ── 11. /browse never skips testing for unfamiliar project types ──
+
+if [ -f "$BROWSE" ]; then
+  if grep -qiE 'never skip|nothing to test|not.*skip' "$BROWSE"; then
+    pass "/browse never skips testing for unfamiliar project types"
+  else
+    fail "/browse missing rule against skipping testing"
+  fi
+fi
+
+# ── 12. /browse resolves URL adaptively ──
+
+if [ -f "$BROWSE" ]; then
+  if grep -qiE 'URL Resolution|determine the base URL' "$BROWSE"; then
+    pass "/browse has adaptive URL resolution"
+  else
+    fail "/browse missing URL resolution logic"
+  fi
+fi
+
+# ── 13. /verify requires functional testing, not just structural checks ──
+
+if [ -f "$VERIFY" ]; then
+  if grep -qiE 'functional testing.*never optional|never declare PASS based on structural checks' "$VERIFY"; then
+    pass "/verify requires functional testing, not just structural checks"
+  else
+    fail "/verify missing rule: functional testing is never optional"
+  fi
+fi
+
 print_test_summary

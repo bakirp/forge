@@ -28,6 +28,12 @@
 - Verify the dev server started (check for port conflicts)
 - Run /browse standalone with the URL to isolate browser vs server issues
 
+## /verify skips browser testing for projects without a dev server
+- `/browse` should figure out how to run ANY web project, not just ones with a dev server
+- Check `/browse` output — it should log how it resolved the entry point
+- If detection fails: invoke `/verify web` to force web domain, or run `/browse [entry-point-url]` directly
+- "No server" means "simpler to test," not "nothing to test" — functional testing is never optional
+
 ## Stale reports blocking /ship
 - /ship blocks on /review and /verify failures — re-run both to generate fresh reports
 - Delete .forge/review/report.md and .forge/verify/report.md to reset

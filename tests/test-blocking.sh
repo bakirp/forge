@@ -114,7 +114,23 @@ else
   skip "/review not yet created — skipping review blocking tests"
 fi
 
-# ── 8. /debug skill (may not exist yet) ──
+# ── 8. /review has runtime behavior analysis step ──
+
+if [[ -f "$REVIEW" ]]; then
+  if grep -qiE 'runtime behavior|what happens when this.*execut|how.*behaves at runtime' "$REVIEW"; then
+    pass "/review has runtime behavior analysis step"
+  else
+    fail "/review missing runtime behavior analysis step"
+  fi
+
+  if grep -qiE 'reason about runtime.*not just structure|not just.*structur' "$REVIEW"; then
+    pass "/review has rule: reason about runtime, not just structure"
+  else
+    fail "/review missing rule: reason about runtime, not just structure"
+  fi
+fi
+
+# ── 10. /debug skill (may not exist yet) ──
 
 DEBUG="$ROOT/skills/debug/SKILL.md"
 if [[ -f "$DEBUG" ]]; then
@@ -127,7 +143,7 @@ else
   skip "/debug not yet created — skipping debug blocking tests"
 fi
 
-# ── 9. /ship STALE blocking for review report ──
+# ── 11. /ship STALE blocking for review report ──
 
 if require_skill ship; then
   if grep -q 'STALE' "$SHIP"; then
@@ -137,7 +153,7 @@ if require_skill ship; then
   fi
 fi
 
-# ── 10. /ship STALE blocking for verify report ──
+# ── 12. /ship STALE blocking for verify report ──
 
 if require_skill ship; then
   if grep -q 'STALE' "$SHIP" && grep -q 'review/report\.md' "$SHIP" && grep -q 'verify/report\.md' "$SHIP"; then
@@ -147,7 +163,7 @@ if require_skill ship; then
   fi
 fi
 
-# ── 11. /ship marks reports stale after auto-fix and requires re-run ──
+# ── 13. /ship marks reports stale after auto-fix and requires re-run ──
 
 if require_skill ship; then
   if grep -qiE 'auto.fix' "$SHIP" && grep -qiE 'stale' "$SHIP"; then
@@ -157,7 +173,7 @@ if require_skill ship; then
   fi
 fi
 
-# ── 12. /build contains checkpoint after each subagent ──
+# ── 14. /build contains checkpoint after each subagent ──
 
 if require_skill build; then
   if grep -qi 'checkpoint' "$BUILD"; then
@@ -167,7 +183,7 @@ if require_skill build; then
   fi
 fi
 
-# ── 13. /build Stage 1 architecture compliance blocks merge ──
+# ── 15. /build Stage 1 architecture compliance blocks merge ──
 
 if require_skill build; then
   if grep -q 'Architecture Compliance' "$BUILD" && grep -q 'BLOCK merge' "$BUILD"; then
@@ -177,7 +193,7 @@ if require_skill build; then
   fi
 fi
 
-# ── 14. /build two-stage verification requires both stages to pass ──
+# ── 16. /build two-stage verification requires both stages to pass ──
 
 if require_skill build; then
   if grep -q 'Stage 1' "$BUILD" && grep -q 'Stage 2' "$BUILD" && grep -q 'BLOCK merge' "$BUILD"; then

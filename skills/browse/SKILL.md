@@ -127,14 +127,27 @@ For each failure, record:
 - What was expected vs. what happened
 - The screenshot path for visual evidence
 
-If the dev server is not running:
-1. Read package.json "scripts" — prefer "dev" over "start"
-2. If no script found, try: next dev, vite, flask run, go run main.go (check which tools exist)
-3. Start in background and capture stderr
-4. Detect port from: package.json config → .env PORT → vite.config.js port → default 3000
-5. Poll localhost:[port] every 1 second, timeout after 30 seconds
-6. If server does not start: report FAIL with the command tried and its stderr output
-7. On skill completion: kill the background server process to avoid orphans
+### URL Resolution
+
+Before starting tests, determine how to run the project and what URL to open. The goal is to figure this out for ANY project — never skip testing because the project doesn't fit a familiar pattern.
+
+1. Check the architecture doc for a specified URL, entry point, or run instructions
+2. Read the project's build/run configuration files (whatever they are for this language/framework)
+3. Look at README, Makefile, scripts, or any entry point hints in the project
+4. If you can't determine how to run it, ask the user — do not skip testing
+
+**If the project needs a server or build step first:**
+1. Identify the run command from the project's configuration
+2. Start in background and capture stderr
+3. Detect the port/address from project config, environment variables, or command output
+4. Poll until the server is reachable, timeout after 30 seconds
+5. If it won't start: report FAIL with the command tried and its stderr output
+6. On skill completion: kill any background processes you started
+
+**If the project runs without a server:**
+- Determine the entry point and open it directly
+- Log: `FORGE /browse — No server required. Opening entry point directly.`
+- Do NOT skip testing — "no server" means "simpler to test," not "nothing to test"
 
 ## Step 6: Write Browse Report
 
@@ -195,3 +208,4 @@ Report: .forge/browse/report.md
 - When called by `/verify`, return structured results, not just pass/fail
 - **Evidence before claims** — never claim PASS without showing actual test output
 - Do not guess at URLs or ports — detect from project config or ask the user
+- "No server needed" means "simpler to test," not "nothing to test" — always find a way to open and exercise the project

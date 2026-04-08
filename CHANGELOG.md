@@ -1,5 +1,37 @@
 # Changelog
 
+## v2.8.1 — 2026-04-08
+
+Agents must reason about runtime behavior, not just check structure. Functional testing is never optional.
+
+### `/review` — Runtime Behavior Analysis (New Step 3)
+- New **Step 3: Runtime Behavior Analysis** inserted before code quality review
+- Agents must trace each component's execution path: initialization timing, environment assumptions, trigger ordering, resource cleanup
+- Runtime bugs diagnosable from code reading alone are review findings — not deferred to `/verify`
+- New report section: **Runtime Behavior** in review report template
+- New rule: "Reason about runtime, not just structure"
+
+### `/verify` — Runtime Behavior Pre-Check (New Step 3)
+- New **Step 3: Runtime Behavior Pre-Check** inserted before browser delegation
+- Verifier must read source and reason about execution before running any tests
+- Issues found from code reasoning flagged immediately, not deferred to Playwright/curl
+- New rule: "Reason about runtime, not just structure"
+
+### `/browse` — Adaptive URL Resolution
+- **URL Resolution** subsection rewritten in Step 5: figures out how to run the project (dev server, direct open, or any other method) instead of assuming one hosting model
+- "No server needed" means "simpler to test," not "nothing to test"
+- New rule: functional testing is never skipped because of unfamiliar project structure
+
+### `/verify` — Functional Testing Is Never Optional
+- Web App domain detection now includes any project whose output runs in a browser, regardless of hosting model
+- New rule: never declare PASS based on structural checks alone
+
+### Testing
+- New tests in `tests/test-browser.sh`: runtime pre-check, URL resolution, no-skip rule
+- New tests in `tests/test-blocking.sh`: review runtime analysis step, runtime-not-structure rule
+
+---
+
 ## v2.8.0 — 2026-04-08
 
 Skill handover optimization: phase isolation, build report handoff artifact, phase-transition telemetry, and 4 new subagent definitions.

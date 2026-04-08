@@ -105,7 +105,20 @@ Flag every deviation as an issue with a severity level.
 
 For **tiny tasks** without an architecture doc, skip this step and note "N/A (tiny task)" in the report.
 
-## Step 3: Code Quality Review
+## Step 3: Runtime Behavior Analysis
+
+Before checking code quality, reason about how the code **actually behaves at runtime** — not just whether it looks correct structurally. Checking file existence, syntax validity, or import correctness is not a review — those are structural properties. The review must ask: **"What happens when this code executes?"**
+
+For each component in the diff, mentally trace its execution path:
+
+1. **When does it initialize?** Is the environment it depends on ready at that point? (DOM rendered, data loaded, services connected, container visible, dependencies available)
+2. **What assumptions does it make?** Does it assume dimensions, ordering, availability, or state that may not hold in all execution contexts?
+3. **What triggers it?** Can user actions, network responses, or lifecycle events arrive in an order the code doesn't handle?
+4. **What cleans up after it?** Are resources (listeners, timers, connections, subscriptions) released when the context changes?
+
+If you identify a runtime behavior issue that is diagnosable from code reading alone, flag it — do NOT defer it to `/verify` or claim "this needs browser testing." If you can read the code and reason about the bug, that is a review finding.
+
+## Step 4: Code Quality Review
 
 Review all changed files for:
 
@@ -157,7 +170,7 @@ If the search finds existing code that could have been reused, flag it as a majo
 - Are types consistent with declared interfaces?
 - Are there `any` types, unchecked casts, or missing validations at entry points?
 
-## Step 4: Security Surface Review
+## Step 5: Security Surface Review
 
 This is a lightweight pre-check — not the full OWASP audit that `/ship` performs. Flag anything obvious:
 
@@ -179,7 +192,7 @@ This is a lightweight pre-check — not the full OWASP audit that `/ship` perfor
 - User input at system boundaries that is not validated or sanitized
 - Missing length limits, type checks, or format validation on external input
 
-## Step 5: Cross-Model Second Opinion (Optional)
+## Step 6: Cross-Model Second Opinion (Optional)
 
 When working on complex or security-critical code, a second opinion from a different model can catch blind spots.
 
@@ -211,7 +224,7 @@ Report your findings as a numbered list of issues with severity.
 
 Merge findings with the primary review. Deduplicate — if both models flag the same issue, note it with extra confidence. If the secondary model finds something the primary missed, include it with a note: "Flagged by cross-model review."
 
-## Step 6: Write Review Report
+## Step 7: Write Review Report
 
 Create the report directory and write the report:
 
@@ -247,6 +260,9 @@ git rev-parse HEAD^{tree}
 
 ## Spec Compliance
 [For each architecture doc section, note PASS or describe the deviation]
+
+## Runtime Behavior
+[Findings from reasoning about how the code behaves at runtime — initialization order, hidden containers, race conditions, lifecycle issues. "None found" if clean, with evidence of what was checked.]
 
 ## Code Quality
 [Findings organized by category: readability, duplication, complexity, error handling, types]
@@ -284,7 +300,7 @@ git rev-parse HEAD^{tree}
 [FAIL: Fundamental problems found. May need to revisit /architect.]
 ```
 
-## Step 7: Report Result
+## Step 8: Report Result
 
 Before claiming the review is complete, show evidence it was written:
 ```bash
@@ -320,6 +336,7 @@ Report: .forge/review/report.md
 - Severity must be honest: do not inflate minor issues to major, do not downgrade major issues to minor
 - When `$ARGUMENTS` specifies a focus area, still do a full review but give extra depth to the requested area
 - **Evidence before claims** — every finding must cite the specific file, line, and code. Never report "no issues" without showing what was checked.
+- **Reason about runtime, not just structure** — checking file existence, syntax, and CSS coverage is not a review. Ask "what happens when this runs?" for every component. If a bug is diagnosable from reading the code, it is a review failure to miss it — do not defer to `/verify` what you can catch by reasoning.
 - **Cross-model review is optional** — only recommended for large or security-critical changes, never forced
 
 ### Telemetry
