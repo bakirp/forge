@@ -125,6 +125,11 @@ Validate the last written line before considering the append complete:
 tail -1 ~/.forge/memory.jsonl | jq empty || echo "ERROR: Invalid JSON written — remove last line"
 ```
 
+Run deduplication to consolidate any historical duplicates:
+```bash
+bash scripts/memory-dedup.sh
+```
+
 ## Step 6: Confirm
 
 ```

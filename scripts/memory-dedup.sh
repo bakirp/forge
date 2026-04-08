@@ -21,11 +21,13 @@ fi
 TOTAL=$(wc -l < "$MEMORY" | tr -d ' ')
 
 python3 -c "
-import json, sys
+import json, sys, os
 
-dry_run = $( [ "$DRY_RUN" = true ] && echo "True" || echo "False" )
+dry_run = sys.argv[1] == 'true'
+memory_path = sys.argv[2]
+
 entries = []
-with open('$MEMORY') as f:
+with open(memory_path) as f:
     for i, line in enumerate(f):
         line = line.strip()
         if not line: continue
@@ -54,9 +56,9 @@ for e in entries:
         continue
     if k in seen:
         old = seen[k]
-        old_ts = old.get('timestamp', '')
-        new_ts = e.get('timestamp', '')
-        if new_ts >= old_ts:
+        old_date = old.get('date', '')
+        new_date = e.get('date', '')
+        if new_date >= old_date:
             keep = [x for x in keep if x.get('_line') != old['_line']]
             keep.append(e)
             seen[k] = e
@@ -69,12 +71,14 @@ for e in entries:
 
 print(f'Total entries: {len(entries)}  |  Duplicates: {dupes}  |  Kept: {len(keep)}')
 if not dry_run and dupes > 0:
-    with open('$MEMORY', 'w') as f:
+    tmp_path = memory_path + '.tmp'
+    with open(tmp_path, 'w') as f:
         for e in keep:
             f.write(e['_raw'] + '\n')
+    os.rename(tmp_path, memory_path)
     print('Deduplication complete.')
 elif dry_run and dupes > 0:
     print('(dry run — no changes made)')
 elif dupes == 0:
     print('No duplicates found.')
-"
+" "$DRY_RUN" "$MEMORY"

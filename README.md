@@ -12,11 +12,9 @@ FORGE is a Claude Code skill framework with three capabilities no existing tool 
 
 ```bash
 git clone https://github.com/bakirp/Forge.git
-cd Forge
-./setup
 ```
 
-Then open any project in Claude Code. FORGE's SessionStart hook will auto-inject a skill overview. Type `/think` to start any task.
+Add FORGE as a Claude Code plugin by pointing to the cloned directory. FORGE's SessionStart hook will auto-inject a skill overview. Type `/think` to start any task.
 
 See the [Getting Started Guide](docs/getting-started.md) for a full walkthrough.
 
@@ -125,7 +123,7 @@ See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each s
 
 ## Testing
 
-FORGE includes 17 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, setup, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, handover, and adversarial review.
+FORGE includes 16 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, handover, and adversarial review.
 
 ```bash
 # Run all tests

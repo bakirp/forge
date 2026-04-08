@@ -140,6 +140,11 @@ Output: .forge/design/review-[topic].md
 Findings: [N] critical, [N] major, [N] minor, [N] suggestions
 ```
 
+### Telemetry
+```bash
+bash scripts/telemetry.sh design-review completed
+```
+
 ## Rules
 
 **Severity**: Critical = blocks shipping (a11y preventing usage, broken core interaction). Major = fix before shipping (a11y gaps, missing error/loading states, consistency violations). Minor = fix when convenient. Suggestion = enhancement idea, not a problem.

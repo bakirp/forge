@@ -122,6 +122,11 @@ Variants: [count] generated
 Recommendation: Variant [X] — [Name]
 ```
 
+### Telemetry
+```bash
+bash scripts/telemetry.sh design-explore completed
+```
+
 ## Rules
 
 - Every variant names its aesthetic direction and makes consistent choices. Type, color, spacing, and motion must not contradict the stated direction.

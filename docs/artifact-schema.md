@@ -148,6 +148,8 @@ Input -> [Step 1] -> [Step 2] -> Output
 - Files reviewed: [count]
 - Issues found: [count]
 - Critical: [count]
+- Major: [count]
+- Minor: [count]
 - Suggestions: [count]
 
 ## Spec Compliance

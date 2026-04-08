@@ -167,3 +167,5 @@ No active locks. Use /freeze [patterns] to lock files.
 - **Track blocked attempts** — keep a count of how many modifications were blocked during the session for reporting in `/freeze list` and on deactivation.
 - **Do not freeze `.git/` internals** — git operations (commit, branch, merge) should always work even if the repo root is frozen. Only user-facing files are subject to freeze.
 - **Advisory and session-scoped** — no other FORGE skill programmatically checks whether freeze locks are active. Enforcement relies on conversation context within a single session.
+
+> **Warning:** Subagents spawned by `/build` or `/autopilot` run in isolated contexts and will NOT inherit freeze locks. This guard only applies to the current conversation session.

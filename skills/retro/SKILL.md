@@ -1,6 +1,6 @@
 ---
 name: retro
-description: "Post-ship retrospective. Asks three structured questions about what slowed you down, what you'd do differently, and what FORGE should remember. Stores structured retro data that /evolve consumes. Use after shipping — triggered by 'run a retro', 'retrospective', 'what went well', 'what slowed us down', 'review the session'."
+description: "Post-ship retrospective. Asks three structured questions about what slowed you down, what you'd do differently, and what FORGE should remember. Stores structured retro data that /evolve consumes. Use after shipping — triggered by 'run a retro', 'retrospective', 'what went well', 'what slowed us down', 'reflect on the session'."
 argument-hint: "[optional: project name or session context]"
 allowed-tools: Read Grep Glob Bash Write
 ---
@@ -22,6 +22,9 @@ ls -t .forge/architecture/*.md 2>/dev/null | head -1
 
 # Check for verify report
 cat .forge/verify/report.md 2>/dev/null | head -5
+
+# Catalog all artifacts from this session
+bash scripts/artifact-discover.sh all
 ```
 
 Also read `$ARGUMENTS` for any context the user provided.
@@ -209,6 +212,11 @@ Low-rated skills:
   /[skill] — [score]: [feedback summary]
 
 Run /evolve to apply improvements based on this and past retros.
+```
+
+### Telemetry
+```bash
+bash scripts/telemetry.sh retro completed
 ```
 
 ## Rules

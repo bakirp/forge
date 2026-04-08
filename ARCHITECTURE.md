@@ -12,7 +12,7 @@ A binary would add:
 - A barrier to contribution (most Claude Code users aren't systems programmers)
 - Lock-in to a single host (Claude Code only)
 
-Pure Markdown means FORGE skills are portable to any AI coding tool that reads markdown instructions (Cursor, Codex CLI, Gemini CLI). No adapter layer needed for v1.
+Pure Markdown means FORGE skills are portable in principle to any AI coding tool that reads markdown instructions. FORGE currently targets Claude Code exclusively.
 
 ## Why JSONL for Memory
 
@@ -131,10 +131,6 @@ Every success or failure claim in FORGE must cite evidence: the command run, its
 ## Guard Skills (Phase 3)
 
 /careful and /freeze are opt-in, session-scoped guardrails. They don't persist across sessions by design — persistent file locks would break collaborative workflows. They're advisory: the user can always override.
-
-## Multi-Host Support (Phase 3)
-
-FORGE skills are pure Markdown, portable to any AI host. The setup script detects the environment (Claude Code, Codex, Cursor) and installs to the appropriate skills directory. Claude Code is the primary host; others are experimental.
 
 ## SessionStart Hook
 

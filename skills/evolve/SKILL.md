@@ -114,6 +114,10 @@ Changes that alter core behavior or guardrails:
 - Adding new required steps
 - Changing classification criteria in /think
 
+### Automatic High-Risk Classification (Safety Guardrails)
+
+Any change that modifies lines containing 'MUST', 'never skip', 'block', 'no exceptions', 'always require', or 'do not' is automatically classified as **high-risk** regardless of other factors. These are safety guardrails and require explicit user approval.
+
 Present all proposals:
 
 ```

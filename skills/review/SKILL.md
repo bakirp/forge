@@ -77,7 +77,7 @@ No architecture doc and no code changes found. Nothing to review.
 Read the git diff to see what was actually changed:
 
 ```bash
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 git diff ${DEFAULT_BRANCH}...HEAD
 git diff --name-only ${DEFAULT_BRANCH}...HEAD
 ```

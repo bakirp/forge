@@ -13,10 +13,12 @@ cmd_create() {
   mkdir -p "$dir"
   local ts; ts=$(now_iso)
   local payload
-  payload=$(cat <<EOF
-{"id":"$id","task":"$desc","started":"$ts","status":"active","phase":"think","artifacts":{},"blockers":[],"history":[{"phase":"think","status":"started","timestamp":"$ts"}]}
-EOF
-  )
+  if $HAS_JQ; then
+    payload=$(jq -n --arg id "$id" --arg desc "$desc" --arg ts "$ts" \
+      '{"id":$id,"task":$desc,"started":$ts,"status":"active","phase":"think","artifacts":{},"blockers":[],"history":[{"phase":"think","status":"started","timestamp":$ts}]}')
+  else
+    payload=$(python3 -c "import json,sys; print(json.dumps({'id':sys.argv[1],'task':sys.argv[2],'started':sys.argv[3],'status':'active','phase':'think','artifacts':{},'blockers':[],'history':[{'phase':'think','status':'started','timestamp':sys.argv[3]}]}))" "$id" "$desc" "$ts")
+  fi
   json_create "$payload" "$dir/manifest.json"
   printf '%s\n' "$id" > "$RUNS_DIR/latest"
   echo -e "${GREEN}Created${NC} $id"
@@ -38,7 +40,7 @@ cmd_phase() {
     jq_write "$f" --arg p "$phase" --arg ts "$ts" \
       '.phase=$p | .history += [{"phase":$p,"status":"started","timestamp":$ts}]'
   else
-    py_write "$f" "d['phase']='$phase'; d['history'].append({'phase':'$phase','status':'started','timestamp':'$ts'})"
+    py_write "$f" "d['phase']=sys.argv[2]; d['history'].append({'phase':sys.argv[2],'status':'started','timestamp':sys.argv[3]})" "$phase" "$ts"
   fi
   echo -e "${GREEN}Phase${NC} -> $phase"
 }
@@ -52,7 +54,7 @@ cmd_status() {
     jq_write "$f" --arg s "$status" --arg ts "$ts" \
       '.status=$s | .history += [{"phase":.phase,"status":$s,"timestamp":$ts}]'
   else
-    py_write "$f" "d['status']='$status'; d['history'].append({'phase':d['phase'],'status':'$status','timestamp':'$ts'})"
+    py_write "$f" "d['status']=sys.argv[2]; d['history'].append({'phase':d['phase'],'status':sys.argv[2],'timestamp':sys.argv[3]})" "$status" "$ts"
   fi
   echo -e "${GREEN}Status${NC} -> $status"
 }
@@ -64,7 +66,7 @@ cmd_artifact() {
   if $HAS_JQ; then
     jq_write "$f" --arg n "$name" --arg p "$path" '.artifacts[$n]=$p'
   else
-    py_write "$f" "d['artifacts']['$name']='$path'"
+    py_write "$f" "d['artifacts'][sys.argv[2]]=sys.argv[3]" "$name" "$path"
   fi
   echo -e "${GREEN}Artifact${NC} $name -> $path"
 }
@@ -76,7 +78,7 @@ cmd_blocker() {
   if $HAS_JQ; then
     jq_write "$f" --arg m "$msg" '.blockers += [$m]'
   else
-    py_write "$f" "d['blockers'].append('$msg')"
+    py_write "$f" "d['blockers'].append(sys.argv[2])" "$msg"
   fi
   echo -e "${YELLOW}Blocker${NC} added: $msg"
 }

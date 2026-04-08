@@ -2,7 +2,7 @@
 name: forge
 description: "FORGE workflow overview — lists all available skills, routing rules, and phase dependencies. Use when asking about available commands, workflow order, or how FORGE works — triggered by 'what skills', 'available commands', 'workflow', 'how does forge work', 'what can you do'."
 argument-hint: "[optional: skill name or 'help']"
-allowed-tools: Read Grep Glob Bash Agent
+allowed-tools: Read Grep Glob Bash
 ---
 
 # FORGE — Workflow Overview

@@ -119,3 +119,5 @@ Destructive operation guardrails disabled. Standard safety defaults still apply.
 - **Log intercepted commands** — keep a mental count of how many destructive operations were caught during the session for the deactivation summary.
 - **Respect user overrides** — if the user confirms "yes" after a warning, proceed. Careful mode advises; it does not block.
 - **Advisory and session-scoped** — no other FORGE skill programmatically checks whether careful mode is active. Enforcement relies on conversation context within a single session.
+
+> **Warning:** Subagents spawned by `/build` or `/autopilot` run in isolated contexts and will NOT inherit careful mode. This guard only applies to the current conversation session.

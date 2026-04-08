@@ -10,13 +10,9 @@
 
 ```bash
 git clone https://github.com/bakirp/Forge.git
-cd Forge
-./setup
 ```
 
-Setup takes under 60 seconds. It:
-1. Creates `~/.forge/` (memory bank, sessions, retros)
-2. Installs all FORGE skills to `~/.claude/skills/`
+Add FORGE as a Claude Code plugin by pointing to the cloned directory. The plugin system auto-discovers all skills, agents, and hooks.
 
 ## Your First Session
 

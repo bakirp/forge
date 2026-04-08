@@ -2,7 +2,7 @@
 
 Complete reference of who triggers whom, what artifacts flow where, and where the gaps are.
 
-Last updated: 2026-04-08 (v2.10.0)
+Last updated: 2026-04-09 (v0.0.1)
 
 ---
 
@@ -598,7 +598,7 @@ SPAWNED BY                EXECUTION ORDER
 
 ## Design Integration Status
 
-`/design` is a **standalone suite** — no main pipeline skill reads `.forge/design/` artifacts automatically. This is intentional (decided v2.10.0 audit):
+`/design` is a **standalone suite** — no main pipeline skill reads `.forge/design/` artifacts automatically. This is intentional (decided in integration audit):
 
 - Wiring design into `/build` would add a second source of truth alongside the architecture doc
 - Wiring into `/ship` would pollute the security gate for non-frontend projects

@@ -1,8 +1,9 @@
 ---
 name: forge-architect
-description: "FORGE Architecture Agent — designs data flow, API contracts, and component boundaries during epic task classification. Produces the architecture document consumed by /build."
-whenToUse: "After the Product Agent completes during epic task classification. Requires scope output from the Product Agent. Spawned as part of the Agent Teams workflow."
-tools: ["Read", "Grep", "Glob", "Bash"]
+model: opus
+color: cyan
+description: "FORGE Architecture Agent — designs data flow, API contracts, and component boundaries during epic task classification. Produces the architecture document consumed by /build. After the Product Agent completes during epic task classification. Requires scope output from the Product Agent. Spawned as part of the Agent Teams workflow."
+tools: Read, Grep, Glob, Bash
 ---
 
 <example>

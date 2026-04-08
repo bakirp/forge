@@ -35,15 +35,7 @@ Determine which branch to finish:
 
 Also detect the base branch (the branch the feature was created from):
 ```bash
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-if [ -z "$DEFAULT_BRANCH" ]; then
-  for branch in main master develop; do
-    if git show-ref --verify --quiet "refs/heads/$branch"; then
-      DEFAULT_BRANCH="$branch"
-      break
-    fi
-  done
-fi
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 ```
 
 ## Step 2: Pre-Finish Checks
@@ -210,6 +202,11 @@ Files changed: [count]
 Commits merged: [count]
 
 Next: /ship to create a PR and deploy.
+```
+
+### Telemetry
+```bash
+bash scripts/telemetry.sh finish completed
 ```
 
 ## Rules

@@ -20,7 +20,7 @@ If arguments are provided:
 
 If no arguments:
 ```bash
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 CURRENT_BRANCH=$(git branch --show-current)
 git diff --stat "$DEFAULT_BRANCH"..."$CURRENT_BRANCH"
 ```

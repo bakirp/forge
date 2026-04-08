@@ -11,33 +11,38 @@ jq_read() {
   jq -r "$@" "$f"
 }
 
-# jq_write <file> [--arg k v ...] <expr> — modify JSON file in place
+# jq_write <file> [--arg k v ...] <expr> — modify JSON file atomically
 jq_write() {
   local f="$1"; shift
-  local tmp; tmp=$(jq "$@" "$f") && printf '%s\n' "$tmp" > "$f"
+  local tmp; tmp=$(jq "$@" "$f") && printf '%s\n' "$tmp" > "${f}.tmp" && mv "${f}.tmp" "$f"
 }
 
-# py_read <file> <python-print-expr> — read a value using python3
-# NOTE: The expression arg is interpolated into python code. Only pass trusted,
-# internally-constructed expressions — never raw user input.
+# py_read <file> <python-print-expr> [extra-args...] — read a value using python3
+# The expression is interpolated into code — keep it to trusted field access only.
+# Extra args are available as sys.argv[2], sys.argv[3], etc.
 py_read() {
+  local f="$1" expr="$2"; shift 2
   python3 -c "
 import json, sys
 with open(sys.argv[1]) as f: d=json.load(f)
-print($2)
-" "$1"
+print(${expr})
+" "$f" "$@"
 }
 
-# py_write <file> <python-statements> — modify JSON file using python3
-# NOTE: The statements arg is interpolated into python code. Only pass trusted,
-# internally-constructed statements — never raw user input.
+# py_write <file> <python-statements> [extra-args...] — modify JSON file using python3
+# The statements are interpolated into code — use sys.argv[2..N] for variable data,
+# never interpolate shell variables into the statement string.
+# Extra args are available as sys.argv[2], sys.argv[3], etc.
 py_write() {
+  local f="$1" expr="$2"; shift 2
   python3 -c "
-import json, sys
+import json, sys, os
 with open(sys.argv[1]) as f: d=json.load(f)
-$2
-with open(sys.argv[1],'w') as f: json.dump(d,f,indent=2)
-" "$1"
+${expr}
+tmp=sys.argv[1]+'.tmp'
+with open(tmp,'w') as f: json.dump(d,f,indent=2)
+os.rename(tmp, sys.argv[1])
+" "$f" "$@"
 }
 
 # json_create <json-string> <output-file> — create a JSON file from a string

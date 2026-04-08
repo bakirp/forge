@@ -1,6 +1,6 @@
 ---
 name: ship
-description: "Security audit + PR creation + deploy. Reads /verify report (blocks on failure), runs OWASP Top 10 and STRIDE threat model checks, auto-fixes critical security issues, creates a PR with release summary, and optionally supports canary deploys. Use when ready to ship — triggered by 'ship it', 'create a PR', 'deploy', 'release this'."
+description: "Security audit + PR creation. Reads /verify report (blocks on failure), runs OWASP Top 10 and STRIDE threat model checks, auto-fixes critical security issues, and creates a PR with release summary. Use when ready to ship — triggered by 'ship it', 'create a PR', 'ready to merge', 'release this'."
 argument-hint: "[optional: --canary | --draft]"
 allowed-tools: Read Grep Glob Write Edit Bash Agent
 ---
@@ -52,27 +52,13 @@ FORGE /ship — BLOCKED
 No review report found. Run /review first.
 ```
 
-**Freshness check — review report:** After confirming the review report exists and passes, verify it was written against the current commit:
+**Freshness check — review report:** Delegate to the artifact-check script:
 
 ```bash
-CURRENT_SHA=$(git rev-parse HEAD)
-REVIEW_SHA=$(grep "^## commit_sha:" .forge/review/report.md | awk '{print $NF}')
-if [[ "$REVIEW_SHA" != "$CURRENT_SHA" ]]; then
-  echo "STALE: review report is from $REVIEW_SHA, current HEAD is $CURRENT_SHA"
-fi
+bash scripts/artifact-check.sh review
 ```
 
-If the `commit_sha` in the review report does not match `git rev-parse HEAD`, block shipping:
-
-```
-FORGE /ship — BLOCKED
-
-The review report is stale (written against a different commit).
-Report commit: [report commit_sha]
-Current HEAD:  [git rev-parse HEAD]
-
-Re-run /review, then /ship.
-```
+If the check fails (non-zero exit), block shipping with the error message from the script.
 
 **Stop here. Do not proceed.**
 
@@ -106,31 +92,17 @@ FORGE /ship — BLOCKED
 No verification report found. Run /verify first.
 ```
 
-**Freshness check — verify report:** After confirming the verify report exists and passes, verify it was written against the current commit:
+**Freshness check — verify report:** Delegate to the artifact-check script:
 
 ```bash
-CURRENT_SHA=$(git rev-parse HEAD)
-VERIFY_SHA=$(grep "^## commit_sha:" .forge/verify/report.md | awk '{print $NF}')
-if [[ "$VERIFY_SHA" != "$CURRENT_SHA" ]]; then
-  echo "STALE: verify report is from $VERIFY_SHA, current HEAD is $CURRENT_SHA"
-fi
+bash scripts/artifact-check.sh verify
 ```
 
-If the `commit_sha` in the verify report does not match `git rev-parse HEAD`, block shipping:
-
-```
-FORGE /ship — BLOCKED
-
-The verify report is stale (written against a different commit).
-Report commit: [report commit_sha]
-Current HEAD:  [git rev-parse HEAD]
-
-Re-run /verify, then /ship.
-```
+If the check fails (non-zero exit), block shipping with `STALE:` prefix and the error message from the script.
 
 **Stop here. Do not proceed.**
 
-**Note on auto-fix staleness:** Step 4 (Auto-Fix Critical Issues) modifies source files, which changes the working tree but does not automatically update the commit SHA. After any auto-fix is applied, treat both the review and verify reports as stale — their `commit_sha` fields will no longer reflect the fixed state. You must re-run /review and /verify before proceeding to PR creation. Do not skip this requirement.
+**Note on auto-fix staleness:** Step 4 (Auto-Fix Critical Issues) modifies source files, which changes the working tree but does not automatically update the commit SHA. After any auto-fix is applied, treat both the review and verify reports as STALE — their `commit_sha` fields will no longer reflect the fixed state. You must re-run /review and /verify before proceeding to PR creation. Do not skip this requirement.
 
 If **Status: PASS** and freshness checks pass, proceed.
 
@@ -184,7 +156,7 @@ If no CHANGELOG.md, skip — don't create one uninvited.
 Scan all files created or modified during this build cycle. Detect the base branch and use `git diff --name-only` to identify changed files:
 
 ```bash
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 git diff --name-only ${DEFAULT_BRANCH}...HEAD
 ```
 
@@ -270,7 +242,7 @@ When in doubt: require user approval.
 Read the git log for this branch. Detect the default branch first — do not assume `main`:
 ```bash
 # Detect the default branch
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 git log --oneline ${DEFAULT_BRANCH}..HEAD
 ```
 
@@ -308,7 +280,7 @@ Produce a human-readable summary grouped by type:
 
 ```bash
 # Stage only files modified during this build cycle — never use git add -A
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 git diff --name-only ${DEFAULT_BRANCH}...HEAD | xargs git add
 # Also stage any security fixes made in Step 3
 git add [files modified by security fixes]

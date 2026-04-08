@@ -2,7 +2,7 @@
 name: browse
 description: "Dedicated browser automation skill using Playwright. Executes browser flows, captures screenshots, and reports results. Used by /verify for web domain QA, and available standalone for browser-based tasks. Use for browser testing — triggered by 'test in browser', 'run Playwright', 'check the UI', 'browser automation', 'test the page'."
 argument-hint: "[url or flow description]"
-allowed-tools: Read Grep Glob Write Edit Bash Agent
+allowed-tools: Read Grep Glob Write Edit Bash
 ---
 
 # /browse — Browser Automation with Playwright

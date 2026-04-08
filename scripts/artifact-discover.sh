@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Usage: ./scripts/artifact-discover.sh [type]
-# Types: all, architecture, review, verify, debug, browse, brainstorm, runs, releases
+# Types: all, architecture, build, review, verify, debug, browse, brainstorm, design, context, benchmark, deploy, autopilot, runs, releases
 # Lists all artifacts found under .forge/ with their status/date
 
 TYPE="${1:-all}"
@@ -33,11 +33,17 @@ show() {
     local kind="$1"
     case "$kind" in
         architecture) list_type "arch"       "$FORGE_LOCAL/architecture" "*.md" ;;
-        review)       list_type "review"     "$FORGE_LOCAL/review"       "report.md" ;;
+        build)        list_type "build"      "$FORGE_LOCAL/build"        "report.md" ;;
+        review)       list_type "review"     "$FORGE_LOCAL/review"       "*.md" ;;
         verify)       list_type "verify"     "$FORGE_LOCAL/verify"       "report.md" ;;
         debug)        list_type "debug"      "$FORGE_LOCAL/debug"        "report.md" ;;
         browse)       list_type "browse"     "$FORGE_LOCAL/browse"       "report.md" ;;
         brainstorm)   list_type "brainstorm" "$FORGE_LOCAL/brainstorm"   "*.md" ;;
+        design)       list_type "design"     "$FORGE_LOCAL/design"       "*.md" ;;
+        context)      list_type "context"    "$FORGE_LOCAL/context"      "*.md" ;;
+        benchmark)    list_type "benchmark"  "$FORGE_LOCAL/benchmark"    "*.md" ;;
+        deploy)       list_type "deploy"     "$FORGE_LOCAL/deploy"       "*.md" ;;
+        autopilot)    list_type "autopilot"  "$FORGE_LOCAL/autopilot"    "state.json" ;;
         runs)         list_type "run"        "$FORGE_LOCAL/runs"         "*/manifest.json" ;;
         releases)     list_type "release"    "$FORGE_LOCAL/releases"     "*/summary.md" ;;
         *) echo "Unknown type: $kind" >&2; return 1 ;;
@@ -48,7 +54,7 @@ echo "FORGE Artifacts"
 echo "==============="
 found_any=false
 
-ALL_TYPES="architecture review verify debug browse brainstorm runs releases"
+ALL_TYPES="architecture build review verify debug browse brainstorm design context benchmark deploy autopilot runs releases"
 if [ "$TYPE" = "all" ]; then
     for t in $ALL_TYPES; do
         show "$t" 2>/dev/null && found_any=true

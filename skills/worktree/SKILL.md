@@ -1,6 +1,6 @@
 ---
 name: worktree
-description: "Creates an isolated git worktree for a task. Sets up a feature branch, configures the environment, and provides a clean workspace that /finish will complete. Use when starting isolated work — triggered by 'create a worktree', 'isolated workspace', 'new feature branch', 'work in isolation'."
+description: "Creates an isolated git worktree for a task. Sets up a feature branch, configures the environment, and provides a clean workspace that /finish will complete. Use when starting isolated work — triggered by 'create a worktree', 'isolated workspace', 'set up a worktree', 'work in isolation'."
 argument-hint: "[branch-name or task description]"
 allowed-tools: Read Grep Glob Write Bash
 ---
@@ -78,23 +78,14 @@ If a worktree already exists at the target path, report and stop.
 Find the repository's default branch — do not assume `main`:
 
 ```bash
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-if [ -z "$DEFAULT_BRANCH" ]; then
-  # Fallback: check for common names
-  for branch in main master develop; do
-    if git show-ref --verify --quiet "refs/heads/$branch"; then
-      DEFAULT_BRANCH="$branch"
-      break
-    fi
-  done
-fi
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 ```
 
 If no default branch detected, ask the user which branch to base off.
 
 ## Step 4: Create Worktree
 
-Create `.forge/worktrees/` if it doesn't exist.
+Create `.forge/worktrees/` if it doesn't exist. If `.forge/.gitignore` does not exist, create it with `*` to prevent artifact commits.
 
 ```bash
 git worktree add -b [branch-name] .forge/worktrees/[branch-name] $DEFAULT_BRANCH
@@ -163,6 +154,11 @@ Worktree: .forge/worktrees/[branch-name]
 Base: [default-branch]
 
 Work in this isolated copy. When done, run /finish to merge back.
+```
+
+### Telemetry
+```bash
+bash scripts/telemetry.sh worktree completed
 ```
 
 ## Rules

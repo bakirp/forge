@@ -32,6 +32,12 @@ cmd_init() {
     esac
   done
 
+  # Validate numeric inputs
+  for var_name in max_inner max_outer max_total; do
+    eval "val=\$$var_name"
+    [[ "$val" =~ ^[0-9]+$ ]] || { echo "ERROR: --$var_name must be a positive integer, got '$val'" >&2; exit 1; }
+  done
+
   mkdir -p "$STATE_DIR"
 
   local ts; ts=$(now_iso)
@@ -56,7 +62,7 @@ EOF
   if $HAS_JQ; then
     printf '%s\n' "$payload" | jq . > "$STATE_FILE"
   else
-    python3 -c "import json; json.dump(json.loads('''$payload'''), open('$STATE_FILE','w'), indent=2)"
+    python3 -c "import json, sys; json.dump(json.loads(sys.argv[1]), open(sys.argv[2],'w'), indent=2)" "$payload" "$STATE_FILE"
   fi
 
   echo -e "${GREEN}GUARD${NC} initialized (inner=$max_inner, outer=$max_outer, total=$max_total)"
@@ -134,7 +140,7 @@ cmd_tick() {
     local py_counter=""
     [[ "$counter" == "inner" ]] && py_counter="; d['inner_count']+=1"
     [[ "$counter" == "outer" ]] && py_counter="; d['outer_count']+=1"
-    py_write "$STATE_FILE" "d['total_count']+=1; d['current_phase']='$phase'; d['history'].append({'event':'tick','phase':'$phase','timestamp':'$ts'})${py_counter}"
+    py_write "$STATE_FILE" "d['total_count']+=1; d['current_phase']=sys.argv[2]; d['history'].append({'event':'tick','phase':sys.argv[2],'timestamp':sys.argv[3]})${py_counter}" "$phase" "$ts"
   fi
 
   echo -e "${GREEN}GUARD TICK${NC} $phase (total=$(cmd_read_field total_count))"
@@ -155,7 +161,7 @@ cmd_fail() {
     (( count > 0 )) && is_repeat=true
   else
     local count
-    count=$(py_read "$STATE_FILE" "d['last_failure_hashes'].count('$issue_hash')")
+    count=$(py_read "$STATE_FILE" "d['last_failure_hashes'].count(sys.argv[2])" "$issue_hash")
     (( count > 0 )) && is_repeat=true
   fi
 
@@ -164,7 +170,7 @@ cmd_fail() {
     jq_write "$STATE_FILE" --arg h "$issue_hash" --arg p "$phase" --arg ts "$ts" \
       '.last_failure_hashes += [$h] | .history += [{"event":"fail","phase":$p,"issue":$h,"timestamp":$ts}]'
   else
-    py_write "$STATE_FILE" "d['last_failure_hashes'].append('$issue_hash'); d['history'].append({'event':'fail','phase':'$phase','issue':'$issue_hash','timestamp':'$ts'})"
+    py_write "$STATE_FILE" "d['last_failure_hashes'].append(sys.argv[2]); d['history'].append({'event':'fail','phase':sys.argv[3],'issue':sys.argv[2],'timestamp':sys.argv[4]})" "$issue_hash" "$phase" "$ts"
   fi
 
   if $is_repeat; then
@@ -183,7 +189,7 @@ cmd_halt() {
     jq_write "$STATE_FILE" --arg r "$reason" --arg ts "$ts" \
       '.status="halted" | .halt_reason=$r | .history += [{"event":"halt","reason":$r,"timestamp":$ts}]'
   else
-    py_write "$STATE_FILE" "d['status']='halted'; d['halt_reason']='$reason'; d['history'].append({'event':'halt','reason':'$reason','timestamp':'$ts'})"
+    py_write "$STATE_FILE" "d['status']='halted'; d['halt_reason']=sys.argv[2]; d['history'].append({'event':'halt','reason':sys.argv[2],'timestamp':sys.argv[3]})" "$reason" "$ts"
   fi
 
   echo -e "${RED}GUARD HALT${NC} $reason" >&2
@@ -198,7 +204,7 @@ cmd_complete() {
     jq_write "$STATE_FILE" --arg ts "$ts" \
       '.status="completed" | .completed=$ts | .history += [{"event":"complete","timestamp":$ts}]'
   else
-    py_write "$STATE_FILE" "d['status']='completed'; d['completed']='$ts'; d['history'].append({'event':'complete','timestamp':'$ts'})"
+    py_write "$STATE_FILE" "d['status']='completed'; d['completed']=sys.argv[2]; d['history'].append({'event':'complete','timestamp':sys.argv[2]})" "$ts"
   fi
 
   echo -e "${GREEN}GUARD${NC} autopilot completed"
@@ -210,7 +216,7 @@ cmd_status() {
   if $HAS_JQ; then
     jq . "$STATE_FILE"
   else
-    python3 -c "import json; print(json.dumps(json.load(open('$STATE_FILE')),indent=2))"
+    python3 -c "import json, sys; print(json.dumps(json.load(open(sys.argv[1])),indent=2))" "$STATE_FILE"
   fi
 }
 

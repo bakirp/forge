@@ -34,7 +34,7 @@ Parse `$ARGUMENTS` for:
 Collect the review inputs:
 
 ```bash
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 BASE_REF="${PARSED_BASE:-$DEFAULT_BRANCH}"
 git diff --name-only ${BASE_REF}...HEAD
 git diff ${BASE_REF}...HEAD

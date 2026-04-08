@@ -110,4 +110,4 @@ case "${1:-help}" in
   all)          shift; check_all "$@" ;;
   *) echo "Usage: artifact-check.sh {architecture|review|verify|manifest|all} <path|run-id>"; exit 1 ;;
 esac
-exit "$FAILURES"
+exit $(( FAILURES > 0 ? 1 : 0 ))

@@ -217,22 +217,40 @@ Generate `.forge/autopilot/future-enhancements.md` with:
 
 ```bash
 mkdir -p .forge/autopilot
+bash scripts/artifact-discover.sh all > .forge/autopilot/artifacts-inventory.md
 bash scripts/manifest.sh artifact "$RUN_ID" future-enhancements ".forge/autopilot/future-enhancements.md"
 ```
 
 ## Step 9: Memory
 
-Store key session decisions using `jq` for safe JSON construction. Note: this writes directly to `memory.jsonl` instead of invoking `/memory-remember` to avoid interactive prompts in autonomous mode.
+Store key session decisions via `/memory-remember` to ensure deduplication and validation. If `/memory-remember` cannot be invoked (e.g., skill unavailable), fall back to direct write with inline safeguards.
+
+**Preferred: Use /memory-remember**
+
+Invoke `/memory-remember` with the decision summary, category, and tags. This handles deduplication, JSON construction, and validation automatically.
+
+**Fallback: Direct write with deduplication and validation**
+
+If direct write is necessary, follow these safeguards:
 
 ```bash
-ID="$(date +%Y%m%d_%H%M%S)_$(xxd -l2 -p /dev/urandom)"
-jq -n -c \
-  --arg id "$ID" --arg project "$(basename "$(pwd)")" --arg date "$(date +%Y-%m-%d)" \
-  --arg category "[category]" --arg decision "[summary]" --arg rationale "[why]" \
-  --argjson anti_patterns '[]' --argjson tags '["tag1"]' --argjson confidence 0.8 \
-  '{id:$id,project:$project,date:$date,category:$category,decision:$decision,rationale:$rationale,anti_patterns:$anti_patterns,tags:$tags,confidence:$confidence}' \
-  >> ~/.forge/memory.jsonl
-tail -1 ~/.forge/memory.jsonl | jq empty || echo "ERROR: Invalid JSON — remove last line"
+# 1. Check for duplicates before writing
+DECISION_TEXT="[summary]"
+if grep -c "$DECISION_TEXT" ~/.forge/memory.jsonl 2>/dev/null | grep -qv '^0$'; then
+  echo "SKIP: Duplicate decision already in memory"
+else
+  # 2. Use jq for safe JSON construction (never string concatenation)
+  ID="$(date +%Y%m%d_%H%M%S)_$(xxd -l2 -p /dev/urandom)"
+  jq -n -c \
+    --arg id "$ID" --arg project "$(basename "$(pwd)")" --arg date "$(date +%Y-%m-%d)" \
+    --arg category "[category]" --arg decision "$DECISION_TEXT" --arg rationale "[why]" \
+    --argjson anti_patterns '[]' --argjson tags '["tag1"]' --argjson confidence 0.8 \
+    '{id:$id,project:$project,date:$date,category:$category,decision:$decision,rationale:$rationale,anti_patterns:$anti_patterns,tags:$tags,confidence:$confidence}' \
+    >> ~/.forge/memory.jsonl
+
+  # 3. Validate after write — remove if invalid
+  tail -1 ~/.forge/memory.jsonl | jq empty || { echo "ERROR: Invalid JSON written — removing last line"; sed -i '' '$d' ~/.forge/memory.jsonl; }
+fi
 ```
 
 ## Step 10: Final Report

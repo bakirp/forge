@@ -10,9 +10,12 @@ cmd_detect_runner() {
   local root="${1:-.}"
 
   # Priority 1: explicit config override
+  # WARNING: commands from .forge/config.json are executed via eval.
+  # Only trust this file if you created it yourself.
   local tc=""
   tc=$(read_forge_config "$root" "test_command" 2>/dev/null || true)
   if [[ -n "$tc" ]]; then
+    echo -e "${YELLOW}WARN${NC} Using test command from .forge/config.json: $tc" >&2
     echo "$tc"
     return 0
   fi
@@ -125,10 +128,13 @@ cmd_detect_runner() {
 cmd_detect_coverage() {
   local root="${1:-.}"
 
-  # Config override
+  # Config override — WARNING: commands from .forge/config.json are executed via eval.
+  # Only trust this file if you created it yourself. A malicious PR could inject commands.
   local cc=""
   cc=$(read_forge_config "$root" "coverage_command" 2>/dev/null || true)
   if [[ -n "$cc" ]]; then
+    echo -e "${YELLOW}WARN${NC} Using coverage command from .forge/config.json: $cc" >&2
+    echo -e "${YELLOW}WARN${NC} Verify this is safe before proceeding." >&2
     echo "$cc"
     return 0
   fi

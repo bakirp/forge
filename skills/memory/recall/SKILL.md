@@ -56,7 +56,15 @@ Also check `CLAUDE.md` for a project name if present.
 
 ## Step 4: Rank Entries
 
-Score each entry using three tiers:
+Use the ranking script to score and filter entries:
+
+```bash
+bash scripts/memory-rank.sh "$SEARCH_TERMS" "$(basename "$(pwd)")" 5
+```
+
+The script scores entries by: project name match (+3), tag overlap (+2 per tag), decision/rationale text match (+1), high confidence (+1 if >= 0.8), and age penalty (-1 if > 6 months old). Returns the top N results.
+
+If the script is unavailable, fall back to manual ranking using three tiers:
 
 **Tier 1 — Project match** (highest weight):
 Entries where `project` matches the current project name.

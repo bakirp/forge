@@ -27,6 +27,8 @@ If running inline:
 
 ## Step 1: Load Architecture Doc
 
+If `.forge/.gitignore` does not exist, create it with `*` to prevent artifact commits.
+
 Find and read the architecture doc:
 
 ```bash
@@ -119,7 +121,7 @@ bash scripts/context-prune.sh extract .forge/architecture/[task].md .forge/conte
 bash scripts/context-prune.sh conventions >> .forge/context/task-1.md
 bash scripts/context-prune.sh conventions >> .forge/context/task-2.md
 
-# Check token estimates (warns if any bundle exceeds 8000 tokens)
+# Check token estimates (warns if any bundle exceeds 32000 tokens)
 bash scripts/context-prune.sh estimate .forge/context/task-1.md
 bash scripts/context-prune.sh estimate .forge/context/task-2.md
 ```
@@ -159,7 +161,7 @@ For each path in the output, write exactly **one test case**. Rules:
 - Name tests to reflect the path: `test_[function]_[path_description]` (e.g., `test_auth_token_missing_returns_401`)
 - If modifying existing code, run change impact analysis first:
   ```bash
-  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+  DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
   bash scripts/quality-gate.sh path-diff . ${DEFAULT_BRANCH}
   ```
   - `ADD_TEST` paths → write new test cases
@@ -399,8 +401,10 @@ This report is the primary handoff artifact for isolated post-build phases. Incl
 
 Update the run manifest:
 ```bash
-scripts/manifest.sh phase "$(cat .forge/runs/latest)" build
-scripts/manifest.sh status "$(cat .forge/runs/latest)" completed
+if [[ -f .forge/runs/latest ]]; then
+  bash scripts/manifest.sh phase "$(cat .forge/runs/latest)" build
+  bash scripts/manifest.sh status "$(cat .forge/runs/latest)" completed
+fi
 ```
 
 ## Rules

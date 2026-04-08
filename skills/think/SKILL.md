@@ -34,6 +34,10 @@ Before classifying complexity, check if this is a debugging task. Look for these
 
 If debug signals are strong:
 
+```bash
+bash scripts/telemetry.sh think completed debug
+```
+
 ```
 FORGE /think → DEBUG
 
@@ -99,20 +103,7 @@ Wait for user confirmation. If they disagree, reclassify immediately.
 
 ### Model Routing
 
-Each phase uses the optimal model for its task. When spawning phases as subagents or recommending models, use this routing table:
-
-| Phase | Model | Rationale |
-|-------|-------|-----------|
-| `/think` | Opus | Classification and routing |
-| `/architect` | Opus | Deep reasoning on architectural decisions, trade-offs |
-| `/build` | Opus | TDD implementation (per-task routing available in Step 3) |
-| `/review` | Opus | Judgment + fresh perspective via context isolation |
-| `/verify` | Opus | Verification and QA |
-| `/ship` | Opus | Security audit + PR creation |
-
-> **Note:** All phases use Opus by default. Model routing to cheaper models is available for future cost optimization.
-
-Model routing is advisory — if the preferred model is unavailable, use whatever IS available.
+All phases use Opus by default. Model routing is advisory — if the preferred model is unavailable, use whatever IS available.
 
 ### TINY → Direct Build
 - Skip /architect entirely

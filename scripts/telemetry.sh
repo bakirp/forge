@@ -18,10 +18,20 @@ set -euo pipefail
 
 TELEMETRY_DIR="$HOME/.forge"
 TELEMETRY_FILE="$TELEMETRY_DIR/telemetry.jsonl"
+LOCK_FILE="$TELEMETRY_DIR/.telemetry.lock"
 
 mkdir -p "$TELEMETRY_DIR"
 
-PROJECT_PATH="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+# Atomic append helper — uses flock if available, falls back to direct append
+append_line() {
+  if command -v flock &>/dev/null; then
+    flock "$LOCK_FILE" -c "printf '%s\n' '$1' >> '$TELEMETRY_FILE'"
+  else
+    printf '%s\n' "$1" >> "$TELEMETRY_FILE"
+  fi
+}
+
+PROJECT_PATH="$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")"
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 # --- phase-transition: log context metrics at skill boundaries ---

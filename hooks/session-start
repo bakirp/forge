@@ -25,6 +25,7 @@ MESSAGE="<FORGE-SESSION-START>
 FORGE is active. Available workflow:
 
   /think [task]     — Start here. Classifies complexity, routes to the right depth.
+  /autopilot        — Autonomous pipeline with self-healing loops
   /brainstorm       — Explore alternatives before architecture
   /architect        — Lock architecture before building
   /build            — TDD-enforced implementation
@@ -32,6 +33,7 @@ FORGE is active. Available workflow:
   /verify           — Cross-platform QA
   /ship             — Security audit + PR creation
   /debug            — Root-cause debugging
+  /design           — Design consultation (consult, explore, review, audit, polish)
   /memory           — Cross-project decision memory
   /retro            — Post-ship retrospective
   /evolve           — Self-improve skills from retro data

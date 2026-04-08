@@ -38,8 +38,8 @@ if command -v jq &>/dev/null; then
             + ([$terms[] | select(. as $t | ($entry.tags // [] | map(ascii_downcase))[] | contains($t))] | length * 2)
             + ([$terms[] | select(. as $t | (($entry.decision // "") + " " + ($entry.rationale // "")) | ascii_downcase | contains($t))] | length)
             + (if (($entry.confidence // 0) >= 0.8) then 1 else 0 end)
-            + (if (($entry.timestamp // "") != "" and (($entry.timestamp | split("T")[0] | strptime("%Y-%m-%d") | mktime) < $cutoff)) then -1 else 0 end);
-        [., score] | @json
+            + (if (($entry.date // "") != "" and (($entry.date | strptime("%Y-%m-%d") | mktime) < $cutoff)) then -1 else 0 end);
+        [., score]
     ' "$MEMORY" 2>/dev/null | jq -s 'sort_by(-(.[1])) | .[:'"$LIMIT"'][] | .[0]' 2>/dev/null | jq -r '
         "[\(.score // "?")] \(.project // "?") / \(.category // "?")\n  Decision:  \(.decision // "n/a")\n  Rationale: \(.rationale // "n/a")\n  Tags:      \((.tags // []) | join(", "))\n"
     ' 2>/dev/null
@@ -48,13 +48,14 @@ else
 import json, sys, time
 from datetime import datetime, timedelta
 
-query = '''$QUERY'''.lower().split()
-project = '''$PROJECT'''.lower()
-limit = int('$LIMIT')
+query = sys.argv[1].lower().split()
+project = sys.argv[2].lower()
+limit = int(sys.argv[3])
+memory_path = sys.argv[4]
 cutoff = time.time() - 180 * 86400
 
 results = []
-with open('$MEMORY') as f:
+with open(memory_path) as f:
     for line in f:
         line = line.strip()
         if not line: continue
@@ -68,10 +69,10 @@ with open('$MEMORY') as f:
         text = (e.get('decision','') + ' ' + e.get('rationale','')).lower()
         score += sum(1 for t in query if t in text)
         if e.get('confidence', 0) >= 0.8: score += 1
-        ts = e.get('timestamp','')
-        if ts:
+        ds = e.get('date','')
+        if ds:
             try:
-                d = datetime.fromisoformat(ts.replace('Z','+00:00'))
+                d = datetime.fromisoformat(ds)
                 if d.timestamp() < cutoff: score -= 1
             except: pass
         results.append((score, e))
@@ -82,5 +83,5 @@ for score, e in results[:limit]:
     print(f'  Rationale: {e.get(\"rationale\",\"n/a\")}')
     print(f'  Tags:      {\", \".join(e.get(\"tags\",[]))}')
     print()
-" 2>/dev/null
+" "$QUERY" "$PROJECT" "$LIMIT" "$MEMORY" 2>/dev/null
 fi

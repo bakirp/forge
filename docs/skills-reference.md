@@ -1,6 +1,6 @@
 # FORGE Skills Reference
 
-Complete reference for all FORGE skills. Each skill is a Markdown file with YAML frontmatter that Claude Code reads and executes.
+Quick reference for all FORGE skills. For detailed steps and rules, see each skill's `SKILL.md` file directly.
 
 ## Skill Chain
 
@@ -19,606 +19,94 @@ Automation:  /autopilot (full pipeline, zero prompts)
 
 ---
 
-## /think — Adaptive Entry Point
-
-**Phase**: Planning
-**Usage**: `/think [task description]` or `/think --auto [task description]`
-
-Classifies task complexity and routes to the right workflow depth. With `--auto`, chains the full pipeline (architect → build → review → verify) without manual invocation per phase — user can interrupt at any gate.
-
-| Classification | Signals | Route |
-|---------------|---------|-------|
-| **Tiny** | 1-2 files, bug fix, config tweak, "just", "quick" | Direct to `/build` |
-| **Feature** | 3-10 files, new endpoint/component, has edge cases | `/architect` then `/build` |
-| **Epic** | 10+ files, new system, migration, multi-concern | Agent Teams then `/architect` then `/build` |
-
-**Epic Agent Teams**: For epic tasks, spawns three specialized agents:
-- **Product Agent** — defines scope, deferred items, acceptance criteria
-- **Architecture Agent** — designs data flow, API contracts, component boundaries
-- **Security Agent** — STRIDE analysis, OWASP mapping, security requirements
-
-Each agent has a FORGE checklist and required output format. Their outputs are synthesized into a unified architecture doc.
-
-**Telemetry**: Logs invocation to `~/.forge/telemetry.jsonl` with classification and outcome.
-
-**Rules**: Always shows reasoning. User can override classification. When uncertain, picks the higher level.
-
----
-
-## /architect — Lock Architecture
-
-**Phase**: Planning
-**Usage**: `/architect [task description]`
-
-Produces a locked architecture document that `/build` must follow exactly.
-
-**Steps**:
-1. Recalls relevant past decisions from memory bank via `/memory-recall`
-2. Analyzes existing codebase (structure, patterns, stack)
-3. Produces architecture doc with: data flow, API contracts, component boundaries, edge cases, test strategy, dependencies, security considerations, deferred items
-4. Saves doc to `.forge/architecture/[task-name].md`
-5. Presents for user approval
-6. Stores key decisions to memory via `/memory-remember`
-
-**Output**: Locked Markdown doc at `.forge/architecture/`. Changes require re-running `/architect`.
-
-**Rules**: Never writes implementation code. Every edge case must have a handling strategy. Every API must have defined error cases.
-
----
-
-## /build — TDD Implementation
-
-**Phase**: Build
-**Usage**: `/build [architecture doc path or 'continue']`
-
-Implements the architecture doc with strict TDD enforcement.
-
-**Token Budget**: Before spawning subagents, estimates token cost. Warns if projected >40k tokens.
-
-**Model Routing**: All tasks use Opus by default. Model routing to cheaper models is available for future cost optimization.
-
-**TDD Loop** (per task):
-1. Write failing tests first — tests MUST fail. **Mocking discipline**: mock only at system boundaries (external APIs, databases, time, filesystem). Never mock internal collaborators or your own classes.
-2. **Path Coverage Protocol**: Enumerates condition paths via `quality-gate.sh path-map`, writes exactly one test per path. For code modifications, `path-diff` classifies paths as ADD_TEST/MODIFY_TEST/REMOVE_TEST
-3. **Reusability Search**: Searches for existing functions via `quality-gate.sh reusability-search` before implementing
-4. Implement minimum code to pass
-5. Run tests — all must pass
-6. **Quick Refactor**: Brief pass to extract duplication, simplify overly complex logic. Verify tests still pass. 60-second timebox — larger refactors are left for `/review`.
-7. **Coverage Gate**: Enforces configured threshold via `quality-gate.sh coverage`
-8. 2-stage review: spec compliance, then code quality
-
-**Test Framework Detection**: Delegates to `scripts/quality-gate.sh detect-runner` supporting 15+ frameworks (Jest, Vitest, Mocha, Cypress, Playwright, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test, Bun). Config override via `.forge/config.json` `test_command`.
-
-**Subagents**: For 3+ independent tasks, spawns agents in isolated worktrees. After each subagent completes, a checkpoint pauses execution to verify output against the architecture doc (API contracts, component boundaries, data flow) and logs PASS/FAIL — the next subagent only starts on PASS. Merges and runs full test suite after all complete.
-
-**Final Verification**: Two-stage gate before declaring done. Stage 1: architecture compliance check (BLOCK merge on failure). Stage 2: full test suite (BLOCK merge on failure). Passing tests alone is not sufficient — both stages must pass.
-
-**Task Ordering**: Prefers vertical slices — each task delivers one user-visible behavior end-to-end (data model + logic + route + tests) rather than horizontal layers. Shared foundations are built first only when multiple slices depend on them.
-
-**Build Report (Handoff Artifact)**: After final verification, writes `.forge/build/report.md` with commit SHA, files modified, test results, architecture deviations, and user decisions. This structured artifact enables post-build phases to run as isolated subagents with no prior conversation context.
-
-**Phase Isolation**: For < 3 tasks, `/build` can run as an isolated subagent (`forge-builder` agent). For 3+ tasks, it runs inline in the main session (needs to spawn worktree subagents). When running as a subagent, Step 5 (Subagent Execution) is skipped — all tasks execute sequentially.
-
-**Rules**: Architecture doc is law. Tests must fail before implementation. Mock only at system boundaries. Never skips review. Reports progress per task.
-
----
-
-## /verify — Cross-Platform QA
-
-**Phase**: QA
-**Usage**: `/verify [optional: web|api|pipeline]`
-
-Verifies build output actually works. Produces a pass/fail report for `/ship`.
-
-**Domain Detection**:
-- **Web App**: Playwright browser tests for key user flows (including projects with no server — functional testing is never skipped)
-- **API**: Endpoint contract validation (status codes, response shapes, error cases, auth)
-- **Data Pipeline**: Output diffing, schema validation, error handling
-- **Hybrid**: Runs all applicable strategies
-
-**On Failure**: Captures annotated screenshots (web), detailed error info. Each failure includes expected vs actual.
-
-**Coverage Gate**: Before verification, checks coverage threshold via `quality-gate.sh coverage`. Blocks verification if below configured threshold.
-
-**Output**: Report at `.forge/verify/report.md` with status (PASS/FAIL), test counts, failure details, coverage metrics. `commit_sha` and `tree_hash` are stamped into the report at write time for freshness tracking by `/ship`.
-
-**Runtime Pre-Check**: Before running tests, reads source code and reasons about runtime behavior. Issues diagnosable from code alone are flagged before browser/curl testing.
-
-**Rules**: Never marks FAIL as PASS. Never modifies application code. Screenshots mandatory on web failures.
-
----
-
-## /ship — Security Audit + PR
-
-**Phase**: Ship
-**Usage**: `/ship [--canary] [--draft]`
-
-Final gate. Security audit, then PR creation.
-
-**Blocks on**: `/review` and `/verify` failures — no override, no exceptions.
-
-**Freshness Validation**: Extracts `commit_sha` from each report and compares it to the current `HEAD`. If either report was produced against a different commit, ship halts with a `STALE:` error and requires re-running `/review` and `/verify`. Auto-fix (see below) always invalidates both reports — they must be regenerated before proceeding even when the fix is minor.
-
-**OWASP Top 10 Check**: Scans all changed files for injection, broken auth, data exposure, XXE, access control issues, misconfig, XSS, insecure deserialization, known vulnerabilities, insufficient logging.
-
-**STRIDE Threat Model**: Evaluates spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege.
-
-**Auto-Fix**: Fixes critical security issues (hardcoded secrets, missing sanitization). Re-runs tests after each fix. Asks for approval on ambiguous fixes.
-
-**PR Creation**: Generates human-readable release summary grouped by type (features, fixes, security). Creates PR via `gh pr create`.
-
-**Flags**:
-- `--canary` — marks PR as canary deploy
-- `--draft` — creates draft PR
-
----
-
-## /review — Code Review Gate
-
-**Phase**: Review  
-**Usage**: `/review [optional: specific files or focus area]`
-
-Code review gate between `/build` and `/verify`. Checks spec compliance, code quality, and security surface.
-
-**Steps**:
-1. Loads architecture doc and git diff
-2. Spec compliance review (API contracts, component boundaries, edge cases, test strategy)
-3. Code quality review (readability, duplication, complexity, error handling)
-4. **DRY check**: Automated duplication detection via `quality-gate.sh dry-check`
-5. **Path coverage audit**: Enumerates all condition paths via `quality-gate.sh path-map`, verifies each has exactly one test — flags untested paths (critical), duplicate tests (major), orphaned tests (minor)
-6. **Reusability audit**: Searches for existing code via `quality-gate.sh reusability-search` that could have been reused
-7. **Coverage measurement**: Runs `quality-gate.sh coverage` to measure and report line coverage against threshold
-8. Security surface review (lightweight pre-check — not the full /ship audit)
-9. Writes report to `.forge/review/report.md`, stamping `commit_sha` (`git rev-parse HEAD`) and `tree_hash` (`git rev-parse HEAD^{tree}`) into the report at write time
-
-**Verdicts**:
-- **PASS**: Only minor issues or suggestions. Ready for `/verify`.
-- **NEEDS_CHANGES**: Major issues found. Fix and re-run `/review`.
-- **FAIL**: Critical issues or fundamental problems. May need `/architect` revisit. Coverage below threshold or untested condition paths = automatic FAIL.
-
-**Phase Isolation**: Can run as an isolated foreground subagent (`forge-reviewer` agent) for fresh-context review. When isolated, reads `.forge/build/report.md` and `.forge/architecture/*.md` from disk — no prior conversation context. This eliminates self-evaluation bias from the build phase.
-
-**Rules**: Critical issues = automatic FAIL. Coverage below threshold = critical. Untested condition path = critical. Duplicate tests = major. Never modifies code. Report must be machine-parseable by `/ship`.
-
-### /review request — Prepare Review Request
-
-**Usage**: `/review request [scope or context]`
-
-Prepares a scoped review request for human reviewers or `/review` execution. Defines review criteria, focus areas, and context so reviewers know what to look at.
-
-### /review response — Process Review Feedback
-
-**Usage**: `/review response [feedback source]`
-
-Processes and acts on review feedback with anti-sycophancy guardrails. Before extracting action items, technically verifies each piece of feedback against the actual codebase — pushes back on incorrect suggestions and reclassifies subjective opinions. Then prioritizes verified items as blocking, recommended, or suggestions.
-
-### /review adversarial — Red-Team Review
-
-**Usage**: `/review adversarial [optional: focus area or --base <ref>]`
-
-Adversarial review that challenges the implementation by actively trying to break it. Default posture is skepticism — assumes the change can fail in subtle, high-cost, or user-visible ways until evidence says otherwise.
-
-**Attack Surfaces** (checked systematically):
-1. Auth / permissions / tenant isolation
-2. Data loss / corruption / irreversible state
-3. Rollback safety / retries / idempotency
-4. Race conditions / ordering / stale state
-5. Empty-state / null / timeout / degraded dependencies
-6. Version skew / schema drift / migration hazards
-7. Observability gaps
-
-**Finding Bar**: Only material findings. Each must answer: What can go wrong? Why is this code vulnerable? What is the likely impact? What concrete change would reduce the risk? No style feedback, naming suggestions, or speculative concerns.
-
-**Calibration**: Prefers one strong finding over several weak ones. If the change is safe, says so directly — a clean adversarial review is a valid result.
-
-**Confidence Scores**: Each finding includes a 0.0-1.0 confidence score. Inferences are stated explicitly.
-
-**Output**: Report at `.forge/review/adversarial.md` with status (SHIP/NO-SHIP/SHIP-WITH-CAVEATS), attack surface coverage table, and structured findings with confidence scores. Includes `commit_sha` and `tree_hash` for freshness.
-
-**Phase Isolation**: Can run as an isolated subagent (`forge-adversarial-reviewer` agent) for fresh-context adversarial review. When isolated, reads `.forge/build/report.md` and `.forge/architecture/*.md` from disk.
-
-**Integration with `/ship`**: Advisory, not mandatory. `/ship` reads the adversarial report if present and includes findings in the PR description, but does NOT block on it.
-
-**Rules**: Never modifies code. Evidence before claims. Every finding must be defensible from the provided code context. Status values (SHIP/NO-SHIP/SHIP-WITH-CAVEATS) are distinct from `/review`'s (PASS/FAIL/NEEDS_CHANGES).
-
----
-
-## /debug — Root-Cause Debugging
-
-**Phase**: Any  
-**Usage**: `/debug [bug description, error message, or failing test]`
-
-Root-cause-first debugging. Invoked by `/think` for debug tasks, or directly by user.
-
-**Steps**:
-1. Understand the bug from arguments or user input
-2. Reproduce the error
-3. Collect evidence (source files, git log, grep)
-4. Form hypotheses ranked by likelihood
-5. Test hypotheses systematically
-6. Apply minimal fix, verify with tests
-7. Write report to `.forge/debug/report.md`
-
-**Rules**: Evidence before claims. Test hypotheses systematically. Minimal fix only. Never fabricate root cause.
-
----
-
-## /memory — Decision Memory
-
-**Phase**: All
-**Usage**: `/memory [remember|recall|forget] [args]`
-
-Cross-project architectural decision memory stored at `~/.forge/memory.jsonl`.
-
-### Sub-commands
-
-**`/memory recall [terms]`** — Retrieve relevant past decisions. Ranks by: project match > tag overlap > category relevance > recency. Returns top 5. Read-only.
-
-**`/memory remember [decision]`** — Store a decision. Extracts from session context or explicit argument. Deduplicates before appending. Always confirms with user.
-
-**`/memory forget [terms]`** — Search and selectively delete entries. `--prune` auto-removes entries older than 6 months with confidence < 0.5.
-
-**`/memory`** (no args) — Shows memory bank status (entry count, projects, latest entry).
-
-**Schema**: See [Memory Guide](memory-guide.md) for the full schema and usage details.
-
----
-
-## /retro — Retrospective
-
-**Phase**: Post-ship
-**Usage**: `/retro [optional: project context]`
-
-Collects structured feedback after a `/ship` cycle.
-
-**Three Questions**:
-1. What slowed us down?
-2. What would we do differently?
-3. What should FORGE remember?
-
-**Skill Ratings**: Rates each skill used in the cycle (1-5). Low-rated skills get follow-up questions.
-
-**Output**: Structured JSON at `~/.forge/retros/[date]_[project].json`. Feeds into `/evolve`. Question 3 answers are stored to memory via `/memory-remember`.
-
----
-
-## /evolve — Self-Evolution
-
-**Phase**: Meta
-**Usage**: `/evolve [optional: specific skill name]`
-
-Reads retrospective data and rewrites FORGE skills to improve them.
-
-**Process**:
-1. Loads all retro files and telemetry data (`~/.forge/telemetry.jsonl`), aggregates skill ratings and usage patterns
-2. Scores each skill: healthy (>=3.5), ok (2.5-3.4), needs work (<2.5)
-3. Analyzes feedback for low-scoring skills
-4. Proposes changes classified by risk level
-5. Applies approved changes, validates skill files
-6. Logs evolution history
-
-**Risk Levels**:
-- **Low** (auto-apply): Wording, formatting, examples, typo fixes
-- **Medium** (recommend + ask): Threshold changes, optional steps, verbosity adjustments
-- **High** (explicit approval only): Removing safety checks, changing skill chain, modifying schema
-
-**Output**: Evolution log at `~/.forge/retros/evolve_[date].json`. Key changes stored to memory.
-
-**Rules**: Never removes safety guardrails without explicit approval. Needs at least 2 retros for meaningful proposals.
-
----
-
-## /brainstorm — Ideation Before Architecture
-
-**Phase**: Ideation
-**Usage**: `/brainstorm [task description]` or `/brainstorm --grill [plan description]`
-
-Generates 3-5 alternative approaches before committing to architecture. Invoked by `/think` when a task has ambiguous solution paths, or directly by the user. With `--grill`, stress-tests an existing plan instead of generating new approaches.
-
-**Normal Mode** (default):
-0. **Problem-framing** — asks 5 forcing questions: Who benefits? What if we don't build this? What does success look like? Simplest version? Solving a symptom? Respects "just build it" override.
-1. Analyzes the task and existing codebase for constraints
-2. Generates 3-5 distinct approaches with trade-offs
-3. Scores each on effort, risk, maintainability, and performance
-4. Recommends one approach with rationale
-5. Produces artifact for `/architect` to consume
-
-**Grill Mode** (`--grill`):
-Replaces approach generation with decision-tree interrogation of an existing plan. Asks one question at a time, provides a recommended answer with each, and self-resolves questions answerable from the codebase. Walks through: scope boundaries, assumptions, failure modes, integration points, missing pieces, ordering risks. Capped at 10 questions by default (extendable on request). Produces a grill artifact with confirmed decisions, identified risks, plan changes, and open questions.
-
-**Output**: Brainstorm doc at `.forge/brainstorm/[task-name].md` (both modes).
-
-**Rules**: Never commits to a single approach without showing alternatives (normal mode). Each approach must have clear trade-offs. Recommended approach must cite evidence from the codebase. In grill mode, always provide a recommended answer with every question.
-
----
-
-## /worktree — Isolated Workspace Setup
-
-**Phase**: Lifecycle
-**Usage**: `/worktree [branch-name]`
-
-Creates an isolated git worktree for a task. Used by `/build` for subagent isolation, or directly by the user for parallel work.
-
-**Steps**:
-1. Creates a new branch from the current HEAD
-2. Sets up a git worktree at `.forge/worktrees/[branch-name]`
-3. Copies necessary configuration files
-4. Reports the worktree path for use
-
-**Output**: Worktree ready at `.forge/worktrees/[branch-name]`.
-
-**Rules**: Always checks for existing worktrees before creating. Warns if uncommitted changes exist on the current branch. Pairs with `/finish` for cleanup.
-
----
-
-## /finish — Branch Completion and Merge
-
-**Phase**: Lifecycle
-**Usage**: `/finish [branch-name]`
-
-Completes work in a worktree: merges the branch back, runs tests, and cleans up the worktree.
-
-**Steps**:
-1. Switches to the worktree and verifies all tests pass
-2. Merges the branch into the parent branch
-3. Resolves conflicts if any (prompts user for ambiguous cases)
-4. Removes the worktree and prunes the branch
-5. Runs the full test suite on the merged result
-
-**Output**: Merged branch, cleaned up worktree.
-
-**Rules**: Never merges with failing tests. Always cleans up the worktree after merge. Warns before deleting branches with unmerged commits.
-
----
-
-## /browse — Playwright Browser Automation
-
-**Phase**: Browser
-**Usage**: `/browse [url or flow description]`
-
-Dedicated Playwright browser automation. Extracted from `/verify` in Phase 3 to separate test execution from test orchestration. Also usable standalone for any browser task.
-
-**Steps**:
-1. Resolves the base URL — figures out how to run the project (dev server, direct open, etc.) and never skips testing because of unfamiliar hosting
-2. Launches Playwright in headless mode (or headed if requested)
-3. Navigates to the target URL or executes the described flow
-4. Captures screenshots at key steps
-5. Reports results with evidence (screenshots, console output, network requests)
-
-**Output**: Screenshots and logs at `.forge/browse/`.
-
-**Rules**: Always captures screenshots on failure. Never modifies application state unless explicitly instructed. Headless by default for CI compatibility.
-
----
-
-## /design — Design Workflow Hub
-
-**Phase**: Design (standalone — invoke before or after main pipeline phases as needed)
-**Usage**: `/design [consult|explore|review|audit|polish] [context]`
-
-Design hub with anti-pattern enforcement and aesthetic direction. All sub-skills load `skills/design/references/principles.md` — the shared foundation containing 10 design principles, 12 named aesthetic directions, a 32-item anti-pattern blocklist, WCAG AA accessibility baseline, usability heuristics, and review angles. Skills selectively load additional domain references (typography, color, motion, interaction, responsive) based on their needs.
-
-### /design consult
-Design consultation with aesthetic direction. Frames the problem (purpose, audience, tone, one memorable thing), selects an aesthetic direction from the catalog (or defines a custom one), defines a design language (typography, color, spacing, motion), validates against the anti-pattern blocklist, and produces Implementation Notes that `/build` consumes. Loads `typography.md`, `color-and-contrast.md`, and `motion-design.md` for detailed design language specs — typography uses modular scales and fluid `clamp()` values, color uses OKLCH for perceptual uniformity, motion specifies named easing curves with `cubic-bezier()` values.
-
-### /design explore
-Variant exploration with aesthetic differentiation. Generates 3-4 genuinely distinct alternatives, each with a different aesthetic direction and design language. Compares across measurable dimensions (complexity, accessibility, state coverage, maintenance burden) and recommends. Loads `typography.md` and `color-and-contrast.md` — variant design language format uses OKLCH palettes and modular scale ratios.
-
-### /design review
-Design review with anti-pattern scanning as the first step. Checks against the full blocklist plus AI Design Fingerprint detection (flags compound patterns like Inter + purple gradient + uniform cards as "AI slop"). Runs a dedicated accessibility audit (every a11y issue is at least Major), evaluates state coverage, visual/content quality, responsiveness, and performance. Includes usability heuristics check (Nielsen's 10 heuristics with FORGE severity levels) and review angle stress test (power user, first-time, accessibility, edge case, mobile/touch). Reports PASS/NEEDS_CHANGES with severity-rated findings.
-
-### /design audit
-Technical design quality audit — measurement, not a gate. Scores 5 dimensions (0-10 each): accessibility, responsiveness, interaction completeness, anti-pattern density, and performance. Every finding cites `file:line`. Loads `interaction-design.md` and `responsive-design.md` for structured evaluation criteria. Report includes per-dimension scores, findings, and Top 5 Improvements. A typical production UI scores 6-8.
-
-### /design polish
-Final visual polish pass before `/ship`. Runs a 6-check sweep: typography rendering, color consistency, spacing rhythm, motion quality, state completeness, and copy quality. Makes fixes directly — this is not a review. Loads `typography.md` and `color-and-contrast.md` for specific values. Report lists changes made per dimension.
-
-**Output**: Design artifacts at `.forge/design/`: `consult-[topic].md`, `explore-[topic].md`, `review-[topic].md`, `audit-[topic].md`, `polish-[topic].md`.
-
-**Pipeline**: `/design` is a standalone suite — no main pipeline skill reads `.forge/design/` artifacts automatically. `/design consult` produces a direction artifact; pass its path to `/architect` if you want architecture to respect design direction. `/design review` evaluates visual/UX quality (complementary to code `/review`). `/design audit` measures technical quality. `/design polish` makes final visual fixes.
-
-**Rules**: Every recommendation names an aesthetic direction. Generic output is a failure mode. WCAG AA minimum. Anti-pattern blocklist enforced. Evidence before claims.
-
----
-
-## /document-release — Post-Ship Documentation Sync
-
-**Phase**: Post-ship
-**Usage**: `/document-release [PR number or version]`
-
-Synchronizes documentation after shipping. Reads the PR diff and release summary, then updates relevant docs.
-
-**Steps**:
-1. Reads the shipped PR diff and release notes
-2. Identifies docs that need updating (README, API docs, guides)
-3. Proposes documentation changes
-4. Applies approved changes
-5. Creates a follow-up PR if needed
-
-**Output**: Updated documentation, optional follow-up PR.
-
-**Rules**: Never overwrites docs without showing the diff first. Focuses on user-facing documentation. Skips internal-only changes.
-
----
-
-## /careful — Destructive Operation Guard
-
-**Phase**: Guard
-**Usage**: `/careful [on|off]`
-
-Session-scoped guardrail that warns before destructive operations. When enabled, intercepts commands like `git reset --hard`, `rm -rf`, `DROP TABLE`, force pushes, and similar.
-
-**Behavior**: When `/careful on` is active, any destructive operation triggers a warning with the specific risk and asks for confirmation before proceeding.
-
-**Rules**: Session-scoped only — does not persist across sessions. Advisory — the user can always override. Does not block non-destructive operations.
-
----
-
-## /freeze — Scoped Edit Locks
-
-**Phase**: Guard
-**Usage**: `/freeze [patterns|off|list]`
-
-Prevents edits to specified files or directories during a session. Useful for protecting stable code while working on related changes.
-
-**Examples**:
-- `/freeze src/core/**` — locks all files under src/core/
-- `/freeze *.config.js` — locks all config files
-- `/freeze list` — shows current locks
-- `/freeze off` — removes all locks
-
-**Rules**: Session-scoped only. Pattern-based using glob syntax. Shows a warning and refuses the edit when a frozen file is targeted. User can `/freeze off` at any time.
-
----
-
-## /benchmark — Performance Benchmarking
-
-**Phase**: Performance
-**Usage**: `/benchmark [target function, endpoint, or module]`
-
-Runs performance benchmarks and compares against baselines. Detects regressions before they ship.
-
-**Steps**:
-1. Identifies the target (function, endpoint, or module)
-2. Runs baseline measurement (or loads saved baseline)
-3. Runs current measurement with statistical rigor (multiple iterations)
-4. Compares against baseline with threshold detection
-5. Reports results with flamegraph-style analysis if regression detected
-
-**Output**: Benchmark report at `.forge/benchmark/`.
-
-**Rules**: Always runs multiple iterations for statistical significance. Regression threshold is configurable (default: 10% degradation). Saves baselines for future comparison.
-
----
-
-## /canary — Canary Deployment
-
-**Phase**: Deploy
-**Usage**: `/canary [percentage]`
-
-Gradual rollout with monitoring. Deploys to a small percentage of traffic, monitors for errors, and either promotes or rolls back.
-
-**Steps**:
-1. Deploys the build to canary infrastructure (configurable percentage, default 5%)
-2. Monitors error rates, latency, and key metrics for a configurable window
-3. Compares canary metrics against baseline
-4. Promotes to full deployment if healthy, or rolls back if degraded
-5. Reports deployment outcome
-
-**Output**: Monitoring data during canary period (no persistent artifact).
-
-**Rules**: Always monitors before promoting. Automatic rollback on error rate spike. Never promotes without baseline comparison.
-
----
-
-## /deploy — Post-Merge Deployment
-
-**Phase**: Deploy
-**Usage**: `/deploy [environment]`
-
-Post-merge deployment and health verification. Runs after a PR is merged to deploy and verify the release in the target environment.
-
-**Steps**:
-1. Verifies the PR is merged and CI is green
-2. Triggers deployment to the target environment
-3. Runs health checks against the deployed service
-4. Verifies key functionality with smoke tests
-5. Reports deployment status
-
-**Output**: Deploy record at `.forge/deploy/last-deploy.json`.
-
-**Rules**: Never deploys from an unmerged branch. Health checks must pass before marking deployment as successful. Supports rollback if health checks fail.
-
----
-
-## /autopilot — Fully Autonomous Product Builder
-
-**Phase**: Automation
-**Usage**: `/autopilot [product description]` or `/autopilot --skip-brainstorm [description]`
-
-Takes a one-line product description and runs the entire FORGE pipeline — brainstorm, architect, build, review, verify, ship — with zero user prompts. Self-heals on failures via guard-enforced iteration limits.
-
-**Core contract**: The user should not need to type anything after invoking. Emits one-line status updates at each phase transition. The user CAN interrupt at any time.
-
-**Guard Enforcement**: Every phase transition goes through `scripts/autopilot-guard.sh`, which manages a state file (`.forge/autopilot/state.json`) with hard counters:
-- **Inner loop** (build-review cycles): default max 3
-- **Outer loop** (verify retries): default max 2
-- **Total phases**: default max 15
-- **Repeated failure detection**: halts if the same issue appears twice
-
-**Pipeline by Complexity**:
-
-| Classification | Pipeline |
-|---------------|----------|
-| TINY | build → review → verify → ship |
-| FEATURE | brainstorm → architect → build → review → verify → ship |
-| EPIC | brainstorm → architect (agent teams) → build → review → verify → ship |
-
-**Flags**:
-- `--max-iterations N` — max build-review inner loops (default 3)
-- `--skip-brainstorm` — skip brainstorm phase, go straight to architect
-
-**Steps**:
-1. Initialize guard state and run manifest
-2. Classify complexity (TINY/FEATURE/EPIC)
-3. Brainstorm (skipped for TINY) — answers forcing questions autonomously
-4. Architect (skipped for TINY) — produces locked architecture doc
-5. Build with TDD enforcement
-6. Review + fix loop (inner loop, guard-enforced)
-7. Verify + fix loop (outer loop, guard-enforced)
-8. Ship — security audit, PR creation
-9. Generate future enhancements at `.forge/autopilot/future-enhancements.md`
-10. Store key decisions to memory
-
-**Output**: PR URL, future enhancements doc, run manifest.
-
-**Rules**: Guard's word is final — if check exits non-zero, stop immediately. Debug tasks are rejected (use `/debug` instead). Never asks the user for input after initialization.
-
----
-
-## /forge — FORGE Overview
-
-**Phase**: Any
-**Usage**: `/forge`
-
-FORGE workflow overview and help. Lists all available skills, routing rules, and phase dependencies. Use as a quick reference or starting point. Includes a **Red Flags** table of rationalization patterns agents use to skip ceremony (e.g. "I'll skip `/verify`, it looks fine") — agents and reviewers should treat any such pattern as a process violation.
+## Core Pipeline
+
+| Skill | Phase | Usage | Purpose |
+|-------|-------|-------|---------|
+| `/think` | Planning | `/think [description]` | Classifies complexity (tiny/feature/epic), routes to appropriate workflow depth. `--auto` chains the full pipeline. |
+| `/architect` | Planning | `/architect [description]` | Produces locked architecture doc with data flow, API contracts, edge cases, test strategy. Reads/writes memory. |
+| `/build` | Build | `/build [arch doc or 'continue']` | TDD implementation with subagent execution, path coverage, reusability search. Writes `.forge/build/report.md`. |
+| `/review` | Review | `/review [files or focus]` | Code review gate: spec compliance, quality, DRY, path coverage, security surface. Writes `.forge/review/report.md`. |
+| `/verify` | QA | `/verify [web\|api\|pipeline]` | Cross-platform verification: Playwright for web, contract validation for API. Writes `.forge/verify/report.md`. |
+| `/ship` | Ship | `/ship [--canary] [--draft]` | OWASP + STRIDE security audit, auto-fix, PR creation. Blocks on `/review` and `/verify` failures. |
+
+## Review Sub-Skills
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/review request` | `/review request [scope]` | Prepares scoped review request with criteria and context. |
+| `/review response` | `/review response [feedback]` | Processes review feedback with anti-sycophancy gate — verifies before implementing. |
+| `/review adversarial` | `/review adversarial [focus]` | Red-team review across 7 attack surfaces. Status: SHIP/NO-SHIP/SHIP-WITH-CAVEATS. |
+
+## Memory Sub-Skills
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/memory recall` | `/memory recall [terms]` | Retrieve ranked decisions. Top 5 by: project match > tag overlap > category > recency. |
+| `/memory remember` | `/memory remember [decision]` | Store architectural decision. Deduplicates, confirms with user. |
+| `/memory forget` | `/memory forget [terms]` | Delete entries by search or `--prune` (6+ months, low confidence). |
+
+## Design Sub-Skills
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/design consult` | `/design consult [context]` | Design consultation with aesthetic direction, anti-pattern enforcement, accessibility-first. |
+| `/design explore` | `/design explore [context]` | Generate 3-4 distinct design variants with comparison table. |
+| `/design review` | `/design review [context]` | Design review against principles, anti-patterns, accessibility. PASS/NEEDS_CHANGES. |
+| `/design audit` | `/design audit [context]` | Technical quality measurement (0-10 per dimension). Not a gate. |
+| `/design polish` | `/design polish [context]` | Final 6-check visual sweep. Makes fixes directly. |
+
+## Standalone Skills
+
+| Skill | Phase | Usage | Purpose |
+|-------|-------|-------|---------|
+| `/debug` | Any | `/debug [description]` | Root-cause debugging: evidence collection, ranked hypotheses, minimal fix. |
+| `/brainstorm` | Ideation | `/brainstorm [description]` | 3-5 alternative approaches with trade-offs. `--grill` stress-tests existing plans. |
+| `/browse` | Browser | `/browse [url or flow]` | Playwright browser automation with screenshots. |
+| `/benchmark` | Performance | `/benchmark [target]` | Performance benchmarking with baseline comparison and regression detection. |
+
+## Lifecycle & Guards
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/worktree` | `/worktree [branch]` | Create isolated git worktree for task isolation. |
+| `/finish` | `/finish [branch]` | Merge branch back, run tests, clean up worktree. |
+| `/careful` | `/careful [on\|off]` | Session-scoped warning before destructive operations. |
+| `/freeze` | `/freeze [patterns]` | Session-scoped edit locks on files/directories. |
+| `/document-release` | `/document-release [PR#]` | Post-ship documentation sync. |
+| `/retro` | `/retro [context]` | Post-ship retrospective: 3 questions + skill ratings. Feeds `/evolve`. |
+| `/evolve` | `/evolve [skill]` | Self-rewriting skills based on retro data. Risk-classified changes. |
+
+## Deploy
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/canary` | `/canary [percentage]` | Gradual rollout (default 10%), monitor, promote or rollback. |
+| `/deploy` | `/deploy [environment]` | Post-merge deployment + health verification. |
+
+## Automation
+
+| Skill | Usage | Purpose |
+|-------|-------|---------|
+| `/autopilot` | `/autopilot [description]` | Full pipeline, zero prompts. Guard-enforced iteration limits. |
+| `/forge` | `/forge` | FORGE overview, skill listing, red-flags table. |
 
 ---
 
 ## Quality Gates — `scripts/quality-gate.sh`
 
-Shared infrastructure script consumed by `/build`, `/review`, and `/verify`. Centralizes test framework detection, coverage enforcement, and code quality analysis so skills don't duplicate logic.
-
-### Subcommands
+Shared infrastructure consumed by `/build`, `/review`, and `/verify`.
 
 | Command | Purpose | Used by |
 |---------|---------|---------|
 | `detect-runner [root]` | Detect test framework (15+ supported) | `/build`, `context-prune.sh` |
 | `detect-coverage [root]` | Detect coverage tool | `/build`, `/review`, `/verify` |
-| `coverage [root] [--threshold N]` | Run coverage, enforce threshold (exit 1 on failure) | `/build`, `/review`, `/verify` |
-| `reusability-search [root] [patterns...]` | Find existing functions matching patterns | `/build`, `/review` |
+| `coverage [root] [--threshold N]` | Run coverage, enforce threshold | `/build`, `/review`, `/verify` |
+| `reusability-search [root] [patterns...]` | Find existing functions | `/build`, `/review` |
 | `dry-check [root] [files...]` | Detect duplicate code blocks | `/review` |
-| `path-map [root] [files...]` | Extract condition paths (if/else/switch/loop/try/catch) | `/build`, `/review` |
-| `path-diff [root] [base-branch]` | Change impact: ADD_TEST/MODIFY_TEST/REMOVE_TEST/NO_ACTION | `/build` |
+| `path-map [root] [files...]` | Extract condition paths | `/build`, `/review` |
+| `path-diff [root] [base-branch]` | Change impact classification | `/build` |
 
-### Supported Test Frameworks
+**Supported Frameworks**: Jest, Vitest, Mocha, Cypress, Playwright, Bun, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test. Config override: `.forge/config.json` `test_command`.
 
-Jest, Vitest, Mocha, Cypress, Playwright, Bun, pytest, Go test, Cargo test, Maven, Gradle, RSpec, Minitest, PHPUnit, dotnet test. Config override: `.forge/config.json` `test_command`.
-
-### Supported Coverage Tools
-
-Istanbul/nyc, c8, Vitest coverage, Jest coverage, coverage.py, pytest-cov, go cover, cargo-tarpaulin, JaCoCo (Maven/Gradle), SimpleCov, PHPUnit coverage, dotnet coverage. Config override: `.forge/config.json` `coverage_command`.
-
-### Path Coverage
-
-`path-map` extracts branching constructs across 7 language families (JS/TS, Python, Go, Rust, Java/Kotlin, Ruby, PHP/C#): if/else chains, switch/case, loops, try/catch, ternary expressions, guard/early returns. Output format: `file:line|path_type|path_id|description`.
-
-`path-diff` compares paths between base branch and HEAD to classify each as needing a new test, test modification, test removal, or no action.
-
-### Configuration
-
-| Field | In `.forge/config.json` | Purpose |
-|-------|------------------------|---------|
-| `test_command` | `"test_command": "npm test"` | Override auto-detected test runner |
-| `coverage_command` | `"coverage_command": "npm run coverage"` | Override auto-detected coverage tool |
-| `coverage_threshold` | `"coverage_threshold": 80` | Minimum coverage % (hard gate) |
+**Configuration**: Override via `.forge/config.json`: `test_command`, `coverage_command`, `coverage_threshold`.

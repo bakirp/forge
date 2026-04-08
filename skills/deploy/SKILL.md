@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Deploy and land flow. Handles post-merge deployment: pull latest, run final checks, deploy to target environment, verify deployment health, and update status. Use after merge — triggered by 'deploy this', 'push to production', 'deploy to staging', 'land this', 'go live'."
+description: "Post-merge deploy and land flow. Handles post-merge deployment: pull latest merged code, run final checks, deploy to target environment, verify deployment health, and update status. Use AFTER the PR is merged — triggered by 'deploy this', 'push to production', 'deploy to staging', 'land this', 'go live', 'after merge'."
 argument-hint: "[optional: environment name, e.g. staging|production]"
 allowed-tools: Read Grep Glob Write Bash
 ---
@@ -48,8 +48,7 @@ Sync with the latest merged code:
 
 ```bash
 # Detect default branch
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-[ -z "$DEFAULT_BRANCH" ] && DEFAULT_BRANCH="main"
+DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 
 git checkout $DEFAULT_BRANCH
 git pull origin $DEFAULT_BRANCH
