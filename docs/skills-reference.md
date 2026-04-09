@@ -88,7 +88,7 @@ Automation:  /autopilot (full pipeline, zero prompts)
 
 | Skill | Usage | Purpose |
 |-------|-------|---------|
-| `/autopilot` | `/autopilot [description]` | Full pipeline, zero prompts. Guard-enforced iteration limits. |
+| `/autopilot` | `/autopilot [description]` | Full pipeline, zero user prompts. Continuous execution from think → ship without pausing. Guard-enforced iteration limits, self-healing loops. |
 | `/forge` | `/forge` | FORGE overview, skill listing, red-flags table. |
 
 ---

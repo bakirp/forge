@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.3 — 2026-04-09
+
+### Autopilot Phase Handoff Fix
+
+- **No-pause execution** — Added explicit HARD RULE preventing model from pausing between Skill tool calls. Autopilot now executes continuously from think → ship without waiting for user input.
+- **Think context refinement** — Removed "Autopilot handles routing" phrase that was causing think to emit "returning control to autopilot" text, which the orchestrator was echoing as an end-of-turn signal.
+- **Continuation reminders** — Added inline `[After Skill call returns: ...]` reminders before Steps 2, 2b, 3, 4 to reinforce no-pause rule at decision points.
+
+### Quality & Verification
+
+- autopilot integration test updated to confirm continuous execution without user prompts
+- All tests pass
+
 ## v0.0.2 — 2026-04-09
 
 Enforcement hardening for the autonomous autopilot skill. Added structural barriers to prevent inline implementation, designed conditional design step routing for UI tasks, and clarified auto-proceed scope to eliminate ambiguity in skill invocation decisions.

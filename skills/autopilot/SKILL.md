@@ -27,6 +27,12 @@ If the artifact is missing, do NOT tick. Halt and report to the user.
 **FAILURE HANDLING:**
 If a skill invocation fails or produces no output artifact, HALT the pipeline immediately and report the failure. Do not attempt to substitute, skip, or reimplement.
 
+**HARD RULE — No pausing between phases.**
+After any Skill tool call returns, IMMEDIATELY execute the next Bash command (guard tick, artifact check).
+Do NOT output any text to the user between phases. Do NOT treat a Skill tool result as a turn boundary.
+The entire pipeline (Steps 1–10) is one continuous execution block. Your response does not end until
+Step 10 completes or the guard script halts you with a non-zero exit. There is no other valid stopping point.
+
 ## Guard Protocol
 
 Every phase transition goes through the guard script (`scripts/autopilot-guard.sh`). The guard manages `.forge/autopilot/state.json` with real counters and exit codes.
@@ -93,7 +99,9 @@ Each phase follows this pattern:
 ### Step 1: Think
 *(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
-Invoke `/think [product description]` with additional context: "Do NOT chain to subsequent skills — just classify and stop. Autopilot handles routing."
+[After Skill call returns: immediately run the guard tick below — do NOT output to user first]
+
+Invoke `/think [product description]` with additional context: "Just classify and return. Do not announce handoff or chain to other skills. Autopilot reads your output and handles all routing silently."
 
 Read the classification and set the pipeline:
 - **TINY (no UI):** build → review → verify → ship
@@ -114,6 +122,8 @@ bash scripts/manifest.sh phase "$RUN_ID" think
 ### Step 2: Brainstorm (skip for TINY or --skip-brainstorm)
 *(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
+[After Skill call returns: immediately run the guard tick below — do NOT output to user first]
+
 Invoke `/brainstorm [product description]` — skill auto-selects the best approach in AUTOPILOT MODE.
 
 ```bash
@@ -127,6 +137,8 @@ bash scripts/manifest.sh artifact "$RUN_ID" brainstorm ".forge/brainstorm/*.md"
 
 ### Step 2b: Design (conditional — UI tasks only)
 *(Invoke via Skill tool. Inline implementation is a contract violation.)*
+
+[After Skill call returns: immediately run the guard tick below — do NOT output to user first]
 
 If `HAS_UI=true`: invoke `/forge:design` BEFORE `/forge:architect`. Pass the brainstorm output and product description. The design artifact informs architecture direction.
 
@@ -148,6 +160,8 @@ fi
 ### Step 3: Architect (skip for TINY)
 *(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
+[After Skill call returns: immediately run the guard tick below — do NOT output to user first]
+
 Invoke `/architect [product description]` — skill produces locked doc, stores memory decisions, auto-approves.
 
 ```bash
@@ -161,6 +175,8 @@ bash scripts/manifest.sh artifact "$RUN_ID" architecture ".forge/architecture/*.
 
 ### Step 4: Build
 *(Invoke via Skill tool. Inline implementation is a contract violation.)*
+
+[After Skill call returns: immediately run the guard tick below — do NOT output to user first]
 
 Count implementation tasks from architecture doc:
 - **< 3 tasks:** Spawn `forge-builder` agent (skills: [forge:build], model: opus) with architecture doc path and AUTOPILOT MODE context
