@@ -11,6 +11,22 @@ You are FORGE's autonomous orchestrator. You invoke the real FORGE skills at eac
 
 **Core contract:** You are the DRIVER, not the road. The user types nothing after invoking you. They CAN interrupt, but you never stop to ask.
 
+## Enforcement Rules
+
+**HARD RULE — Inline implementation is FORBIDDEN.**
+Every phase MUST be invoked using the Skill tool. You are FORBIDDEN from writing application code, build logic, review logic, or any phase output directly.
+If you catch yourself generating implementation artifacts instead of invoking the skill — STOP. You are violating the autopilot contract. Invoke the skill or halt.
+
+**SELF-CHECK before ticking any phase:**
+Before running `autopilot-guard.sh tick <phase>`, confirm the expected output artifact exists on disk:
+```bash
+test -f [expected artifact path] || { bash scripts/autopilot-guard.sh halt "artifact missing after [phase] — skill may not have been invoked"; exit 1; }
+```
+If the artifact is missing, do NOT tick. Halt and report to the user.
+
+**FAILURE HANDLING:**
+If a skill invocation fails or produces no output artifact, HALT the pipeline immediately and report the failure. Do not attempt to substitute, skip, or reimplement.
+
 ## Guard Protocol
 
 Every phase transition goes through the guard script (`scripts/autopilot-guard.sh`). The guard manages `.forge/autopilot/state.json` with real counters and exit codes.
@@ -27,8 +43,12 @@ Prepend this to every skill invocation so skills auto-proceed at low-risk decisi
 
 ```
 AUTOPILOT MODE — This skill is being invoked by /autopilot.
-- Auto-proceed with the recommended option at LOW-RISK decision points
-  (classification confirmation, token budget warnings, approach selection, architecture approval)
+- AUTO-PROCEED means: when a skill presents you with a low-risk decision, choose the recommended
+  option without pausing to ask the user
+  (classification confirmation, token budget warnings, approach selection, architecture approval).
+
+  AUTO-PROCEED does NOT mean: choosing to skip a skill invocation. Invoking each skill is not a
+  decision — it is mandatory. There is no scenario in which skipping a skill is the auto-proceed action.
 - STOP and surface to the user at HIGH-RISK decision points
   (changes to business logic, API contracts, cryptographic code, security-critical fixes,
    database migrations, schema changes, anything the downstream skill marks as "require user approval")
@@ -41,7 +61,7 @@ Emit between every phase:
 
 ```
 FORGE /autopilot — Pipeline Progress
-  ✓ think → ✓ brainstorm → ● architect → build → review → verify → ship
+  ✓ think → ✓ brainstorm → — design → ● architect → build → review → verify → ship
   Guard: inner=[N]/[max] outer=[N]/[max] total=[N]/[max]
 ```
 
@@ -61,6 +81,8 @@ Store `$RUN_ID` and use it for all subsequent `manifest.sh artifact` and `manife
 
 ## Steps 1–4: Invoke Skills
 
+**Invoking each applicable skill is not optional — it is the phase.** AUTOPILOT MODE context does not authorize skipping phases; it only applies to decisions made WITHIN an invoked phase.
+
 Each phase follows this pattern:
 
 1. `bash scripts/autopilot-guard.sh check` — stop if non-zero
@@ -69,13 +91,18 @@ Each phase follows this pattern:
 4. Emit pipeline progress dashboard
 
 ### Step 1: Think
+*(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
 Invoke `/think [product description]` with additional context: "Do NOT chain to subsequent skills — just classify and stop. Autopilot handles routing."
 
 Read the classification and set the pipeline:
-- **TINY:** skip brainstorm + architect → build → review → verify → ship
-- **FEATURE:** brainstorm → architect → build → review → verify → ship
-- **EPIC:** brainstorm → architect (agent teams) → build → review → verify → ship
+- **TINY (no UI):** build → review → verify → ship
+- **TINY (with UI):** [ask user] → (design →) build → review → verify → ship
+- **FEATURE (no UI):** brainstorm → architect → build → review → verify → ship
+- **FEATURE (with UI):** brainstorm → design → architect → build → review → verify → ship
+- **EPIC:** brainstorm → design → architect → build → review → verify → ship
+
+Also detect: if the task involves any user-facing interface — pages, views, components, layouts, flows, forms, dashboards, or settings screens — set `HAS_UI=true`. This flag controls whether Step 2b is inserted into the pipeline.
 
 If debug task detected → `bash scripts/autopilot-guard.sh halt "debug task — use /debug"` and stop.
 
@@ -85,26 +112,55 @@ bash scripts/manifest.sh phase "$RUN_ID" think
 ```
 
 ### Step 2: Brainstorm (skip for TINY or --skip-brainstorm)
+*(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
 Invoke `/brainstorm [product description]` — skill auto-selects the best approach in AUTOPILOT MODE.
 
 ```bash
+bash scripts/autopilot-guard.sh check
+# [Invoke forge:brainstorm via Skill tool]
+test -f .forge/brainstorm/*.md || { bash scripts/autopilot-guard.sh halt "brainstorm artifact missing"; exit 1; }
 bash scripts/autopilot-guard.sh tick brainstorm
 bash scripts/manifest.sh phase "$RUN_ID" brainstorm
 bash scripts/manifest.sh artifact "$RUN_ID" brainstorm ".forge/brainstorm/*.md"
 ```
 
+### Step 2b: Design (conditional — UI tasks only)
+*(Invoke via Skill tool. Inline implementation is a contract violation.)*
+
+If `HAS_UI=true`: invoke `/forge:design` BEFORE `/forge:architect`. Pass the brainstorm output and product description. The design artifact informs architecture direction.
+
+Skip this step for non-UI tasks.
+
+For TINY tasks with `HAS_UI=true`: pause and ask the user whether to include design before proceeding. Do NOT silently skip. This is a HIGH-RISK decision point — do not auto-proceed.
+
+```bash
+if [ "$HAS_UI" = "true" ]; then
+  bash scripts/autopilot-guard.sh check
+  # [Invoke forge:design via Skill tool]
+  test -f .forge/design/*.md || { bash scripts/autopilot-guard.sh halt "design artifact missing"; exit 1; }
+  bash scripts/autopilot-guard.sh tick design
+  bash scripts/manifest.sh phase "$RUN_ID" design
+  bash scripts/manifest.sh artifact "$RUN_ID" design ".forge/design/*.md"
+fi
+```
+
 ### Step 3: Architect (skip for TINY)
+*(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
 Invoke `/architect [product description]` — skill produces locked doc, stores memory decisions, auto-approves.
 
 ```bash
+bash scripts/autopilot-guard.sh check
+# [Invoke forge:architect via Skill tool]
+test -f .forge/architecture/*.md || { bash scripts/autopilot-guard.sh halt "architecture artifact missing"; exit 1; }
 bash scripts/autopilot-guard.sh tick architect
 bash scripts/manifest.sh phase "$RUN_ID" architect
 bash scripts/manifest.sh artifact "$RUN_ID" architecture ".forge/architecture/*.md"
 ```
 
 ### Step 4: Build
+*(Invoke via Skill tool. Inline implementation is a contract violation.)*
 
 Count implementation tasks from architecture doc:
 - **< 3 tasks:** Spawn `forge-builder` agent (skills: [forge:build], model: opus) with architecture doc path and AUTOPILOT MODE context
@@ -143,7 +199,8 @@ LOOP:
     issue_hash=$(echo -n "[first critical issue]" | shasum | cut -c1-8)
     bash scripts/autopilot-guard.sh fail review "$issue_hash" [stop if non-zero]
 
-    Apply targeted fixes directly (review-driven corrections, not new implementation)
+    Invoke `/forge:build` with a targeted prompt scoped to the review issues.
+    Do NOT apply fixes inline. Inline code changes in the orchestrator are a contract violation.
     Run tests to confirm fixes
     bash scripts/autopilot-guard.sh tick build-fix inner
     GOTO LOOP

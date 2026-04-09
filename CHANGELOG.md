@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.0.2 — 2026-04-09
+
+Enforcement hardening for the autonomous autopilot skill. Added structural barriers to prevent inline implementation, designed conditional design step routing for UI tasks, and clarified auto-proceed scope to eliminate ambiguity in skill invocation decisions.
+
+### Autopilot Enforcement
+
+- **Hard rule enforcement** — Added HARD RULE that inline implementation is forbidden. Every phase MUST be invoked using the Skill tool. Added per-step enforcement reminders at Steps 1–4 to keep the rule salient during execution.
+- **Artifact verification gates** — Added `test -f` checks after Brainstorm, Design, and Architect phases to halt the pipeline if skill output artifacts are missing. Reflects that skill invocation failures must stop the pipeline, not degrade it.
+- **Failure handling rule** — New FAILURE HANDLING section clarifies that missing artifacts halt the pipeline immediately — no silent degradation, no substitution with inline code.
+- **Step 5 inline fix anti-pattern** — Fixed review loop inner cycle: now invokes `/forge:build` with targeted prompt instead of "apply fixes directly." Inline code changes in the orchestrator are a contract violation.
+
+### Conditional Design Step for UI Tasks
+
+- **Step 2b: Design** — Added new optional step between Brainstorm and Architect. If task has UI (pages, views, components, layouts, flows, forms, dashboards, settings screens), invoke `/forge:design` to inform architecture direction.
+- **UI detection in Step 1 (Think)** — Expanded Think step to detect `HAS_UI` flag, which controls whether Step 2b is inserted into the pipeline.
+- **TINY+UI user approval** — For TINY tasks with UI, autopilot pauses and asks user whether to include design (HIGH-RISK decision point, no auto-proceed).
+- **Updated routing table** — Think step routing now specifies 5 pipeline variants: TINY (no UI), TINY (with UI), FEATURE (no UI), FEATURE (with UI), EPIC (all have design).
+
+### Auto-Proceed Scope Clarification
+
+- **Explicit negative statement** — Updated AUTOPILOT MODE context block with "AUTO-PROCEED does NOT mean: choosing to skip a skill invocation. Invoking each skill is not a decision — it is mandatory."
+- **Duplicated in orchestrator preamble** — Added the same rule to Steps 1–4 preamble in the orchestrator's own instructions, not just the context passed to sub-skills, to prevent decay of rule salience over time.
+
+### Quality & Verification
+
+- All 16 test suites pass with 0 failures
+- autopilot-guard.sh tests: 15/15 passing
+- No regressions in artifact schema, blocking logic, completion rules, or evolution guardrails
+
 ## v0.0.1 — 2026-04-09
 
 Initial release. FORGE is a structured Claude Code skill framework: plan, build, review, verify, ship — with TDD enforcement, quality gates, coverage enforcement, and adaptive complexity routing.

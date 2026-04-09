@@ -2,7 +2,7 @@
 
 Complete reference of who triggers whom, what artifacts flow where, and where the gaps are.
 
-Last updated: 2026-04-09 (v0.0.1)
+Last updated: 2026-04-09 (v0.0.2)
 
 ---
 
@@ -14,19 +14,21 @@ USER ENTRY POINTS
   ├─ /think [task] ─────────────────────────────────────────────────────────────┐
   │    │                                                                        │
   │    ├─ TINY ──────────────────────── forge-builder agent ─── /build ─────┐   │
+  │    │   (with UI: [ask user] → /design → /build)                        │   │
   │    │                                                                    │   │
-  │    ├─ FEATURE ── /brainstorm ── /architect ── /build ──────────────────┤   │
-  │    │                                                                    │   │
-  │    ├─ EPIC ── /brainstorm ── Agent Teams ── /architect ── /build ──────┤   │
-  │    │                          ├─ forge-product                          │   │
-  │    │                          ├─ forge-architect                        │   │
-  │    │                          └─ forge-security                         │   │
-  │    │                                                                    │   │
-  │    │  (--auto mode continues the chain below)                           │   │
-  │    │                                                                    ▼   │
-  │    ├─ forge-reviewer agent ─── /review ─────────────────────────────────┤   │
-  │    ├─ forge-verifier agent ─── /verify ── /browse ──────────────────────┤   │
-  │    └─ forge-shipper agent ──── /ship ───────────────────────────────────┘   │
+  │    ├─ FEATURE ── /brainstorm ── [/design if UI] ── /architect ─────┬───┤   │
+  │    │                                                              │   │   │
+  │    ├─ EPIC ── /brainstorm ── [/design if UI] ── Agent Teams ─────┤   │   │
+  │    │                                          ├─ forge-product     │   │   │
+  │    │                                          ├─ forge-architect   │   │   │
+  │    │                                          └─ forge-security    │   │   │
+  │    │  ── /architect ── /build ────────────────────────────────────┤   │   │
+  │    │                                                              │   │   │
+  │    │  (--auto mode continues the chain below)                    │   │   │
+  │    │                                                              ▼   ▼   │
+  │    ├─ forge-reviewer agent ─── /review ──────────────────────────────────┤   │
+  │    ├─ forge-verifier agent ─── /verify ── /browse ─────────────────────────┤   │
+  │    └─ forge-shipper agent ──── /ship ────────────────────────────────────┘   │
   │                                                                             │
   ├─ /autopilot [description] ─────────────────────────────────────────────────┐│
   │    │                                                                       ││
