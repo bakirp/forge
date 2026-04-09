@@ -43,7 +43,7 @@ The MCP browser tools (`mcp__claude-in-chrome__*`) require Chrome running locall
 
 ## Skill Discovery and Installation
 
-FORGE skills live in `skills/` in the repo. The `setup` script copies them to `~/.claude/skills/` (global Claude Code skills directory), making them available in every project.
+FORGE skills live in `skills/` in the repo. They are made available by adding FORGE as a Claude Code plugin, which auto-discovers all skills via `.claude-plugin/plugin.json`.
 
 Why global install (not per-project):
 - FORGE is a workflow framework, not a project dependency

@@ -69,7 +69,7 @@ Required fields:
 
 1. Fork the repo
 2. Edit the SKILL.md file
-3. Test by running `./setup` and using the skill in a Claude Code session
+3. Test by using the skill in a Claude Code session
 4. Submit a PR with:
    - What you changed and why
    - What problem you observed (ideally from a `/retro`)
@@ -81,7 +81,7 @@ Required fields:
 2. Follow the existing skill patterns (step-by-step instructions, clear output formats, rules section)
 3. Update `SKILL.md` (root bootstrap) to list the new skill
 4. Update `docs/skills-reference.md`
-5. Test via `./setup` and a Claude Code session
+5. Test in a Claude Code session
 
 ### Documentation
 

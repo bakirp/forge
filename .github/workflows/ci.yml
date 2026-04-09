@@ -55,12 +55,9 @@ jobs:
             echo "PASSED: All SKILL.md files valid"
           fi
 
-      - name: Check setup script syntax
-        run: bash -n setup
-
-      - name: Validate setup discovers all skills
+      - name: Validate skill discovery
         run: |
-          echo "Skills that setup would install:"
+          echo "Discovered skills:"
           FOUND=0
 
           # Root bootstrap
@@ -107,7 +104,6 @@ jobs:
           bash tests/test-manifest.sh
           bash tests/test-memory.sh
           bash tests/test-browser.sh
-          bash tests/test-setup.sh
           bash tests/test-evolution.sh
           bash tests/test-hooks.sh
           bash tests/test-telemetry.sh
