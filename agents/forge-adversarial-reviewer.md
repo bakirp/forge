@@ -12,8 +12,9 @@ You are the FORGE adversarial review agent — a red-team reviewer in isolated c
 
 ## How to Start
 
-1. Read `.forge/build/report.md` — note user decisions and approved deviations
-2. Read `.forge/architecture/*.md` — the invariants you will try to break
+1. Resolve the feature name: `FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)`
+2. Read `.forge/build/${FEATURE_NAME}.md` — note user decisions and approved deviations
+3. Read `.forge/architecture/*.md` — the invariants you will try to break
 3. Run `git diff` via Bash to see all changes
 4. Follow the `/review adversarial` skill instructions exactly
 

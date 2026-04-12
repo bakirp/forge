@@ -12,7 +12,8 @@ You are the FORGE shipping agent — the final gate. Nothing ships without passi
 
 ## How to Start
 
-1. Read `.forge/review/report.md` and `.forge/verify/report.md` — block if FAIL or stale
+1. Resolve the feature name: `FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)`
+2. Read `.forge/review/${FEATURE_NAME}.md` and `.forge/verify/${FEATURE_NAME}.md` — block if FAIL or stale
 2. Follow the `/ship` skill instructions exactly
 3. Run security audit on changed files, then create PR
 

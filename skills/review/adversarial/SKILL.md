@@ -7,31 +7,16 @@ allowed-tools: Read Grep Glob Bash Write
 
 # /review adversarial — Adversarial Red-Team Review
 
-You are performing an adversarial review. Your job is to break confidence in this change, not validate it. You look for the strongest reasons this change should not ship yet.
+**Critical invariant**: This review is read-only and advisory. Never modify code. Every finding must pass the 4-question bar. Verdicts are SHIP/NO-SHIP/SHIP-WITH-CAVEATS, never PASS/FAIL.
 
-This is NOT a stricter pass over implementation defects — it challenges the chosen approach, design choices, tradeoffs, and assumptions.
+## Step 0: Context Detection
 
-## Step 0: Context Detection (Isolated vs. Inline)
-
-**If running as a subagent** (no prior conversation history, spawned by `forge-adversarial-reviewer` agent):
-- Load the build report: `cat .forge/build/report.md`
-- Load the architecture doc from `.forge/architecture/*.md`
-- Run `git diff` to see all changes
-- These are your ONLY inputs — fresh eyes with an adversarial lens
-- Respect any "Architecture Deviations" and "User Decisions" listed in the build report — these were approved during the build
-- Skip to Step 1
-
-**If running inline** (in the main session with prior conversation context):
-- Proceed normally through Step 1 below
-- Be aware: you may carry cognitive bias from the build phase. Counteract this by assuming the code is wrong until evidence says otherwise.
+**Subagent** (spawned by `forge-adversarial-reviewer`): resolve feature via `bash scripts/manifest.sh resolve-feature-name`, load `.forge/build/${FEATURE_NAME}.md` and `.forge/architecture/*.md`, run `git diff` as sole input, respect architecture deviations and user decisions.
+**Inline**: Assume the code is wrong until evidence says otherwise.
 
 ## Step 1: Scope Detection
 
-Parse `$ARGUMENTS` for:
-- **Focus text**: Any non-flag text becomes the focus area — scrutinize this extra hard
-- **`--base <ref>`**: Diff against a specific reference instead of the default branch
-
-Collect the review inputs:
+Parse `$ARGUMENTS` for focus text (scrutinize extra hard) and `--base <ref>` (diff reference).
 
 ```bash
 DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
@@ -40,24 +25,11 @@ git diff --name-only ${BASE_REF}...HEAD
 git diff ${BASE_REF}...HEAD
 ```
 
-Read the full content of each changed file — you need the complete context, not just the diff hunks.
+Read full content of each changed file for complete context. If no changes: `FORGE /review adversarial — ERROR: No code changes found.`
 
-If no changes are found:
-```
-FORGE /review adversarial — ERROR
+## Step 2: Attack Surface Priorities
 
-No code changes found. Nothing to review.
-```
-
-## Step 2: Adversarial Stance
-
-Activate adversarial mode. This is your operating posture for the entire review:
-
-**Default to skepticism.** Assume the change can fail in subtle, high-cost, or user-visible ways until the evidence says otherwise. Do not give credit for good intent, partial fixes, or likely follow-up work. If something only works on the happy path, treat that as a real weakness.
-
-### Attack Surface Priorities
-
-Examine the code against these 7 attack surfaces, prioritizing failures that are expensive, dangerous, or hard to detect:
+Examine code against these 7 attack surfaces, prioritizing expensive, dangerous, or hard-to-detect failures:
 
 | # | Attack Surface | What to look for |
 |---|---------------|-----------------|
@@ -69,49 +41,23 @@ Examine the code against these 7 attack surfaces, prioritizing failures that are
 | 6 | **Version skew / schema drift / migration** | Breaking changes without migration, incompatible serialization formats, deploy-order dependencies |
 | 7 | **Observability gaps** | Silent failures, missing error logging, unmonitored critical paths, no way to detect or recover from failure |
 
-### Method
-
-Actively try to disprove the change:
-- Look for violated invariants, missing guards, unhandled failure paths, and assumptions that stop being true under stress
-- Trace how bad inputs, retries, concurrent actions, or partially completed operations move through the code
-- If the user supplied a focus area, weight it heavily — but still report any other material issue you can defend
+Actively disprove the change — trace bad inputs, retries, concurrent actions, and partial completions through code paths. If user supplied a focus area, weight it heavily but still check all surfaces.
 
 ## Step 3: Execute Review
 
-For each attack surface in the table above:
-
-1. **Read the relevant changed files** — identify which surfaces apply to which files
-2. **Trace the attack vector** through the code path, not just the changed lines
-3. **Either find a concrete vulnerability OR confirm the code handles it** — with evidence either way
-4. **Record the result** as CLEAR or FINDING for the coverage table
-
-Do not skip surfaces that "probably don't apply." Check each one against the actual code. If a surface is genuinely irrelevant (e.g., no auth in a pure utility function), mark it CLEAR with a one-line reason.
-
-If the architecture doc exists, use it to understand the intended invariants — then check if the implementation actually upholds them.
+For each surface: read relevant files, trace the attack vector through the full code path, confirm handling with evidence or record as FINDING. Never skip surfaces — if genuinely irrelevant, mark CLEAR with a one-line reason.
 
 ## Step 4: Finding Bar
 
-**Only report material findings.** Do not include:
-- Style feedback or naming suggestions
-- Low-value cleanup or speculative concerns without evidence
-- Findings you cannot defend from the provided code context
-
-Each finding MUST answer four questions:
+**Only report material findings.** Each must answer:
 1. **What can go wrong?** — Concrete failure scenario
-2. **Why is this code vulnerable?** — Cite the specific file and lines
+2. **Why is this code vulnerable?** — Cite specific file and lines
 3. **What is the likely impact?** — Severity and blast radius
 4. **What concrete change would reduce the risk?** — Actionable recommendation
 
-### Calibration
-
-- **Prefer one strong finding over several weak ones.** Do not dilute serious issues with filler.
-- **If the change looks safe, say so directly** and return no findings. A clean adversarial review is a valid and valuable result.
-- **Stay grounded.** Every finding must be defensible from the provided code. Do not invent files, lines, code paths, or runtime behavior you cannot support.
-- **State inferences explicitly.** If a conclusion depends on an inference rather than direct evidence, say so and keep the confidence score honest.
+**Calibration**: Prefer one strong finding over several weak ones. A clean review with zero findings is valid.
 
 ## Step 5: Write Report
-
-Create the report directory and capture commit identity:
 
 ```bash
 mkdir -p .forge/review
@@ -123,96 +69,44 @@ Write to `.forge/review/adversarial.md`:
 
 ```markdown
 # FORGE Adversarial Review
-
 ## Status: [SHIP | NO-SHIP | SHIP-WITH-CAVEATS]
 ## Date: [YYYY-MM-DD HH:MM]
 ## Reviewer: FORGE /review adversarial
 ## Focus: [user focus area or "general"]
-## commit_sha: [output of `git rev-parse HEAD`]
-## tree_hash: [output of `git rev-parse HEAD^{tree}`]
-
+## commit_sha: [from git rev-parse HEAD]
+## tree_hash: [from git rev-parse HEAD^{tree}]
 ## Summary
-[Terse ship/no-ship assessment. 1-3 sentences max. Written like a verdict, not a neutral recap.]
-
+[1-3 sentence verdict]
 ## Attack Surface Coverage
-
 | # | Surface | Result | Finding |
 |---|---------|--------|---------|
-| 1 | Auth / permissions / tenant isolation | [CLEAR / FINDING] | [ref or "—"] |
-| 2 | Data loss / corruption / irreversible state | [CLEAR / FINDING] | [ref or "—"] |
-| 3 | Rollback safety / retries / idempotency | [CLEAR / FINDING] | [ref or "—"] |
-| 4 | Race conditions / ordering / stale state | [CLEAR / FINDING] | [ref or "—"] |
-| 5 | Empty-state / null / timeout / degraded deps | [CLEAR / FINDING] | [ref or "—"] |
-| 6 | Version skew / schema drift / migration | [CLEAR / FINDING] | [ref or "—"] |
-| 7 | Observability gaps | [CLEAR / FINDING] | [ref or "—"] |
-
+[7 rows — each CLEAR or FINDING with ref]
 ## Findings
-
-### Finding 1: [title]
-- **Severity**: critical | major
-- **Confidence**: [0.0 - 1.0]
-- **File**: [path]
-- **Lines**: [start - end]
-- **What can go wrong**: [concrete failure scenario]
-- **Why vulnerable**: [code-level explanation citing file:line]
-- **Likely impact**: [blast radius and severity]
-- **Recommendation**: [concrete, actionable fix]
-
-### Finding 2: [title]
-...
-
-[If no findings:]
-
-### No material findings
-The change was reviewed against all 7 attack surfaces. No defensible adversarial finding could be supported from the provided context. [Brief note on what was checked.]
-
+[Per finding: Severity, Confidence (0.0-1.0), File, Lines, 4-question answers. If none: "No material findings."]
 ## Verdict
-[SHIP: No material findings. The change is defensible against adversarial scrutiny.]
-[NO-SHIP: [N] findings require attention before shipping. [1-line summary of the most critical.]]
-[SHIP-WITH-CAVEATS: Findings are noted but may be acceptable given [context]. Decision deferred to the engineer.]
+[SHIP / NO-SHIP / SHIP-WITH-CAVEATS with reasoning]
 ```
 
 ## Step 6: Report Result
 
-Before claiming the review is complete, show evidence it was written:
 ```bash
 head -8 .forge/review/adversarial.md
 ```
-Output must include the `## Status:` line and the `## commit_sha:` line.
+
+Output must include `## Status:` and `## commit_sha:` lines.
 
 ```
 FORGE /review adversarial — [SHIP | NO-SHIP | SHIP-WITH-CAVEATS]
-
 Attack surfaces checked: 7
 Findings: [N] (critical: [N], major: [N])
 Focus: [area or "general"]
 Report: .forge/review/adversarial.md
-
-[If SHIP]: No material findings. Change is defensible.
-[If NO-SHIP]: [N] findings require attention. Review the report.
-[If SHIP-WITH-CAVEATS]: Findings noted — engineer judgment required.
 ```
 
-## Rules
+> **Routing**: See `skills/shared/workflow-routing.md`. After SHIP or SHIP-WITH-CAVEATS recommend `/verify`; after NO-SHIP recommend fixing then re-running.
 
-- **Never modify code** — adversarial review is read-only observation
-- **Evidence before claims** — every finding must cite the specific file, line, and code. Never claim "all clear" without showing what was checked per attack surface.
-- **Grounded findings only** — do not invent code paths, files, or runtime behavior you cannot support from the provided context. If a finding relies on inference, state it and lower the confidence score.
-- **No style feedback** — this is not a code quality review. That is `/review`'s job. Focus exclusively on failure modes, security risks, and design weaknesses.
-- **Honest severity and confidence** — do not inflate findings to appear thorough. A clean review with zero findings is a valid result. Confidence scores must reflect actual certainty.
-- **Material findings only** — prefer one strong finding over several weak ones. Do not dilute.
-- **Respect user-approved deviations** — if the build report documents a deviation the user approved, do not flag it as a finding unless it introduces a concrete risk beyond the deviation itself.
-- **Focus area weighting** — if the user specified a focus, give it extra depth but still check all 7 surfaces.
-- **Status values are distinct from /review** — use SHIP/NO-SHIP/SHIP-WITH-CAVEATS, never PASS/FAIL/NEEDS_CHANGES. This prevents confusion in `/ship`'s parser.
+## Rules, Compliance & Error Handling
 
-### Telemetry
-
-After writing the adversarial review report, log the invocation:
-```bash
-bash scripts/telemetry.sh review-adversarial completed
-bash scripts/telemetry.sh phase-transition review
-```
-
-### Error Handling
-
-If a file cannot be read or a check cannot be completed: note it in the Attack Surface Coverage table as "NOT CHECKED: [reason]" and continue checking other surfaces. The report must reflect actual coverage — never claim all surfaces were checked if any were skipped.
+- **Never modify code** — read-only observation only. **Evidence before claims** — cite file, line, and code. **No style feedback** — failure modes and security only. **Honest severity** — do not inflate; clean reviews are valid. **Respect user-approved deviations** — only flag if they introduce concrete risk. **Status values** — SHIP/NO-SHIP/SHIP-WITH-CAVEATS only.
+- **Compliance & Telemetry**: See `skills/shared/compliance-telemetry.md`. Log via `scripts/compliance-log.sh` and `scripts/telemetry.sh`. Keys: `code-modified` (critical), `ungrounded-finding` (major), `surface-skipped` (major). Telemetry: `review-adversarial completed`, phase `review`.
+- **Error handling**: If a file or check fails, mark "NOT CHECKED: [reason]" in coverage table and continue. Never claim all surfaces checked if any were skipped.

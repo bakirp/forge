@@ -7,365 +7,136 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 # /ship — Security Audit + PR + Deploy
 
-You are the final gate. Nothing ships without passing security review and verification.
+Never ship with /review failures or /verify failures — no override, no flag, no exception. Secrets found in code or git history are always critical.
 
-## Step 0: Context Detection (Isolated vs. Inline)
+## Step 0: Context Detection
 
-**If running as a subagent** (spawned by `forge-shipper` agent):
-- Load the build report: `cat .forge/build/report.md` — for file manifest and change context
-- Load the architecture doc from `.forge/architecture/*.md` — for understanding what was built
-- You have no prior conversation history — this is by design for fresh security review
-- Proceed to Step 1
+**If subagent** (spawned by `forge-shipper`): resolve feature via `bash scripts/manifest.sh resolve-feature-name`, load build report `.forge/build/${FEATURE_NAME}.md` and architecture doc from `.forge/architecture/*.md`. No prior history — fresh security review by design. **If inline**: proceed.
 
-**If running inline** (in the main session):
-- Proceed normally to Step 1
-
-## Step 1: Read Verification Report
-
-### Check Review Report
-
-Find and read the `/review` report:
+## Step 1: Load and Gate on Reports
 
 ```bash
-cat .forge/review/report.md
+FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)
 ```
 
-Parse the status line. If **Status: FAIL** or **Status: NEEDS_CHANGES**:
+### Review Report Gate
 
-```
-FORGE /ship — BLOCKED
-
-/review reported issues. Shipping is not allowed until review passes.
-
-Issues:
-- [list from report]
-
-Fix the issues, run /review again, then /ship.
-```
-
-**Stop here. Do not proceed.**
-
-If no review report exists:
-```
-FORGE /ship — BLOCKED
-
-No review report found. Run /review first.
-```
-
-**Freshness check — review report:** Delegate to the artifact-check script:
-
+Read `.forge/review/${FEATURE_NAME}.md`. Check `## Status:` line. If missing or Status is FAIL/NEEDS_CHANGES:
 ```bash
-bash scripts/artifact-check.sh review
+bash scripts/compliance-log.sh ship missing-prerequisite critical "Attempted to ship without review report"
 ```
+**STOP, block shipping.**
 
-If the check fails (non-zero exit), block shipping with the error message from the script.
-
-**Stop here. Do not proceed.**
-
-### Check Verification Report
-
-Find and read the `/verify` report:
-
+Freshness check:
 ```bash
-cat .forge/verify/report.md
+bash scripts/artifact-check.sh review .forge/review/${FEATURE_NAME}.md
 ```
-
-Parse the status line. If **Status: FAIL**:
-
-```
-FORGE /ship — BLOCKED
-
-/verify reported failures. Shipping is not allowed.
-
-Failures:
-- [list from report]
-
-Fix the failures, run /verify again, then /ship.
-```
-
-**Stop here. Do not proceed.** No `--force`, no override, no exceptions.
-
-If no report exists:
-```
-FORGE /ship — BLOCKED
-
-No verification report found. Run /verify first.
-```
-
-**Freshness check — verify report:** Delegate to the artifact-check script:
-
+If Status: STALE (non-zero exit):
 ```bash
-bash scripts/artifact-check.sh verify
+bash scripts/compliance-log.sh ship stale-artifact critical "Review report is stale — commit_sha does not match HEAD"
 ```
+**STOP.**
 
-If the check fails (non-zero exit), block shipping with `STALE:` prefix and the error message from the script.
+### Verify Report Gate
 
-**Stop here. Do not proceed.**
+Read `.forge/verify/${FEATURE_NAME}.md`. Check `## Status:` line. If missing or Status is FAIL:
+```bash
+bash scripts/compliance-log.sh ship missing-prerequisite critical "Attempted to ship without verification report"
+```
+**STOP, block shipping.** No `--force`, no override, no exceptions.
 
-**Note on auto-fix staleness:** Step 4 (Auto-Fix Critical Issues) modifies source files, which changes the working tree but does not automatically update the commit SHA. After any auto-fix is applied, treat both the review and verify reports as STALE — their `commit_sha` fields will no longer reflect the fixed state. You must re-run /review and /verify before proceeding to PR creation. Do not skip this requirement.
+Freshness check:
+```bash
+bash scripts/artifact-check.sh verify .forge/verify/${FEATURE_NAME}.md
+```
+If STALE:
+```bash
+bash scripts/compliance-log.sh ship stale-artifact critical "Verify report is stale — commit_sha does not match HEAD"
+```
+**STOP.**
 
-If **Status: PASS** and freshness checks pass, proceed.
+**After any auto-fix (Step 4)**, both reports become stale — re-run /review and /verify before PR creation.
 
 ## Step 2: Version and Release Preparation
 
-### Detect Version File
+Detect version files (`grep -r '"version"' package.json Cargo.toml pyproject.toml setup.py 2>/dev/null | head -5`). If found, suggest bump: **Patch** (bug fixes), **Minor** (new features, backwards-compatible), **Major** (breaking changes). Confirm with user before applying.
 
-Look for version declarations in the project:
-```bash
-# Check common locations
-grep -r '"version"' package.json Cargo.toml pyproject.toml setup.py 2>/dev/null | head -5
-```
-
-### Bump Version
-
-If a version file is found, suggest a bump based on the changes:
-- **Patch** (x.x.X): Bug fixes, minor changes, no new features
-- **Minor** (x.X.0): New features, backwards-compatible changes
-- **Major** (X.0.0): Breaking changes, API changes
-
-```
-FORGE /ship — Version bump
-
-Current version: [version]
-Changes suggest: [patch | minor | major]
-Reasoning: [1-line explanation]
-
-New version: [bumped version]
-Apply? (y/n, or specify version)
-```
-
-Apply the version bump to the detected file(s).
-
-### Generate Changelog Entry
-
-If `CHANGELOG.md` exists, prepend a new entry:
-
-```markdown
-## v[new-version] — [YYYY-MM-DD]
-
-[1-2 sentence summary of the release]
-
-### [Features | Fixes | Security | Changes]
-- [entries from git log, grouped by type]
-```
-
-If no CHANGELOG.md, skip — don't create one uninvited.
+If `CHANGELOG.md` exists, prepend entry with version, date, and grouped changes. Don't create one uninvited.
 
 ## Step 3: Security Audit
 
-Scan all files created or modified during this build cycle. Detect the base branch and use `git diff --name-only` to identify changed files:
-
+Identify changed files:
 ```bash
 DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 git diff --name-only ${DEFAULT_BRANCH}...HEAD
 ```
 
-### Security Checks
+Run OWASP Top 10 and STRIDE threat model checks against changed files. Read `skills/ship/references/security-checks.md` for full checklists.
 
-Run the OWASP Top 10 and STRIDE threat model checks. See `references/security-checks.md` for the full checklists.
-
-Read `skills/ship/references/security-checks.md` for the detailed OWASP Top 10 checklist, STRIDE threat model questions, and secrets archaeology process. Apply each check to the changed files.
-
-### Adversarial Review (If Available)
-
-Check if an adversarial review exists:
-
-```bash
-test -f .forge/review/adversarial.md && echo "ADVERSARIAL_REVIEW_EXISTS"
-```
-
-If found, read it and incorporate findings into the security report. If the adversarial review has `Status: NO-SHIP`, note it prominently but do NOT block shipping — the adversarial review is advisory:
-
-```
-FORGE /ship — Note: Adversarial review flagged issues
-
-The adversarial review at .forge/review/adversarial.md has Status: NO-SHIP.
-This does NOT block shipping (adversarial review is advisory), but findings
-should be considered:
-- [summarize top findings from adversarial report]
-```
-
-If the adversarial review has `Status: SHIP` or `Status: SHIP-WITH-CAVEATS`, note it as additional confidence in the security posture.
-
-### Report Findings
-
-```
-FORGE /ship — Security Audit
-
-OWASP Top 10:
-  [✓] No injection vulnerabilities
-  [✓] Authentication checks present
-  [✗] CRITICAL: Hardcoded API key in src/config.js:42
-  ...
-
-STRIDE:
-  [✓] Spoofing: Auth tokens validated
-  [!] WARNING: No rate limiting on /api/login
-  ...
-
-Critical: [count] — must fix before shipping
-Warning: [count] — recommend fixing
-Info: [count] — noted for future
-```
+**Adversarial review**: if `.forge/review/adversarial.md` exists — `NO-SHIP` is advisory only (note prominently); `SHIP`/`SHIP-WITH-CAVEATS` adds confidence. Report findings with severity counts (critical/warning/info), citing file:line:pattern for each.
 
 ## Step 4: Auto-Fix Critical Issues
 
-For each **critical** finding, determine the fix category:
-
-**Auto-fix** (no user approval needed):
-- Remove a hardcoded credential and replace with environment variable reference
+**Auto-fix without approval**:
+- Remove hardcoded credentials, replace with env var references
 - Replace SQL string concatenation with parameterized queries
-- Add HTML output escaping where raw user input is rendered
+- Add HTML output escaping for raw user input
 
-**Require user approval:**
-- Anything that changes business logic or control flow
-- Anything that modifies API contracts (inputs, outputs, status codes)
-- Anything that could change test behavior or assertions
-- Fixes where there are multiple possible fix locations
-- Anything involving cryptographic code
-- Adding new middleware or interceptors
+**Require user approval**:
+- Business logic or control flow changes
+- API contract modifications
+- Test behavior or assertion changes
+- Multiple possible fix locations
+- Cryptographic code changes
+- New middleware or interceptors
 
-When in doubt: require user approval.
-
-**Important:** After any auto-fix, both the /review and /verify reports are stale. Re-run /review and /verify before proceeding to PR creation.
+When in doubt, require approval. After any auto-fix, re-run /review and /verify.
 
 ## Step 5: Create PR
 
-### Parse Arguments
+Arguments: `--canary` (canary deploy), `--draft` (draft PR), `--skip-security` (requires confirmation; log skip in PR description).
 
-- `--canary` — mark as canary deploy in PR description
-- `--draft` — create as draft PR
-- `--skip-security` — skip security audit (requires explicit user confirmation before proceeding; always log the skip in the PR description)
-
-### Generate Release Summary
-
-Read the git log for this branch. Detect the default branch first — do not assume `main`:
-```bash
-# Detect the default branch
-DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
-git log --oneline ${DEFAULT_BRANCH}..HEAD
-```
-
-Produce a human-readable summary grouped by type:
-
-```markdown
-## Summary
-- [1-3 bullet points describing the change at a high level]
-
-## Changes
-### Features
-- [feature descriptions from commits]
-
-### Fixes
-- [fix descriptions from commits]
-
-### Security
-- [security fixes applied by /ship]
-
-## Verification
-- Domain: [from verify report]
-- Tests: [pass count from verify report]
-- Security audit: [PASS with N warnings | N critical fixed]
-
-## Adversarial Review
-- Status: [SHIP | NO-SHIP | SHIP-WITH-CAVEATS | "Not performed"]
-- Findings: [count or "N/A"]
-- [If findings exist, list them briefly]
-
-## Test Plan
-- [ ] [Key scenarios to verify in review]
-```
-
-### Create the PR
+Generate release summary from `git log --oneline ${DEFAULT_BRANCH}..HEAD`. PR body must include: summary bullets, changes by type, verification results, adversarial review status if performed, and test plan checklist.
 
 ```bash
-# Stage only files modified during this build cycle — never use git add -A
 DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
 git diff --name-only ${DEFAULT_BRANCH}...HEAD | xargs git add
-# Also stage any security fixes made in Step 3
 git add [files modified by security fixes]
 git commit -m "[summary of changes]"
 git push -u origin [branch-name]
-
-gh pr create \
-  --title "[concise title under 70 chars]" \
-  --body "[generated summary]" \
-  [--draft if --draft flag]
+gh pr create --title "[concise title under 70 chars]" --body "[generated summary]" [--draft if flag set]
 ```
 
-### Generate Release Artifacts
+Never use `git add -A` — stage only files modified during this build cycle.
 
-Write a release summary:
+### Release Artifacts
+
 ```bash
 mkdir -p .forge/releases/v[version]
 ```
-
-Write to `.forge/releases/v[version]/summary.md`:
-```markdown
-# Release v[version]
-
-## Date: [YYYY-MM-DD]
-## PR: [URL]
-## Changes
-[Same grouped summary as PR description]
-## Security
-[Audit results summary]
-## Artifacts
-- Architecture doc: [path or N/A]
-- Review report: [path]
-- Verify report: [path]
-```
+Create `.forge/releases/v[version]/summary.md` with: date, PR URL, grouped changes, security audit results, and paths to architecture/review/verify artifacts.
 
 ## Step 6: Report
 
-Before claiming the ship is complete, show evidence the PR was created:
+Verify PR exists before claiming shipped:
 ```bash
 gh pr view --json url,state,title
 ```
-Output must include the PR URL. Do not claim "shipped" or "PR created" without showing the actual PR URL returned by `gh pr create` or confirmed by `gh pr view`.
 
-```
-FORGE /ship — Complete ✓
+Output must include the PR URL — never claim "shipped" without it. Show: security audit result, PR URL, canary/draft status if applicable.
 
-Security audit: [PASS | N critical fixed, N warnings]
-PR: [URL]
-[If canary]: Marked as canary deploy
-[If draft]: Created as draft — mark ready when reviewed
+## Rules & Compliance
 
-Full cycle complete: /think → /architect → /build → /verify → /ship ✓
-```
+- **Never ship with /review or /verify failures** — output `FORGE /ship — BLOCKED: [reason]` if prerequisites fail
+- **Secrets are always critical** — in code or git history
+- Auto-fix only clear, unambiguous security issues; ask for approval on anything complex
+- PR description must be useful to a human reviewer, not just a git log dump
+- `--skip-security`: add prominent warning to PR description
+- Re-run tests after every auto-fix — if a security fix breaks tests, always stop and ask
+- **Evidence before claims** — every finding must cite file:line:pattern; never claim "no issues" without listing what was scanned
+- Version bump is optional — skip if no version file or user declines
+- **Compliance logging & telemetry**: follow `skills/shared/compliance-telemetry.md`. Ship-specific keys: `missing-prerequisite`, `stale-artifact`, `secrets-in-code`, `secrets-in-history`, `unapproved-auto-fix`, `tests-not-rerun-after-fix`, `ungrounded-finding`.
+- **Error handling**: follow `skills/shared/rules.md`.
+- Log phase-transition telemetry and compliance via `scripts/telemetry.sh` and `scripts/compliance-log.sh` per shared protocol.
 
-### Documentation Sync
-
-After PR creation, check if documentation needs updating:
-```
-If API contracts changed, README examples may be stale, or docs/ references outdated:
-
-FORGE /ship — Documentation may need updating.
-Run /document-release to sync docs with this release.
-```
-
-## Rules
-
-- **Blocks on /review failures** — NEEDS_CHANGES or FAIL in the review report blocks shipping, same as /verify FAIL
-- **Never ship with /verify failures** — no override, no flag, no exception
-- **Never commit secrets** — if a hardcoded secret is found, it's always critical
-- Auto-fix only clear, unambiguous security issues — ask for approval on anything complex
-- The PR description must be useful to a human reviewer, not just a git log dump
-- If `--skip-security` is used, add a prominent warning to the PR description
-- Re-run tests after every auto-fix — security fixes that break functionality are not fixes
-- Report the PR URL so the user can review it immediately
-- **Evidence before claims** — every security finding must cite the specific file, line, and pattern. Never claim "no issues" without listing what was scanned.
-- **Version bump is optional** — skip if no version file detected or user declines
-- **Secrets in git history are always critical** — even if removed from current code, they may be exposed
-- **Suggest /document-release** after shipping if docs may be stale — don't auto-run it
-
-### Telemetry
-After PR creation (or if blocked), log the invocation and phase transition:
-```bash
-bash scripts/telemetry.sh ship [completed|blocked|error]
-bash scripts/telemetry.sh phase-transition ship
-```
-
-### Error Handling
-If any step fails unexpectedly: (1) state what failed and show the error output, (2) state what has been completed so far, (3) state what remains, (4) ask the user: retry this step, skip it, or abort. Never silently continue past a failed step. If a security fix breaks tests, always stop and ask.
+> **What's next**: see `skills/shared/workflow-routing.md`. After /ship: /deploy or /retro. If API contracts changed, suggest /document-release.

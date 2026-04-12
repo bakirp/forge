@@ -39,9 +39,12 @@ FORGE classifies the task and routes you:
 FORGE responds:
 ```
 FORGE /think → FEATURE
+Feature name: add-user-auth-jwt
 Reasoning: New auth system touches API routes, middleware, and data model.
 Route: /architect → /build → /verify → /ship
 ```
+
+`/think` Step 4.5 generates a slugified feature name (here, `add-user-auth-jwt`) and stores it in the run manifest. All downstream artifacts will use this name (e.g., `.forge/build/add-user-auth-jwt.md` instead of `.forge/build/report.md`).
 
 ### 2. Architect
 
@@ -69,7 +72,7 @@ FORGE implements the architecture with TDD:
 /review
 ```
 
-FORGE reviews the build output against the architecture doc. Checks spec compliance, code quality, and security surface. Produces a report at `.forge/review/report.md`.
+FORGE reviews the build output against the architecture doc. Checks spec compliance, code quality, and security surface. Produces a report at `.forge/review/[feature-name].md` (e.g., `.forge/review/add-user-auth-jwt.md`). Each skill output ends with a "What's Next" section suggesting the recommended next step.
 
 ### 5. Verify
 

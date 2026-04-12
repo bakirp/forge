@@ -193,12 +193,12 @@ else
   fail "/build missing Step 6.5 (Build Report)"
 fi
 
-# ── 14. /build report references .forge/build/report.md ──
+# ── 14. /build uses resolve-feature-name for build report ──
 
-if grep -q '\.forge/build/report\.md' "$BUILD"; then
-  pass "/build references .forge/build/report.md"
+if grep -q 'resolve-feature-name' "$BUILD" && grep -q '\.forge/build/' "$BUILD"; then
+  pass "/build uses resolve-feature-name for .forge/build/ artifact"
 else
-  fail "/build does not reference .forge/build/report.md"
+  fail "/build does not use resolve-feature-name pattern for build artifact"
 fi
 
 # ── 15. /build report contains required handoff fields ──
@@ -335,23 +335,20 @@ fi
 # SECTION 7: Cross-Artifact Consistency
 # ═══════════════════════════════════════════════════
 
-# ── 26. Build report path consistent across all files ──
+# ── 26. All pipeline skills use resolve-feature-name for build report ──
 
-BUILD_REPORT_PATH=".forge/build/report.md"
 consistent=true
 for skill in build review verify ship; do
   SKILL_FILE="$ROOT/skills/$skill/SKILL.md"
-  if grep -q "$BUILD_REPORT_PATH" "$SKILL_FILE" 2>/dev/null; then
+  if grep -q 'resolve-feature-name' "$SKILL_FILE" 2>/dev/null; then
     : # ok
-  elif grep -qi "build report\|Build Report" "$SKILL_FILE" 2>/dev/null; then
-    : # referenced by name, acceptable
   else
-    fail "/$skill does not reference build report path or name"
+    fail "/$skill does not use resolve-feature-name for artifact paths"
     consistent=false
   fi
 done
 if $consistent; then
-  pass "Build report path/reference consistent across skills"
+  pass "All pipeline skills use resolve-feature-name for consistent artifact naming"
 fi
 
 # ── 27. /build Step 0 mentions subagent mode limitations ──

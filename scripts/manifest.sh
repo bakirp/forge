@@ -89,12 +89,62 @@ cmd_show() {
   json_print "$f"
 }
 
+# Slugify a string: lowercase, hyphens, strip non-alnum, collapse, truncate 50 chars
+slugify() {
+  echo "$1" | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9]/-/g' \
+    | sed 's/--*/-/g' \
+    | sed 's/^-//;s/-$//' \
+    | cut -c1-50
+}
+
+cmd_feature_name() {
+  local rid="${1:?Usage: manifest.sh feature-name <run-id> <name>}"
+  local raw="${2:?feature name required}"
+  local name; name=$(slugify "$raw")
+  # Conflict detection: if artifacts already exist with this name, append date
+  if [[ -f ".forge/build/${name}.md" ]] || [[ -f ".forge/review/${name}.md" ]] || [[ -f ".forge/verify/${name}.md" ]]; then
+    name="${name}-$(date -u +%Y-%m-%d)"
+  fi
+  local f; f=$(resolve_manifest "$rid")
+  if $HAS_JQ; then
+    jq_write "$f" --arg fn "$name" '.feature_name=$fn'
+  else
+    py_write "$f" "d['feature_name']=sys.argv[2]" "$name"
+  fi
+  echo -e "${GREEN}Feature${NC} $name"
+  echo "$name"
+}
+
+cmd_resolve_feature_name() {
+  local latest="$RUNS_DIR/latest"
+  if [[ ! -f "$latest" ]]; then
+    echo "report"
+    return 0
+  fi
+  local rid; rid=$(cat "$latest")
+  local f="$RUNS_DIR/$rid/manifest.json"
+  if [[ ! -f "$f" ]]; then
+    echo "report"
+    return 0
+  fi
+  local fn
+  if $HAS_JQ; then
+    fn=$(jq -r '.feature_name // "report"' "$f")
+  else
+    fn=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('feature_name','report'))" "$f")
+  fi
+  echo "$fn"
+}
+
 case "${1:-help}" in
-  create)   shift; cmd_create "$@" ;;
-  phase)    shift; cmd_phase "$@" ;;
-  status)   shift; cmd_status "$@" ;;
-  artifact) shift; cmd_artifact "$@" ;;
-  blocker)  shift; cmd_blocker "$@" ;;
-  show)     shift; cmd_show "$@" ;;
-  *) echo "Usage: manifest.sh {create|phase|status|artifact|blocker|show} [args...]"; exit 1 ;;
+  create)               shift; cmd_create "$@" ;;
+  phase)                shift; cmd_phase "$@" ;;
+  status)               shift; cmd_status "$@" ;;
+  artifact)             shift; cmd_artifact "$@" ;;
+  blocker)              shift; cmd_blocker "$@" ;;
+  show)                 shift; cmd_show "$@" ;;
+  feature-name)         shift; cmd_feature_name "$@" ;;
+  resolve-feature-name) cmd_resolve_feature_name ;;
+  *) echo "Usage: manifest.sh {create|phase|status|artifact|blocker|show|feature-name|resolve-feature-name} [args...]"; exit 1 ;;
 esac

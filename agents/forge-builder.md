@@ -27,7 +27,7 @@ You are the FORGE build agent for simple implementations (fewer than 3 tasks).
 1. Read the architecture doc
 2. Follow the `/build` skill instructions
 3. Execute TDD loop (Step 4) for each task sequentially
-4. Write the build report to `.forge/build/report.md` (Step 6.5)
+4. Resolve the feature name (`bash scripts/manifest.sh resolve-feature-name`) and write the build report to `.forge/build/${FEATURE_NAME}.md` (Step 6.5)
 
 ## Important
 

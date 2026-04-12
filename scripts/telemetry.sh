@@ -40,6 +40,10 @@ if [[ "${1:-}" == "phase-transition" ]]; then
   TOKEN_ESTIMATE="${3:-0}"
   TOOL_CALLS="${4:-0}"
 
+  # Resolve feature name for artifact paths (falls back to "report" for backward compat)
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  FEAT_NAME=$("$SCRIPT_DIR/manifest.sh" resolve-feature-name 2>/dev/null || echo "report")
+
   # Measure artifact sizes if they exist
   ARCH_SIZE=0
   BUILD_REPORT_SIZE=0
@@ -48,14 +52,14 @@ if [[ "${1:-}" == "phase-transition" ]]; then
   if [[ -d .forge/architecture ]]; then
     ARCH_SIZE=$(wc -c .forge/architecture/*.md 2>/dev/null | tail -1 | awk '{print $1}' || echo 0)
   fi
-  if [[ -f .forge/build/report.md ]]; then
-    BUILD_REPORT_SIZE=$(wc -c < .forge/build/report.md 2>/dev/null || echo 0)
+  if [[ -f ".forge/build/${FEAT_NAME}.md" ]]; then
+    BUILD_REPORT_SIZE=$(wc -c < ".forge/build/${FEAT_NAME}.md" 2>/dev/null || echo 0)
   fi
-  if [[ -f .forge/review/report.md ]]; then
-    REVIEW_SIZE=$(wc -c < .forge/review/report.md 2>/dev/null || echo 0)
+  if [[ -f ".forge/review/${FEAT_NAME}.md" ]]; then
+    REVIEW_SIZE=$(wc -c < ".forge/review/${FEAT_NAME}.md" 2>/dev/null || echo 0)
   fi
-  if [[ -f .forge/verify/report.md ]]; then
-    VERIFY_SIZE=$(wc -c < .forge/verify/report.md 2>/dev/null || echo 0)
+  if [[ -f ".forge/verify/${FEAT_NAME}.md" ]]; then
+    VERIFY_SIZE=$(wc -c < ".forge/verify/${FEAT_NAME}.md" 2>/dev/null || echo 0)
   fi
 
   if command -v jq &>/dev/null; then

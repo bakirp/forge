@@ -7,52 +7,22 @@ allowed-tools: Read Grep Glob Write Bash
 
 # /canary — Canary Deployment Workflow
 
-You deploy changes to a small subset of infrastructure, monitor for errors, and either promote to full rollout or roll back. You ensure risky changes reach production gradually and safely.
+**Rollback immediately on any threshold breach** (error rate > 1%, latency > 2x baseline, or health check failure). **Never auto-promote** — always require explicit user confirmation before promoting.
+
+> **Shared protocols apply** — see `skills/shared/rules.md`, `skills/shared/compliance-telemetry.md`, `skills/shared/workflow-routing.md`. Log violations via `scripts/compliance-log.sh`.
 
 ## Step 1: Check Prerequisites
 
-Check for a release summary from `/ship`:
-```bash
-ls .forge/releases/*/summary.md 2>/dev/null | tail -1
-```
-If found, read it for version, security audit status, and PR URL. Use this as the source of truth for what version is being deployed.
-
-Verify deployment configuration exists. Scan for:
-
-- Kubernetes manifests (`k8s/`, `deploy/`, `*.yaml` with `kind: Deployment`)
-- Docker Compose (`docker-compose.yml`, `compose.yml`)
-- Cloud config (Vercel `vercel.json`, Fly `fly.toml`, Railway `railway.json`, AWS `samconfig.toml`)
-- Custom deploy scripts (`deploy.sh`, `scripts/deploy*`)
-- CI/CD config (`.github/workflows/deploy*`, `.gitlab-ci.yml`)
-
-```bash
-# Detect deployment infrastructure
-ls -la k8s/ deploy/ 2>/dev/null
-ls fly.toml vercel.json railway.json docker-compose.yml compose.yml 2>/dev/null
-ls deploy.sh scripts/deploy* 2>/dev/null
-```
-
-If none found:
-```
-FORGE /canary — No deployment config detected
-
-Could not find deployment configuration.
-Please provide your deployment method:
-- Kubernetes namespace/context
-- Cloud platform CLI command
-- Custom deploy script path
-```
+Read the latest `.forge/releases/*/summary.md` for version, security audit status, and PR URL. Scan for deployment config: K8s manifests (`k8s/`, `deploy/`), Docker Compose, cloud config (`vercel.json`, `fly.toml`, `railway.json`), deploy scripts (`deploy.sh`, `scripts/deploy*`), and CI/CD workflows. If none found, ask the user for their deployment method.
 
 ## Step 2: Plan Canary
 
-Parse `$ARGUMENTS` for percentage (default: 10%) and environment.
-
-Detect the current version from the latest `/ship` output, git tag, or package version.
+Parse `$ARGUMENTS` for percentage (default: 10%) and environment. Detect current version from `/ship` output, git tag, or package version. Present plan and **wait for user confirmation**:
 
 ```
 FORGE /canary — Plan
 
-Version: [version from /ship or git tag]
+Version: [version]
 Target: [percentage]% of traffic
 Duration: [monitoring period, default 15 minutes]
 Rollback trigger: error rate > 1% or latency > 2x baseline
@@ -61,190 +31,59 @@ Infrastructure: [detected method]
 Proceed? (y/n, or adjust parameters)
 ```
 
-Wait for user confirmation before deploying anything.
-
 ## Step 3: Deploy Canary
 
-Execute deployment to canary target. Method depends on detected infrastructure:
+Execute deployment based on detected infrastructure:
 
-### Kubernetes
-```bash
-# Apply canary deployment with reduced replicas
-kubectl apply -f [canary-manifest]
-# Or scale canary to target percentage
-kubectl scale deployment [name]-canary --replicas=[canary-count]
-```
+| Platform | Command |
+|----------|---------|
+| Kubernetes | `kubectl apply -f [canary-manifest]` or `kubectl scale deployment [name]-canary --replicas=[N]` |
+| Vercel | `vercel deploy --target preview` |
+| Fly.io | `fly deploy --strategy canary` |
+| AWS Lambda | `aws lambda update-alias --routing-config AdditionalVersionWeights={[ver]=[weight]}` |
+| Custom | `./deploy.sh canary [percentage]` |
 
-### Cloud Functions / Serverless
-```bash
-# Deploy to a canary alias or preview environment
-# Vercel
-vercel deploy --target preview
-# Fly.io
-fly deploy --strategy canary
-# AWS Lambda
-aws lambda update-alias --function-name [name] --routing-config AdditionalVersionWeights={[version]=[weight]}
-```
-
-### Static / CDN
-```bash
-# Deploy to preview URL for manual traffic splitting
-vercel deploy  # produces a preview URL
-# Or use edge config for percentage-based routing
-```
-
-### Custom
-```bash
-# Run user-defined canary deploy script
-./deploy.sh canary [percentage]
-```
-
-Report deployment status:
-```
-FORGE /canary — Deployed
-
-Canary deployed successfully.
-Version: [version]
-Target: [percentage]% of traffic
-Endpoint: [canary URL if available]
-
-Monitoring for [duration]...
-```
+Report version, target percentage, canary endpoint URL, and monitoring duration.
 
 ## Step 4: Monitor
 
-Watch for errors during the canary period. Check all available signals:
+Watch three signals during the canary period. If any threshold breaches, immediately recommend rollback.
 
-### Error Rate
-```bash
-# Check application logs for errors
-# Kubernetes
-kubectl logs -l app=[name],track=canary --tail=100 --since=5m
-# Cloud platforms
-fly logs --app [name] | tail -50
-vercel logs [deployment-url] --since 5m
-```
+- **Error Rate** — Check application logs (`kubectl logs`, `fly logs`, `vercel logs`) for elevated errors.
+- **Latency** — Compare canary vs stable: `curl -s -o /dev/null -w "%{time_total}" [canary-url]/health`
+- **Health Checks** — Verify canary endpoint returns 200.
 
-### Latency
-Compare canary response times against the stable deployment:
-```bash
-# Quick latency check
-curl -s -o /dev/null -w "%{time_total}" [canary-url]/health
-curl -s -o /dev/null -w "%{time_total}" [stable-url]/health
-```
-
-### Health Checks
-```bash
-# Verify health endpoint responds
-curl -sf [canary-url]/health
-# Check HTTP status
-curl -s -o /dev/null -w "%{http_code}" [canary-url]/health
-```
-
-### Fallback: Basic HTTP Monitoring
-
-If platform-specific monitoring tools are not available (kubectl, fly, vercel CLI not installed), fall back to basic HTTP health checks:
-
-```bash
-# Poll health endpoint every 30 seconds during monitoring period
-for i in $(seq 1 $((DURATION_SECONDS / 30))); do
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" [canary-url]/health)
-  LATENCY=$(curl -s -o /dev/null -w "%{time_total}" [canary-url]/health)
-  echo "Check $i: status=$STATUS latency=${LATENCY}s"
-  [ "$STATUS" != "200" ] && echo "WARNING: Non-200 status detected"
-  sleep 30
-done
-```
-
-This provides minimum viable monitoring when full observability tooling is absent.
-
-Collect metrics over the monitoring period. If any rollback trigger fires during monitoring, immediately recommend rollback.
+If platform CLI tools are unavailable, fall back to polling the health endpoint with `curl` every 30 seconds.
 
 ## Step 5: Decision
 
-Present monitoring results and recommendation:
+Present monitoring results and **wait for user decision** (never auto-promote):
 
 ```
 FORGE /canary — Monitoring complete
 
-Duration: [time monitored]
-Error rate: [X]% (threshold: 1%)
+Duration: [time]  |  Error rate: [X]% (threshold: 1%)
 Latency: [Xms] (baseline: [Yms], threshold: 2x)
-Health checks: [passing/failing]
-Log errors: [count of error-level log lines]
+Health checks: [passing/failing]  |  Log errors: [count]
 
-[If all healthy]:
-  Recommendation: PROMOTE to full rollout
-  All metrics within acceptable thresholds.
+Recommendation: PROMOTE / ROLLBACK
+[If rollback: which metric breached + details]
 
-[If unhealthy]:
-  Recommendation: ROLLBACK immediately
-  Trigger: [which metric breached threshold]
-  Details: [specific errors or latency spikes observed]
-
-Action: Promote / Rollback / Extend monitoring [additional minutes]?
+Action: Promote / Rollback / Extend monitoring [minutes]?
 ```
-
-Wait for user decision. Never auto-promote.
 
 ## Step 6: Execute Decision
 
-### Promote
-```bash
-# Kubernetes: scale canary to full, scale down old
-kubectl scale deployment [name]-canary --replicas=[full-count]
-kubectl scale deployment [name]-stable --replicas=0
-# Or swap labels/selectors
+- **Promote** — Scale canary to full traffic, retire previous version, report completion.
+- **Rollback** — Remove/scale-down canary, restore stable to 100%, report reason.
+- **Extend** — Continue monitoring for additional period, return to Step 5.
 
-# Cloud: promote preview to production
-vercel promote [deployment-url]
-fly deploy  # full deploy
-```
+## Compliance and Rules
 
-Report:
-```
-FORGE /canary — Promoted
+| rule_key | severity | trigger |
+|----------|----------|---------|
+| `auto-promoted` | critical | Canary promoted without user confirmation |
+| `unhealthy-no-rollback` | critical | Health checks failed but rollback not recommended |
+| `monitoring-not-shown` | major | Promotion decided without showing monitoring results |
 
-Version [version] promoted to 100% of traffic.
-Previous version retired.
-
-Deployment complete.
-```
-
-### Rollback
-```bash
-# Kubernetes: remove canary
-kubectl delete deployment [name]-canary
-# Or scale to 0
-kubectl scale deployment [name]-canary --replicas=0
-
-# Cloud: revert to previous deployment
-vercel rollback
-fly releases rollback
-```
-
-Report:
-```
-FORGE /canary — Rolled back
-
-Canary deployment rolled back.
-Stable version restored to 100% of traffic.
-Reason: [trigger that caused rollback]
-
-Investigate the issue before retrying.
-```
-
-### Extend Monitoring
-Continue monitoring for the additional period, then return to Step 5.
-
-## Rules
-
-- Never auto-promote — always require user confirmation
-- Rollback must be possible at any point during canary
-- If health checks fail, recommend rollback immediately
-- Canary percentage defaults to 10% unless specified
-- Always show monitoring results before asking for a decision
-- Never deploy to production without the user seeing the canary plan first
-- If the deployment method cannot support traffic splitting, fall back to a blue-green approach and explain the tradeoff
-- Keep all canary logs and metrics for post-deployment analysis
-- If monitoring tools are not available, use basic HTTP health checks as a minimum
+Never deploy without the user seeing the canary plan first. If traffic splitting is unsupported, fall back to blue-green and explain the tradeoff. Keep all canary logs/metrics for post-deployment analysis.

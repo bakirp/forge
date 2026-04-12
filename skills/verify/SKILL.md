@@ -7,268 +7,107 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 # /verify — Cross-Platform QA
 
-You verify that `/build` output actually works. You produce a pass/fail report that `/ship` reads — if you report failures, `/ship` will block.
+You verify that `/build` output actually works and produce a pass/fail report that `/ship` reads — if you report failures, `/ship` will block. **Show terminal output for all test commands.** Do not modify application code — verification is read-only observation.
 
-## Step 0: Context Detection (Isolated vs. Inline)
+> **Shared rules apply** — see `skills/shared/rules.md`.
 
-**If running as a subagent** (spawned by `forge-verifier` agent):
-- Load the build report: `cat .forge/build/report.md`
-- Load the architecture doc from `.forge/architecture/*.md`
-- These provide the context you need — you have no prior conversation history
-- Proceed to Step 1
+## Step 0: Context Detection
 
-**If running inline** (in the main session):
-- Proceed normally to Step 1
+**If subagent**: resolve feature via `bash scripts/manifest.sh resolve-feature-name`, load build report `.forge/build/${FEATURE_NAME}.md` and `.forge/architecture/*.md`. **If inline**: proceed.
 
-## Step 1: Check Prerequisites
+## Step 1: Prerequisites Gate
 
-Verify the build completed:
+Run the project's test suite. If tests fail, block immediately:
 ```bash
-# Check that tests pass
-# Detect test runner and run it
+bash scripts/compliance-log.sh verify tests-failing critical "Tests failing before verification — build is not clean"
 ```
-
-If tests are failing, stop immediately:
 ```
-FORGE /verify — Blocked
-
-Unit tests are failing. Run /build to fix before verifying.
-Failing tests: [list]
+FORGE /verify — Blocked. Unit tests failing. Run /build to fix before verifying.
 ```
-
-Check coverage threshold (if configured):
-```bash
-bash scripts/quality-gate.sh coverage
-```
-If coverage is below the configured threshold, block verification:
-```
-FORGE /verify — Blocked
-
-Coverage: XX% (threshold: YY%)
-Fix coverage before verifying. Add tests for uncovered paths.
-```
+Check coverage threshold if configured (`bash scripts/quality-gate.sh coverage`). Block if below.
 
 ## Step 2: Detect Domain
 
-Determine the project type to choose the right verification strategy. Check `$ARGUMENTS` first — if the user specified a domain, use it.
+Use `$ARGUMENTS` if provided, otherwise auto-detect:
 
-Otherwise, auto-detect:
+| Domain | Signal | What to look for |
+|--------|--------|-------------------|
+| **Web App** | Browser output | HTML files, GUI, web server — MUST browser-test via `/browse` |
+| **API** | Endpoint definitions | Routes, request/response handling, API specs |
+| **Pipeline** | Data transformation | ETL logic, processing scripts, input-to-output flow |
+| **CLI** | Terminal program | Argument parsing, stdin/stdout, compiled binaries |
+| **Hybrid** | Multiple signals | Run all applicable strategies |
 
-### Web App
-The project's output is meant to be used in a browser. Look at what the code produces, not what tools built it — HTML files, a GUI, a web server rendering pages, or anything that a user would interact with through a browser. If the output runs in a browser, it is web domain and MUST be browser-tested via `/browse` regardless of the language, framework, or hosting model.
-
-### API
-The project exposes programmatic endpoints that return structured data. Look for route definitions, request/response handling, serialization, API specs, or any code that listens for and responds to network requests.
-
-### Data Pipeline
-The project transforms data from input to output. Look for ETL logic, data processing scripts, query files, or code whose purpose is reading data, transforming it, and writing results.
-
-### CLI / System Program
-The project produces a command-line tool or system program. Look for argument parsing, stdin/stdout handling, compiled binaries, or code meant to be invoked from a terminal.
-
-### Hybrid
-If multiple signals are present, run all applicable strategies. A project can be both an API and a web app, or a CLI tool that also processes data.
-
-Present detection:
+Confirm detection with user before proceeding:
 ```
 FORGE /verify — Domain detected: [WEB | API | PIPELINE | CLI | HYBRID]
-
-Verification strategy:
-- [strategy 1]
-- [strategy 2]
-
-Proceed? (y/n, or override with: /verify web|api|pipeline|cli)
+Verification strategy: [list strategies]. Proceed? (y/n)
 ```
 
 ## Step 3: Runtime Behavior Pre-Check
 
-Before running any tests, read the source code and reason about **how it behaves at runtime**. Structural checks (file existence, syntax, CDN validity) are not verification — they confirm the code is well-formed, not that it works.
+Before running tests, trace execution paths in source code. Structural checks (file existence, syntax) confirm well-formedness, not correctness. Flag issues diagnosable from code reading alone; include findings under "Runtime Analysis" in the report.
 
-For each component, mentally trace its execution: When does it initialize? What does it assume about its environment at that point? What happens when a user interacts with it? Are resources cleaned up when context changes?
+## Step 4: Browser Delegation
 
-If you find issues diagnosable from code reading alone, flag them immediately — do not rely solely on Playwright or curl to catch what reasoning can find. Include findings in the verification report under a "Runtime Analysis" section.
-
-## Step 4: Delegate Browser Testing
-
-If verification needs browser testing (web domain), delegate to `/browse`:
-
-```
-Invoke /browse with the key user flows from the architecture doc.
-/browse handles Playwright setup, test execution, and screenshot capture.
-```
-
-/browse writes its report to `.forge/browse/report.md`. Read that report and incorporate its results into the verification report.
-
-For API and pipeline domains, /browse is not needed — skip this step.
+**Web domain only** — delegate to `/browse` with key user flows. Results go to `.forge/browse/report.md`. Skip for API, pipeline, CLI.
 
 ## Step 5: Run Verification
 
-### Web App Verification
+### Web App
+Delegated to `/browse`. Incorporate results from `.forge/browse/report.md` (flow statuses, failure screenshots).
 
-Delegated to `/browse`. The browse report at `.forge/browse/report.md` contains:
-- Each flow tested with PASS/FAIL status
-- Screenshots for any failures at `.forge/browse/screenshots/`
+### API
+Test every endpoint from the architecture doc with `curl -s -w "\n%{http_code}"`. Verify: status codes, response shape vs contract, error cases, auth enforcement. Validate against OpenAPI spec if present.
 
-Incorporate the browse results into the verification report below.
+Detect auth mechanism (JWT/API key/session) from codebase; if no test credentials exist, flag and skip auth-required tests.
 
-### API Verification
+### Pipeline
+Locate test data from fixtures or architecture doc. Use dry-run mode if available; never fabricate data. Run pipeline, diff actual vs expected, check schema and error handling.
 
-Test every endpoint defined in the architecture doc:
-
-```bash
-# Start the server if not running
-# For each endpoint:
-curl -s -w "\n%{http_code}" -X [METHOD] [URL] \
-  -H "Content-Type: application/json" \
-  -d '[request body]'
-```
-
-Verify for each endpoint:
-- **Status code** matches expected
-- **Response shape** matches the API contract (all fields present, correct types)
-- **Error cases** return proper error responses
-- **Auth** is enforced where specified
-
-If an OpenAPI/Swagger spec exists, validate responses against it.
-
-### Auth Token Handling
-
-Before testing authenticated endpoints, detect the auth mechanism from the codebase:
-
-1. **JWT/Bearer tokens**: Look for auth middleware, token generation in tests or seed scripts. Generate a test token or extract one from the test setup.
-2. **API keys**: Check `.env.example` or test config for test API keys.
-3. **Session/Cookie auth**: Start by hitting the login endpoint with test credentials to obtain a session.
-
-Include the auth header in curl commands for protected endpoints:
-```bash
-# Bearer token
-curl -s -w "\n%{http_code}" -X [METHOD] [URL] \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '[request body]'
-```
-
-If no test credentials or token generation mechanism can be found, flag it:
-```
-FORGE /verify — Warning: Cannot obtain auth tokens for protected endpoints.
-Skipping auth-required endpoint tests. Provide test credentials or a token generation script.
-```
-
-### Data Pipeline Verification
-
-For pipeline projects:
-1. Locate test data: check the project's test directories, fixtures, or sample data
-2. Check the architecture doc "Test Strategy" section for specified test inputs and expected outputs
-3. If the pipeline has a dry-run or test mode, use it
-4. If no test data exists: ask the user for a test input file and expected output. Do not fabricate test data.
-5. Run the pipeline with test input
-6. Diff actual output against expected output
-7. Check row counts, schema, and data types match
-8. Verify error handling for malformed input
-
-### CLI / System Program Verification
-
-For CLI tools and system programs:
-1. Build/compile the project using whatever build system it uses
-2. Run the program with the inputs defined in the architecture doc
-3. Verify exit codes, stdout, and stderr match expected behavior
-4. Test error cases: invalid arguments, missing files, malformed input
-5. If the program produces output files, diff against expected output
-6. Check that help/usage text is accurate if the program has a `--help` flag
+### CLI
+Build project, run with documented inputs, verify exit codes and stdout/stderr. Test error cases (invalid args, missing files). Diff outputs against expected; check `--help` accuracy.
 
 ## Step 6: Compile Report
 
-Create `.forge/verify/` if it doesn't exist.
-
-Before writing, capture the current commit identity:
 ```bash
-git rev-parse HEAD
-git rev-parse HEAD^{tree}
+FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)
+mkdir -p .forge/verify
 ```
 
-Write the verification report to `.forge/verify/report.md`:
-
-```markdown
-# FORGE Verification Report
-
-## Status: [PASS | FAIL]
-## Date: [timestamp]
-## Domain: [WEB | API | PIPELINE | CLI]
-## commit_sha: [output of `git rev-parse HEAD`]
-## tree_hash: [output of `git rev-parse HEAD^{tree}`]
-
-## Summary
-- Tests run: [count]
-- Passed: [count]
-- Failed: [count]
-- Skipped: [count]
-
-## Results
-
-### [Test name]
-- Status: PASS | FAIL
-- Details: [what was tested]
-- [If FAIL] Expected: [expected]
-- [If FAIL] Actual: [actual]
-- [If FAIL] Screenshot: [path, if applicable]
-
-## Failures (if any)
-
-### [Failure 1]
-- Test: [name]
-- Component: [which architecture component]
-- Severity: [critical | major | minor]
-- Details: [what went wrong]
-- Suggested fix: [brief suggestion]
-
-## Coverage Notes
-- Architecture components verified: [list]
-- Components NOT verified: [list, with reason]
-- Edge cases tested: [count from architecture doc]
-
-## Coverage Metrics
-- Line coverage: [XX%]
-- Threshold: [YY% or "not configured"]
-- Coverage status: [PASS | FAIL | NOT_MEASURED]
-```
+Write `.forge/verify/${FEATURE_NAME}.md` with required sections:
+- **Header**: `## Status: PASS|FAIL`, Date, Domain, `commit_sha`, `tree_hash`
+- **Summary**: tests run / passed / failed / skipped
+- **Results** (per test): Status, details, expected vs actual on FAIL
+- **Failures** (if any): test name, component, severity (critical/major/minor), suggested fix
+- **Coverage Notes**: verified components, unverified (with reason), edge cases
+- **Coverage Metrics**: line coverage %, threshold, PASS/FAIL/NOT_MEASURED
 
 ## Step 7: Report Result
 
 ```
-FORGE /verify — [PASS ✓ | FAIL ✗]
-
-Tests: [passed]/[total]
-Domain: [detected domain]
-Report: .forge/verify/report.md
-[If failures]:
-  Critical: [count]
-  Major: [count]
-  Minor: [count]
-
-[If PASS]: Ready for /ship.
-[If FAIL]: Fix failures before /ship. Run /build to address issues, then /verify again.
+FORGE /verify — [PASS | FAIL]
+Tests: [passed]/[total] | Domain: [domain]
+Report: .forge/verify/${FEATURE_NAME}.md
+[If failures]: Critical: [n] | Major: [n] | Minor: [n]
 ```
 
-## Rules
+## Rules, Error Handling & Compliance
 
-- Never mark FAIL as PASS — /ship trusts this report
-- Always test against the architecture doc contracts, not just "does it run"
-- Screenshots are mandatory on every web test failure
-- If the server won't start, that's a FAIL — don't skip verification
-- If Playwright install fails, report it clearly — don't fall back to curl for web testing
-- The report must be machine-readable enough for /ship to parse the status
-- Do not modify application code — verification is read-only observation
-- **Evidence before claims** — after running any test command, your response MUST include: (1) the exact command run, (2) the terminal output (last 30 lines minimum), (3) the exit code or pass/fail summary line. Do NOT write "Tests: N/N passing" — show the actual runner output. If a command failed to run or timed out, state that explicitly.
-- **Reason about runtime, not just structure** — structural checks (file existence, syntax, CDN link validity, CSS coverage) are not verification. Before delegating to browser or curl, read the code and ask "what happens when this runs?" If a bug is diagnosable from code reading alone, it is a verification failure to miss it.
-- Web domain browser testing is delegated to /browse — /verify is the report-and-gate layer, not the execution layer
-- Functional testing is never optional. "No server dependencies" or an unfamiliar project structure is NOT a reason to skip browser testing — it means you need to figure out how to run the project and test it. Never declare PASS based on structural checks alone.
+- Never mark FAIL as PASS — `/ship` trusts this report.
+- Test against architecture doc contracts, not just "does it run."
+- Screenshots mandatory on every web test failure; Playwright failure is not a reason to fall back to curl.
+- If a step fails to execute (server won't start, curl times out): mark as **FAIL** with details. Distinguish "tested and failed" from "NOT TESTED" (with reason). Continue other checks.
+- Functional testing is never optional — unfamiliar structure is not a reason to skip.
+- Reason about runtime, not just structure — missing a code-diagnosable bug is a verification failure.
+- Evidence before claims — show actual output, not summaries.
 
-### Telemetry
-After writing the verification report, log the invocation and phase transition:
-```bash
-bash scripts/telemetry.sh verify [completed|error]
-bash scripts/telemetry.sh phase-transition verify
-```
+## What's Next
 
-### Error Handling
-If a verification step fails to execute (server won't start, Playwright fails, curl times out): mark that check as FAIL with error details in the report. Do not skip silently. Continue with other checks. The report must distinguish "tested and failed" from "could not test."
+If PASS: next is `/ship`. If FAIL: fix via `/build` then re-run `/verify`. See `skills/shared/workflow-routing.md`.
+
+**Compliance** — follow `skills/shared/compliance-telemetry.md`. Log phase-transition telemetry via `scripts/telemetry.sh` per shared protocol. Keys:
+- `verify / code-modified / critical` — code modified during read-only verification
+- `verify / false-pass / critical` — failing verification marked as PASS
+- `verify / browser-testing-skipped / major` — browser testing skipped for web domain
+- `verify / no-evidence / major` — results claimed without showing runner output

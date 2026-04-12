@@ -26,20 +26,20 @@ if require_skill ship; then
     fail "/ship missing blocking logic for /verify failures"
   fi
 
-  if grep -q '\.forge/verify/report\.md' "$SHIP"; then
-    pass "/ship references .forge/verify/report.md"
+  if grep -q 'resolve-feature-name' "$SHIP" && grep -q '\.forge/verify/' "$SHIP"; then
+    pass "/ship uses resolve-feature-name for .forge/verify/ artifacts"
   else
-    fail "/ship does not reference .forge/verify/report.md"
+    fail "/ship does not use resolve-feature-name pattern for verify artifacts"
   fi
 fi
 
 # ── 2. /ship blocks on /review failures ──
 
 if require_skill ship; then
-  if grep -q '\.forge/review/report\.md' "$SHIP"; then
-    pass "/ship references .forge/review/report.md"
+  if grep -q 'resolve-feature-name' "$SHIP" && grep -q '\.forge/review/' "$SHIP"; then
+    pass "/ship uses resolve-feature-name for .forge/review/ artifacts"
   else
-    fail "/ship does not reference .forge/review/report.md (review gate not yet wired)"
+    fail "/ship does not use resolve-feature-name pattern for review artifacts"
   fi
 
   if grep -qiE 'review.*block|review.*gate|review.*report' "$SHIP"; then
@@ -156,10 +156,10 @@ fi
 # ── 12. /ship STALE blocking for verify report ──
 
 if require_skill ship; then
-  if grep -q 'STALE' "$SHIP" && grep -q 'review/report\.md' "$SHIP" && grep -q 'verify/report\.md' "$SHIP"; then
-    pass "/ship blocks with STALE when verify report commit_sha is outdated"
+  if grep -q 'STALE' "$SHIP" && grep -q 'resolve-feature-name' "$SHIP"; then
+    pass "/ship blocks with STALE when report commit_sha is outdated (feature-named artifacts)"
   else
-    fail "/ship missing STALE blocking for verify report (or missing report.md references)"
+    fail "/ship missing STALE blocking for feature-named reports"
   fi
 fi
 

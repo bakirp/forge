@@ -36,7 +36,7 @@
 
 ## Stale reports blocking /ship
 - /ship blocks on /review and /verify failures — re-run both to generate fresh reports
-- Delete .forge/review/report.md and .forge/verify/report.md to reset
+- Delete the feature-named reports (e.g., `.forge/review/add-user-auth.md` and `.forge/verify/add-user-auth.md`) to reset. If using the legacy naming, delete `.forge/review/report.md` and `.forge/verify/report.md` instead.
 
 ## /evolve breaks a skill
 - /evolve creates a backup before changes and auto-reverts on test failure

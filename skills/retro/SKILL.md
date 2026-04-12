@@ -7,180 +7,54 @@ allowed-tools: Read Grep Glob Bash Write
 
 # /retro — Post-Ship Retrospective
 
-You run after `/ship` completes a cycle. You collect structured feedback that `/evolve` uses to improve FORGE skills.
+Never fabricate user answers — only record what they actually said. Collect structured feedback after `/ship` that `/evolve` uses to improve FORGE skills.
+
+> **Shared protocols apply.** See `skills/shared/rules.md`, `skills/shared/compliance-telemetry.md`, and `skills/shared/workflow-routing.md`.
 
 ## Step 1: Gather Context
 
-Understand what just happened:
-
 ```bash
-# Recent commits (the work that was just shipped)
 git log --oneline -20
-
-# Check for architecture doc
 ls -t .forge/architecture/*.md 2>/dev/null | head -1
-
-# Check for verify report
-cat .forge/verify/report.md 2>/dev/null | head -5
-
-# Catalog all artifacts from this session
+FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)
+cat .forge/verify/${FEATURE_NAME}.md 2>/dev/null | head -5
 bash scripts/artifact-discover.sh all
 ```
 
-Also read `$ARGUMENTS` for any context the user provided.
-
-Detect the project name:
-```bash
-basename "$(pwd)"
-```
+Read `$ARGUMENTS` for user context. Detect project name via `basename "$(pwd)"`.
 
 ## Step 2: Ask Three Questions
 
-Present each question and wait for the user's response. Do not rush — give them space to reflect.
+Present each question one at a time; wait for the response before proceeding. Each accepts free text or "skip".
 
-### Question 1: What slowed us down?
-
-```
-FORGE /retro — Question 1 of 3
-
-What slowed us down?
-
-Think about: bottlenecks, unclear requirements, wrong assumptions,
-tools that didn't work, phases that felt wasteful.
-
-(Type your answer, or "skip" to move on)
-```
-
-### Question 2: What would we do differently?
-
-```
-FORGE /retro — Question 2 of 3
-
-What would we do differently next time?
-
-Think about: architecture decisions you'd change, phases you'd skip
-or add, tools you'd switch, approaches that didn't work.
-
-(Type your answer, or "skip" to move on)
-```
-
-### Question 3: What should FORGE remember?
-
-```
-FORGE /retro — Question 3 of 3
-
-What should FORGE remember from this session?
-
-Think about: decisions worth carrying forward, anti-patterns discovered,
-workflow preferences that worked well, things to never repeat.
-
-(Type your answer, or "skip" to move on)
-```
+- **Q1 — What slowed us down?** Bottlenecks, unclear requirements, wrong assumptions.
+- **Q2 — What would we do differently?** Architecture decisions, phases to skip/add.
+- **Q3 — What should FORGE remember?** Decisions to carry forward, anti-patterns, preferences.
 
 ## Step 3: Score FORGE Skills
 
-Based on the session context and user answers, rate each FORGE skill that was used in this cycle:
-
-```
-FORGE /retro — Skill ratings
-
-Rate each skill used in this cycle (1-5, or skip):
-
-  /think     — Did it classify correctly?        [1-5 or skip]
-  /architect — Was the architecture doc useful?   [1-5 or skip]
-  /build     — Did TDD flow work smoothly?       [1-5 or skip]
-  /review    — Was the code review useful?          [1-5 or skip]
-  /verify    — Did verification catch real issues? [1-5 or skip]
-  /ship      — Did security audit + PR work well? [1-5 or skip]
-
-(Enter as: "think:4 architect:5 build:3 verify:skip ship:4")
-```
-
-Parse the ratings. For any skill rated 1-2, ask a follow-up:
-```
-/[skill] rated [score] — What went wrong specifically?
-```
+Ask the user to rate each skill used (1-5 or skip): `"think:4 architect:5 build:3 verify:skip ship:4"`. For any skill rated 1-2, ask: "What went wrong specifically?"
 
 ## Step 4: Trend Analysis
-
-If previous retros exist, surface trends:
 
 ```bash
 ls ~/.forge/retros/*.json 2>/dev/null | wc -l
 ```
 
-If 3+ retros exist, analyze patterns:
-
-### Project Trends
-- Read retros for the current project
-- Identify recurring themes in "what_slowed_us" and "what_differently"
-- Surface patterns: "This is the 3rd time X was mentioned"
-
-### Cross-Project Trends
-- Read retros across all projects
-- Identify skills that are consistently low-rated
-- Surface anti-patterns that appear across projects
-
-### Present Trends
-```
-FORGE /retro — Trend Analysis
-
-Project trends (from [N] retros for [project]):
-  - [recurring theme 1] (mentioned [N] times)
-  - [recurring theme 2]
-
-Cross-project trends (from [N] total retros):
-  - /[skill] consistently rated [score] — [pattern]
-  - Anti-pattern: [description] (seen in [N] projects)
-
-These trends inform /evolve's improvement priorities.
-```
-
-If fewer than 3 retros exist, skip trend analysis silently.
+If 3+ retros exist, surface recurring themes in `what_slowed_us` / `what_differently` per project and cross-project low-rated skills. Present as `"[theme] (mentioned N times)"`. Fewer than 3 retros — skip silently.
 
 ## Step 5: Build Retro Document
 
-Compile everything into a structured JSON document:
-
-```json
-{
-  "date": "YYYY-MM-DD",
-  "project": "[project name]",
-  "session_summary": "[1-2 sentence summary of what was built]",
-  "questions": {
-    "what_slowed_us": "[user's answer or null if skipped]",
-    "what_differently": "[user's answer or null if skipped]",
-    "what_to_remember": "[user's answer or null if skipped]"
-  },
-  "skill_ratings": {
-    "think": { "score": 4, "feedback": null },
-    "architect": { "score": 5, "feedback": null },
-    "build": { "score": 2, "feedback": "TDD loop was too strict for config changes" },
-    "review": { "score": null, "feedback": null },
-    "debug": null,
-    "verify": null,
-    "ship": { "score": 4, "feedback": null }
-  },
-  "decisions_to_remember": [
-    "[extracted from question 3 — things worth storing in memory]"
-  ],
-  "improvements_suggested": [
-    "[extracted from questions 1-2 — concrete improvement ideas for skills]"
-  ]
-}
-```
+Compile JSON with fields:
+- `date`, `project`, `session_summary` — identifiers and 1-2 sentence summary
+- `questions` — `what_slowed_us`, `what_differently`, `what_to_remember` (string or null)
+- `skill_ratings` — map of skill name to `{ score, feedback }` (null if skipped)
+- `decisions_to_remember` — array from Q3; `improvements_suggested` — array from Q1-Q2
 
 ## Step 6: Save Retro
 
 ```bash
-# Ensure retros directory exists
 mkdir -p ~/.forge/retros
-```
-
-Save to `~/.forge/retros/[YYYY-MM-DD]_[project].json`:
-
-```bash
-# If multiple retros on the same day for the same project, append a counter
 DATE=$(date +%Y-%m-%d)
 PROJECT="[project name]"
 BASE="$HOME/.forge/retros/${DATE}_${PROJECT}"
@@ -196,7 +70,7 @@ Write the JSON document to `$TARGET`.
 
 ## Step 7: Store Memories
 
-If the user provided answers to Question 3 ("what should FORGE remember"), invoke `/memory-remember` with those decisions. This ensures retro insights feed directly into the memory bank.
+If Q3 was answered, invoke `/memory-remember` with those decisions — don't just note them.
 
 ## Step 8: Summary
 
@@ -210,21 +84,14 @@ Improvements noted: [count] (available for /evolve)
 
 Low-rated skills:
   /[skill] — [score]: [feedback summary]
-
-Run /evolve to apply improvements based on this and past retros.
 ```
 
-### Telemetry
-```bash
-bash scripts/telemetry.sh retro completed
-```
+## What's Next
 
-## Rules
+Recommend `/evolve` to apply learnings, or `/think` to start a new task.
 
-- Never skip the three questions — but accept "skip" as a valid answer
-- Never fabricate user answers — only record what they actually said
-- Skill ratings are optional — the user can skip any or all
-- Always save the retro file even if all questions are skipped (the skill ratings alone are valuable)
-- Invoke `/memory-remember` for Question 3 answers — don't just note them
-- The retro JSON must be valid, parseable JSON — `/evolve` depends on it
-- Do not suggest changes to skills during retro — that's `/evolve`'s job
+## Rules & Compliance
+
+Never skip the three questions (accept "skip" as valid). Always save the retro even if all questions are skipped. Output must be valid parseable JSON — `/evolve` depends on it. Do not suggest skill changes during retro — that's `/evolve`'s job.
+
+Follow `skills/shared/compliance-telemetry.md`. Log violations via `scripts/compliance-log.sh` per shared protocol. Violation keys: `fabricated-answers` (critical), `invalid-json` (major), `memory-not-stored` (minor), `scope-creep` (minor).

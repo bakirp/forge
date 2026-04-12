@@ -89,13 +89,15 @@ This is different from generic parallel agents because each agent has domain exp
 Phase 1 introduces a formal artifact schema at `docs/artifact-schema.md`. Every skill that produces output writes to a well-defined path under `.forge/`:
 
 - `/architect` → `.forge/architecture/[task-name].md`
-- `/review` → `.forge/review/report.md`
-- `/verify` → `.forge/verify/report.md`
-- `/debug` → `.forge/debug/report.md`
+- `/build` → `.forge/build/[feature-name].md` (falls back to `report.md`)
+- `/review` → `.forge/review/[feature-name].md` (falls back to `report.md`)
+- `/verify` → `.forge/verify/[feature-name].md` (falls back to `report.md`)
+- `/debug` → `.forge/debug/[feature-name].md` (falls back to `report.md`)
+- Compliance log → `.forge/compliance.jsonl`
 - Run manifests → `.forge/runs/<run-id>/manifest.json`
 
 This schema enables:
-- **Blocking gates**: `/ship` reads `.forge/review/report.md` and `.forge/verify/report.md` status lines
+- **Blocking gates**: `/ship` reads `.forge/review/[feature-name].md` and `.forge/verify/[feature-name].md` status lines
 - **Run tracking**: The manifest records which phases completed and where artifacts are
 - **Test validation**: The test harness can verify artifacts exist and are well-formed
 

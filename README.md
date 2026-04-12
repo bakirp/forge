@@ -7,6 +7,9 @@ FORGE is a Claude Code skill framework with three capabilities no existing tool 
 1. **Architectural decision memory** that survives across projects
 2. **Adaptive phase depth** that eliminates unnecessary ceremony on simple tasks
 3. **Self-evolving skills** that rewrite themselves based on your usage patterns
+4. **Feature-named artifacts** -- handover documents named after the feature (e.g., `.forge/build/add-user-auth.md`), not generic `report.md`
+5. **Compliance logging** -- rule violations logged to `.forge/compliance.jsonl` across `/build`, `/review`, `/ship`, `/verify`, `/autopilot`
+6. **Next-steps suggestions** -- every skill ends with a "What's Next" section recommending the logical next action
 
 ## Quick Start
 
@@ -115,7 +118,7 @@ See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each s
 - **Code reusability** — `/build` searches for existing functions before writing new code; `/review` flags duplicate implementations as major issues.
 - **Artifact freshness protocol** — `/review` and `/verify` stamp `commit_sha` + `tree_hash` into their reports. `/ship` validates both against current HEAD before shipping, blocking with `STALE:` on mismatch. After any auto-fix, both reports must be regenerated.
 - **Subagent checkpoints in `/build`** — explicit checkpoint after each subagent verifies output against the architecture doc before the next subagent starts. Final verification is two-stage: architecture compliance first, then the test suite. Tests alone are not sufficient to pass the gate.
-- **Phase isolation** — post-build phases (`/review`, `/verify`, `/ship`) can run as isolated foreground subagents with fresh context, eliminating self-evaluation bias and context rot. `/build` writes a structured handoff artifact (`.forge/build/report.md`) that captures files modified, test results, architecture deviations, and user decisions for downstream phases.
+- **Phase isolation** — post-build phases (`/review`, `/verify`, `/ship`) can run as isolated foreground subagents with fresh context, eliminating self-evaluation bias and context rot. `/build` writes a structured handoff artifact (`.forge/build/[feature-name].md`) that captures files modified, test results, architecture deviations, and user decisions for downstream phases.
 - **Evidence-before-claims** — `/ship`, `/architect`, and `/review` require showing actual output as evidence before claiming work is complete.
 - **Anti-sycophancy in `/review response`** — review feedback is technically verified against the actual codebase before implementation. Incorrect suggestions are pushed back on, not blindly applied.
 - **Adversarial review** — `/review adversarial` challenges the implementation from an attacker's perspective, checking 7 attack surfaces (auth, data loss, race conditions, rollback safety, degraded deps, schema drift, observability gaps). Advisory — does not block the pipeline, but findings are included in the PR if present.
@@ -123,7 +126,7 @@ See the [Recipes Guide](docs/recipes.md) for step-by-step walkthroughs of each s
 
 ## Testing
 
-FORGE includes 16 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, handover, and adversarial review.
+FORGE includes 19 test suites covering routing, blocking gates, artifacts, memory, browser automation, evolution, completeness, manifest tracking, hooks, telemetry, autopilot-guard, context-prune, quality-gate, design, handover, adversarial review, feature naming, compliance logging, and next-steps suggestions.
 
 ```bash
 # Run all tests

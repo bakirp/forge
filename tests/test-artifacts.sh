@@ -48,28 +48,28 @@ if require_skill architect; then
   fi
 fi
 
-# ── 3. /verify references .forge/verify/report.md ──
+# ── 3. /verify references feature-named verify artifact pattern ──
 
 if require_skill verify; then
   path="$ROOT/skills/verify/SKILL.md"
-  if grep -q '\.forge/verify/report\.md' "$path"; then
-    pass "/verify references .forge/verify/report.md"
+  if grep -q 'resolve-feature-name' "$path" && grep -q '\.forge/verify/' "$path"; then
+    pass "/verify uses resolve-feature-name for .forge/verify/ artifacts"
   else
-    fail "/verify does not reference .forge/verify/report.md"
+    fail "/verify does not use resolve-feature-name pattern for verify artifacts"
   fi
 fi
 
-# ── 4. /review references .forge/review/report.md ──
+# ── 4. /review references feature-named review artifact pattern ──
 
 if require_skill review; then
   path="$ROOT/skills/review/SKILL.md"
-  if grep -q '\.forge/review/report\.md' "$path"; then
-    pass "/review references .forge/review/report.md"
+  if grep -q 'resolve-feature-name' "$path" && grep -q '\.forge/review/' "$path"; then
+    pass "/review uses resolve-feature-name for .forge/review/ artifacts"
   else
-    fail "/review does not reference .forge/review/report.md"
+    fail "/review does not use resolve-feature-name pattern for review artifacts"
   fi
 else
-  skip "/review not yet created — cannot check .forge/review/report.md reference"
+  skip "/review not yet created — cannot check feature-named artifact reference"
 fi
 
 # ── 5. /debug references .forge/debug/report.md ──
@@ -118,15 +118,15 @@ if $all_clean; then
   pass "All project-local .forge/ references match the known artifact schema"
 fi
 
-# ── 8. Cross-check: /ship reads the same verify report path that /verify writes ──
+# ── 8. Cross-check: /ship and /verify both use resolve-feature-name for verify artifacts ──
 
 if require_skill verify && require_skill ship; then
-  V_PATH=$(grep -oE '\.forge/verify/report\.md' "$ROOT/skills/verify/SKILL.md" | head -1)
-  S_PATH=$(grep -oE '\.forge/verify/report\.md' "$ROOT/skills/ship/SKILL.md" | head -1)
-  if [[ -n "$V_PATH" && "$V_PATH" == "$S_PATH" ]]; then
-    pass "/verify write path matches /ship read path ($V_PATH)"
+  V_HAS=$(grep -c 'resolve-feature-name' "$ROOT/skills/verify/SKILL.md" || true)
+  S_HAS=$(grep -c 'resolve-feature-name' "$ROOT/skills/ship/SKILL.md" || true)
+  if [[ "$V_HAS" -gt 0 && "$S_HAS" -gt 0 ]]; then
+    pass "/verify and /ship both use resolve-feature-name for consistent artifact paths"
   else
-    fail "/verify and /ship disagree on verify report path"
+    fail "/verify and /ship do not both use resolve-feature-name pattern"
   fi
 fi
 

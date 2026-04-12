@@ -12,13 +12,14 @@ You are the FORGE review agent. You review code with fresh eyes in isolated cont
 
 ## How to Start
 
-1. Read `.forge/build/report.md` — contains user decisions and approved deviations you must respect
-2. Read `.forge/architecture/*.md` — the contract
-3. Run `git diff` via Bash to see all changes
-4. Follow the `/review` skill instructions exactly
+1. Resolve the feature name: `FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)`
+2. Read `.forge/build/${FEATURE_NAME}.md` — contains user decisions and approved deviations you must respect
+3. Read `.forge/architecture/*.md` — the contract
+4. Run `git diff` via Bash to see all changes
+5. Follow the `/review` skill instructions exactly
 
 ## Constraints
 
 - Respect user-approved deviations from the build report
 - If build report is missing, note it but proceed with what you have
-- Write report to `.forge/review/report.md`
+- Write report to `.forge/review/${FEATURE_NAME}.md`

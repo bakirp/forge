@@ -7,124 +7,33 @@ allowed-tools: Read Grep Glob Write Edit Bash Agent
 
 # /benchmark — Performance Benchmarking
 
-You measure performance, compare against baselines, and flag regressions. You produce a benchmark report that helps the team decide whether performance is acceptable before shipping.
+You measure performance, compare against baselines, and flag regressions before shipping. Never modify application code during benchmarking — observation only.
 
-## Step 1: Identify What to Benchmark
+> **Shared protocols apply** — see `skills/shared/rules.md`, `skills/shared/compliance-telemetry.md`, `skills/shared/workflow-routing.md`.
 
-From `$ARGUMENTS` or auto-detect by scanning the codebase:
+## Step 1: Identify Targets
 
-### API Endpoints
-Signals: route handlers, HTTP framework (Express, Fastify, Hono, Flask, Go net/http, etc.).
-Measure: response time (p50, p95, p99), throughput (requests/sec), error rate under load.
+From `$ARGUMENTS` or auto-detect by scanning the codebase. Confirm targets with user before proceeding.
 
-### Database Queries
-Signals: ORM usage, raw SQL files, migration files, query builders.
-Measure: execution time, row count, query plan efficiency.
-
-### Algorithms / Business Logic
-Signals: compute-heavy functions, data processing, sorting, searching, transformation.
-Measure: runtime complexity (wall clock across input sizes), memory usage, allocation count.
-
-### Build / Bundle
-Signals: `package.json` with build script, bundler config (webpack, vite, esbuild, turbopack).
-Measure: build time, bundle size (total and per-chunk), tree-shaking effectiveness.
-
-### Page Load
-Signals: web framework with SSR/CSR, HTML entry points, static assets.
-Measure: Lighthouse score, core web vitals (LCP, FID, CLS), time to interactive.
-
-Present detection:
-```
-FORGE /benchmark — Targets identified
-
-Benchmark targets:
-- [target 1]: [metric type]
-- [target 2]: [metric type]
-
-Proceed? (y/n, or specify targets manually)
-```
+| Target Type | Signals | Key Metrics |
+|-------------|---------|-------------|
+| API Endpoints | Route handlers, HTTP frameworks | p50/p95/p99 response time, req/sec, error rate |
+| Database Queries | ORM, raw SQL, migrations | Execution time, row count, query plan |
+| Algorithms / Logic | Compute-heavy functions, data processing | Wall clock across input sizes, memory, allocations |
+| Build / Bundle | Build scripts, bundler configs | Build time, bundle size (total + per-chunk) |
+| Page Load | SSR/CSR frameworks, static assets | Lighthouse score, LCP, FID, CLS, TTI |
 
 ## Step 2: Check for Existing Baselines
 
-Look for `.forge/benchmark/baseline.json`. If it exists, this run will compare against it.
-
-```bash
-# Check for baseline
-cat .forge/benchmark/baseline.json 2>/dev/null
-```
-
-If no baseline exists, inform the user that this run will establish the initial baseline:
-```
-FORGE /benchmark — No baseline found
-
-This run will establish the initial baseline.
-Future runs will compare against these results.
-```
+Look for `.forge/benchmark/baseline.json`. If present, this run compares against it; otherwise this run establishes the initial baseline.
 
 ## Step 3: Run Benchmarks
 
-Execute appropriate benchmarking tools. Always run a minimum of 3 iterations for timing-based benchmarks to reduce noise.
-
-### HTTP Load Testing
-```bash
-# Prefer wrk, fall back to ab or autocannon
-wrk -t4 -c100 -d10s http://localhost:PORT/endpoint
-# or
-ab -n 1000 -c 50 http://localhost:PORT/endpoint
-# or
-npx autocannon -c 100 -d 10 http://localhost:PORT/endpoint
-```
-
-### Code Benchmarks
-```bash
-# Go
-go test -bench=. -benchmem -count=3 ./...
-
-# Rust
-cargo bench
-
-# Node.js
-node --expose-gc benchmark.js
-# or use the project's existing bench script
-npm run bench
-```
-
-### Bundle Size
-```bash
-# Measure build output
-npm run build
-# Measure output directory size and individual chunks
-du -sh dist/
-find dist/ -name "*.js" -exec ls -lh {} \;
-```
-
-### Page Performance
-Use Playwright with performance timing APIs, or Lighthouse CLI if available:
-```bash
-npx lighthouse http://localhost:PORT --output=json --quiet
-```
-
-Collect raw results for every target. Record each iteration separately so variance can be calculated.
+Minimum 3 iterations for timing benchmarks to reduce noise. Tools: `wrk`/`ab`/`autocannon` (HTTP), `go test -bench`/`cargo bench`/`npm run bench` (code), `du -sh dist/` (bundle), `lighthouse` CLI or Playwright (page perf). Collect raw results per iteration for variance calculation. If a tool is missing, suggest installation but do not auto-install.
 
 ## Step 4: Compare Against Baseline
 
-If a baseline exists, compare current results against it.
-
-```
-FORGE /benchmark — Results
-
-Metric              Baseline    Current     Change    Status
-────────           ─────────   ────────    ──────    ──────
-API /users (p95)   45ms        52ms        +15%      REGRESSION
-API /auth (p95)    12ms        11ms        -8%       OK
-Bundle size        142kb       145kb       +2%       OK
-Build time         8.2s        8.5s        +3%       OK
-DB query (avg)     3.2ms       3.1ms       -3%       OK
-```
-
-### Regression Thresholds
-
-Apply these default thresholds (user can override):
+If a baseline exists, compare every metric and mark each `OK`, `WARNING`, or `REGRESSION`.
 
 | Metric | Warning | Regression |
 |--------|---------|------------|
@@ -135,93 +44,30 @@ Apply these default thresholds (user can override):
 | Memory usage | > 15% increase | > 25% increase |
 | Lighthouse score | > 5 point drop | > 10 point drop |
 
-Mark each metric clearly: `OK`, `WARNING`, or `REGRESSION`.
-
 ## Step 5: Write Report
 
-Create `.forge/benchmark/` if it doesn't exist.
-
-Save the full report to `.forge/benchmark/report.md`:
-
-```markdown
-# FORGE Benchmark Report
-
-## Status: [PASS | REGRESSION]
-## Date: [timestamp]
-
-## Summary
-- Targets benchmarked: [count]
-- Passing: [count]
-- Warnings: [count]
-- Regressions: [count]
-
-## Results
-
-### [Target name]
-- Metric: [what was measured]
-- Baseline: [value] | Current: [value] | Change: [+/-X%]
-- Status: OK | WARNING | REGRESSION
-- Raw data: [iteration 1, iteration 2, iteration 3]
-- Variance: [standard deviation or range]
-
-## Regressions (if any)
-
-### [Regression 1]
-- Target: [name]
-- Metric: [what regressed]
-- Baseline: [value] → Current: [value] (+X%)
-- Threshold: [what the limit is]
-- Possible causes: [brief analysis]
-- Recommendation: [optimize / acceptable / investigate]
-
-## Environment
-- OS: [detected]
-- Runtime: [language version]
-- Hardware: [CPU/memory if available]
-```
+Save to `.forge/benchmark/report.md`:
+- **Status**: PASS or REGRESSION | **Date**: timestamp
+- **Summary**: targets benchmarked, passing, warnings, regressions counts
+- **Per-target**: metric, baseline vs current, change %, status, raw data per iteration, variance
+- **Regressions**: target, metric, baseline -> current, threshold, possible causes, recommendation
+- **Environment**: OS, runtime version, hardware info
 
 ## Step 6: Update Baseline
 
-Use the same `.forge/benchmark/` directory for any new baseline file.
+Write current results to `.forge/benchmark/baseline.json` only when user explicitly approves.
 
-If the user approves, write current results to `.forge/benchmark/baseline.json`:
+## Step 7: Final Output
 
-```
-FORGE /benchmark — Save as new baseline?
+Report status (PASS/REGRESSION), target count, regression count, warnings, and report path. Regressions are warnings, not blockers — user decides acceptability.
 
-This will replace the current baseline with today's results.
-Future runs will compare against these numbers.
+## What's Next
 
-Save baseline? (y/n)
-```
+- **If PASS** — recommend `/ship`; alternative `/review` if not done.
+- **If REGRESSION** — list summaries; recommend `/build` to optimize then re-benchmark.
 
-Only write the baseline file if the user explicitly confirms.
+## Rules & Compliance
 
-## Step 7: Report
+Never run destructive load tests against production — local/staging only. Always compare against baseline when one exists. Report raw numbers and variance, not just averages. Record environment for reproducibility.
 
-```
-FORGE /benchmark — [PASS | REGRESSION]
-
-Targets: [benchmarked count]
-Regressions: [count]
-Warnings: [count]
-Report: .forge/benchmark/report.md
-
-[If PASS]: No regressions detected. Ready for /ship.
-[If REGRESSION]:
-  - [regression 1 summary]
-  - [regression 2 summary]
-  Regressions are warnings — review and decide whether to proceed.
-```
-
-## Rules
-
-- Never modify application code during benchmarking
-- Regressions are warnings, not blockers — user decides if they are acceptable
-- Always compare against baseline when one exists
-- Run benchmarks multiple times to reduce noise (3 runs minimum for timing)
-- Save the baseline only when user explicitly approves
-- Record the environment (OS, runtime version) so results are reproducible
-- If a benchmarking tool is not installed, suggest installation but do not auto-install
-- Do not run destructive load tests against production — always target local or staging
-- Report raw numbers and variance, not just averages — outliers matter
+Compliance keys for `scripts/compliance-log.sh benchmark <key> <severity>`: `code-modified`/`critical` — app code modified during benchmarking; `insufficient-runs`/`minor` — fewer than 3 timing runs; `baseline-saved-unapproved`/`major` — baseline saved without approval.

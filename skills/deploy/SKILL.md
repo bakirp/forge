@@ -7,291 +7,84 @@ allowed-tools: Read Grep Glob Write Bash
 
 # /deploy — Deploy and Land Flow
 
-You handle post-merge deployment. You pull the latest merged code, run a final safety check, deploy to the target environment, verify health, and report status. You are the last step before code is live.
+Production deploys require the user to type "yes" (not just "y") before execution. Pull latest merged code, run final safety checks, deploy, verify health, and report status.
+
+> **Shared protocols apply.** See `skills/shared/rules.md` for evidence-before-claims, no-secrets, scope discipline, and artifact integrity rules.
 
 ## Step 1: Check PR Status
 
-Check for a release summary from `/ship`:
+Read `.forge/releases/*/summary.md` (if present) for PR URL, version, and security audit status. Verify the PR is merged and check recent history:
 ```bash
 ls .forge/releases/*/summary.md 2>/dev/null | tail -1
+gh pr list --state merged --limit 5 && git status && git log --oneline -5
 ```
-If found, read it for the PR URL, version, and security audit status. Use the PR URL to verify the correct PR was merged.
-
-Verify the PR from `/ship` has been merged:
-
-```bash
-# Check recently merged PRs
-gh pr list --state merged --limit 5
-```
-
-Also check the current branch state:
-```bash
-git status
-git log --oneline -5
-```
-
-If the PR is not merged yet:
-```
-FORGE /deploy — Warning
-
-No recently merged PR found.
-The PR from /ship may still be awaiting review or approval.
-
-Proceed with deployment anyway? (y/n)
-```
-
-Wait for user confirmation before continuing.
+If no merged PR is found, warn the user and **wait for confirmation** before continuing.
 
 ## Step 2: Pull and Verify
 
-Sync with the latest merged code:
+Sync with latest merged code (`git checkout $DEFAULT_BRANCH && git pull origin $DEFAULT_BRANCH`). Run the full test suite (detect runner: `npm test`, `go test ./...`, `pytest`, `cargo test`).
 
-```bash
-# Detect default branch
-DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
-
-git checkout $DEFAULT_BRANCH
-git pull origin $DEFAULT_BRANCH
-```
-
-Run the full test suite on the merged code as a final safety check:
-
-```bash
-# Detect and run test suite
-# Node.js
-npm test
-# Go
-go test ./...
-# Python
-pytest
-# Rust
-cargo test
-```
-
-If tests fail:
-```
-FORGE /deploy — Blocked
-
-Tests are failing on the merged code.
-This may indicate a merge conflict or a broken integration.
-
-Failing tests:
-- [test 1]
-- [test 2]
-
-Fix the failures before deploying. Do not deploy broken code.
-```
-
-Stop here if tests fail. Do not proceed to deployment.
+If tests fail — **STOP. Do not deploy.** Report failing tests and block until fixed.
 
 ## Step 3: Detect Environment
 
-From `$ARGUMENTS` or auto-detect the target environment:
-
-### Explicit
-- `staging` — deploy to staging environment
-- `production` — deploy to production (requires explicit confirmation)
-- Custom name — look for matching config
-
-### Auto-detect
-Scan for deployment configuration:
-
+From `$ARGUMENTS` or auto-detect by scanning for deploy configs:
 ```bash
-# Check for deploy scripts and configs
-ls -la deploy.sh scripts/deploy* Makefile 2>/dev/null
-ls -la vercel.json fly.toml railway.json netlify.toml 2>/dev/null
-ls -la Dockerfile docker-compose.yml compose.yml 2>/dev/null
-ls -la .github/workflows/deploy* 2>/dev/null
-
-# Check package.json for deploy scripts
+ls -la deploy.sh scripts/deploy* Makefile vercel.json fly.toml railway.json netlify.toml 2>/dev/null
+ls -la Dockerfile docker-compose.yml compose.yml .github/workflows/deploy* 2>/dev/null
 grep -A2 '"deploy"' package.json 2>/dev/null
 ```
 
-Present detection:
+Present detection and gate on confirmation:
 ```
 FORGE /deploy — Environment detected
-
-Target: [environment name]
-Method: [deployment method]
-Config: [config file path]
-
-[If production]:
-  WARNING: This will deploy to PRODUCTION.
-  Confirm deployment? (yes/no — type "yes" fully to confirm)
-
-[If staging]:
-  Deploy to staging? (y/n)
+Target: [name] | Method: [method] | Config: [path]
+[production]: WARNING — PRODUCTION deploy. Confirm? (type "yes" fully)
+[staging]: Deploy to staging? (y/n)
 ```
-
-For production deploys, require the user to type "yes" (not just "y").
+For production, require full "yes" — this is a **blocking gate**.
 
 ## Step 4: Deploy
 
-Execute deployment based on the detected method:
+| Platform | Command |
+|----------|---------|
+| npm / Node.js | `npm run deploy` / `npm run deploy:[env]` |
+| Docker | `docker build -t [img]:[ver] . && docker push [img]:[ver] && docker compose up -d` |
+| Vercel | `vercel deploy --prod` (production) / `vercel deploy` (staging) |
+| Fly.io | `fly deploy` |
+| Railway | `railway up` |
+| Netlify | `netlify deploy --prod` |
+| AWS SAM/CDK | `sam deploy` / `cdk deploy` |
+| Custom script | `./deploy.sh [env]` / `make deploy ENV=[env]` |
 
-### npm / Node.js
-```bash
-# Use the project's deploy script
-npm run deploy
-# or
-npm run deploy:staging
-npm run deploy:production
-```
-
-### Docker
-```bash
-# Build and tag
-docker build -t [image-name]:[version] .
-# Push to registry
-docker push [image-name]:[version]
-# Update deployment
-docker compose up -d
-```
-
-### Cloud Platforms
-```bash
-# Vercel
-vercel deploy --prod  # production
-vercel deploy         # preview/staging
-
-# Fly.io
-fly deploy
-
-# Railway
-railway up
-
-# Netlify
-netlify deploy --prod
-
-# AWS (SAM/CDK)
-sam deploy
-# or
-cdk deploy
-```
-
-### Custom Script
-```bash
-# Run the project's deploy script
-./deploy.sh [environment]
-# or
-make deploy ENV=[environment]
-```
-
-Capture deployment output for the report. If deployment fails:
-```
-FORGE /deploy — Failed
-
-Deployment failed.
-Error: [error output from deploy command]
-
-Do not retry automatically — diagnose the failure first.
-Common causes:
-- Authentication expired (re-login to cloud CLI)
-- Resource limits exceeded
-- Configuration mismatch between environments
-```
-
-Do not retry automatically. Present the error and let the user decide.
+If deployment fails, present the error and **do not retry automatically** — let the user diagnose first. Suggest common causes: auth expired, resource limits, config mismatch.
 
 ## Step 5: Verify Deployment
 
-After successful deployment, verify the deployed version is healthy:
-
-### Health Check
+After successful deployment, verify health:
 ```bash
-# Hit health endpoint
 curl -sf [deployed-url]/health
 curl -s -o /dev/null -w "%{http_code}" [deployed-url]/
-
-# Check for expected version
-curl -s [deployed-url]/version
-curl -s [deployed-url]/api/health
+DEPLOYED=$(curl -s [deployed-url]/version); EXPECTED=$(git rev-parse --short HEAD)
+echo "Deployed: $DEPLOYED | Expected: $EXPECTED"
 ```
-
-### Deployment Logs
-```bash
-# Check for errors in deployment logs
-# Vercel
-vercel logs [deployment-url] --since 2m
-# Fly.io
-fly logs --app [name]
-# Docker
-docker compose logs --tail=50
-```
-
-### Version Verification
-Confirm the deployed version matches what was merged:
-```bash
-# Compare deployed version against local
-DEPLOYED_VERSION=$(curl -s [deployed-url]/version)
-LOCAL_VERSION=$(git rev-parse --short HEAD)
-echo "Deployed: $DEPLOYED_VERSION | Expected: $LOCAL_VERSION"
-```
-
-If health checks fail:
-```
-FORGE /deploy — Health check failed
-
-Deployment completed but health checks are failing.
-URL: [deployed-url]
-Status: [HTTP status or error]
-
-This may indicate:
-- Application startup failure
-- Missing environment variables
-- Database connection issues
-
-Check deployment logs for details.
-Consider rolling back if the issue persists.
-```
+Check platform logs for errors (`vercel logs`, `fly logs`, `docker compose logs --tail=50`). If health checks fail or version mismatches, flag immediately and suggest rollback.
 
 ## Step 6: Report
 
 ```
 FORGE /deploy — Complete
-
-Environment: [name]
-Version: [git SHA or version tag]
-URL: [deployed URL if available]
-Health: [healthy / unhealthy]
-Deploy method: [what was used]
-Tests: passed before deploy
-
-[If healthy]:
-  Deployment successful and verified.
-
-[If canary recommended]:
-  For production traffic, consider /canary for gradual rollout.
-
-[If doc-sync needed]:
-  API or user-facing changes detected.
-  Run /document-release to sync documentation.
+Environment: [name] | Version: [SHA or tag] | URL: [deployed URL]
+Health: [healthy/unhealthy] | Method: [deploy method] | Tests: passed
 ```
 
-Write a deployment record to `.forge/deploy/last-deploy.json`:
+Write deployment record to `.forge/deploy/last-deploy.json` with fields: `timestamp`, `environment`, `version`, `url`, `health`, `method`. If canary is recommended, suggest `/canary`. If API/user-facing changes detected, suggest `/document-release`.
 
-Create `.forge/deploy/` if it doesn't exist.
+## Rules, Routing & Compliance
 
-```json
-{
-  "timestamp": "[ISO timestamp]",
-  "environment": "[name]",
-  "version": "[git SHA]",
-  "url": "[deployed URL]",
-  "health": "[healthy/unhealthy]",
-  "method": "[deploy method]"
-}
-```
-
-## Rules
-
-- Production deploys always require explicit user confirmation
-- Run tests after pull — merged code might have conflicts from other PRs
-- If deployment fails, do not retry automatically — diagnose first
-- Always verify deployment health after deploying
-- Keep deployment logs for debugging
-- Never deploy if the test suite is failing
-- If no deployment method is detected, ask the user rather than guessing
-- Record every deployment in `.forge/deploy/last-deploy.json` for audit trail
-- If the deployed version does not match expected, flag it immediately
-- Suggest `/canary` for production deployments when the project supports it
+- Production deploys always require explicit "yes" confirmation — **blocking gate**.
+- Run tests after pull; do not retry failed deploys automatically; always verify health post-deploy.
+- If no deployment method is detected, ask the user rather than guessing.
+- Record every deployment in `.forge/deploy/last-deploy.json` for audit trail.
+- **Routing**: After `/deploy` -> `/canary` (gradual rollout) or `/retro` (reflect). See `skills/shared/workflow-routing.md`.
+- **Compliance**: See `skills/shared/compliance-telemetry.md`. Log violations via `scripts/compliance-log.sh` per shared protocol. Violation keys: `no-confirmation` (critical), `tests-not-run-after-pull` (major), `auto-retry` (major), `health-check-skipped` (major).

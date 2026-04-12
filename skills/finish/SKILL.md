@@ -7,213 +7,69 @@ allowed-tools: Read Grep Glob Write Bash
 
 # /finish — Branch Completion and Cleanup
 
-You close the loop on a feature branch. Run checks, merge back, clean up the worktree. The counterpart to `/worktree`.
+Close the loop on a feature branch: run checks, merge back, clean up the worktree. Counterpart to `/worktree`.
 
 ## Step 1: Identify Branch
 
-Determine which branch to finish:
-
-1. If `$ARGUMENTS` specifies a branch name, use it
-2. If currently inside a worktree, detect the branch:
-   ```bash
-   git rev-parse --abbrev-ref HEAD
-   git worktree list
-   ```
-3. If neither, list active worktrees and ask:
-   ```bash
-   git worktree list
-   ```
-   ```
-   FORGE /finish — Which branch?
-
-   Active worktrees:
-     [path]  [branch]  [commit]
-     ...
-
-   Specify a branch to finish.
-   ```
-
-Also detect the base branch (the branch the feature was created from):
-```bash
-DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)
-```
+Use `$ARGUMENTS` if provided; otherwise detect via `git rev-parse --abbrev-ref HEAD` and `git worktree list`. If neither works, list worktrees and ask the user. Detect base branch: `DEFAULT_BRANCH=$(bash scripts/detect-branch.sh)`.
 
 ## Step 2: Pre-Finish Checks
 
-Run all checks from the worktree directory:
+Run from the worktree directory (`cd .forge/worktrees/[branch-name]`):
 
-### Run Tests
-
-```bash
-cd .forge/worktrees/[branch-name]
-# Detect and run the project's test suite
-# Node: npm test / bun test / vitest / jest
-# Python: pytest
-# Go: go test ./...
-# Rust: cargo test
-```
-
-### Check for Uncommitted Changes
-
-```bash
-cd .forge/worktrees/[branch-name]
-git status --porcelain
-```
-
-### Check for FORGE Reports
-
-```bash
-ls .forge/review/report.md .forge/verify/report.md 2>/dev/null
-```
-
-If `.forge/review/report.md` exists, read it and check the Status line:
-```bash
-grep -i 'Status:' .forge/review/report.md 2>/dev/null
-```
-If Status is **FAIL** or **NEEDS_CHANGES**, **block the merge** — tell the user to resolve review issues first.
-
-If `.forge/verify/report.md` exists, read it and check the Status line:
-```bash
-grep -i 'Status:' .forge/verify/report.md 2>/dev/null
-```
-If Status is **FAIL**, **block the merge** — tell the user to resolve verification failures first.
-
-If reports do not exist (user never ran review/verify), warn but do not block — `/finish` is for branch cleanup, not a mandatory gate.
-
-### Report Pre-Check Results
+1. **Tests** — detect and run the project's test suite
+2. **Uncommitted changes** — `git status --porcelain`; if dirty, offer to commit first
+3. **FORGE reports** — resolve via `bash scripts/manifest.sh resolve-feature-name`. If `.forge/review/${FEATURE_NAME}.md` is FAIL/NEEDS_CHANGES or `.forge/verify/${FEATURE_NAME}.md` is FAIL: **block merge**. Missing reports: warn, don't block.
 
 ```
 FORGE /finish — Pre-checks
-
-Branch: [branch-name]
-Tests: [PASS | FAIL — N passed, N failed]
-Uncommitted changes: [yes/no]
-Review: [PASS | FAIL/NEEDS_CHANGES — blocked | not found — warning]
-Verify: [PASS | FAIL — blocked | not found — warning]
-
-[If all good]: Ready to finish.
-[If blocked]: Cannot merge — resolve [review/verify] issues first.
-[If warnings only]: Resolve before finishing? (y/n to override)
+Branch: [branch-name] | Tests: [PASS|FAIL] | Uncommitted: [yes/no]
+Review: [PASS|FAIL—blocked|not found—warning] | Verify: [PASS|FAIL—blocked|not found—warning]
+[Ready to finish | Cannot merge — resolve issues | Warnings — override? (y/n)]
 ```
 
-If tests fail, strongly recommend fixing before proceeding. If the user overrides, note it but continue.
-
-If there are uncommitted changes, offer to commit them:
-```
-Uncommitted changes in worktree. Commit them before merging? (y/n)
-```
+If tests fail, strongly recommend fixing; if user overrides, note it and continue.
 
 ## Step 3: Merge Strategy
-
-### Show Diff Summary
-
-Before any merge, show what will be merged:
 
 ```bash
 git log --oneline $DEFAULT_BRANCH..[branch-name]
 git diff --stat $DEFAULT_BRANCH..[branch-name]
 ```
 
-```
-FORGE /finish — Merge preview
-
-Commits to merge: [count]
-  [short log]
-
-Files changed: [count]
-  [diff stat summary]
-
-Proceed with merge? (y/n)
-```
-
-### Determine Merge Method
-
-```bash
-# Check if fast-forward is possible
-git merge-base --is-ancestor $DEFAULT_BRANCH [branch-name] && echo "ff-possible"
-```
-
-- If fast-forward is possible: use `git merge --ff-only`
-- If not: present options to the user:
-  ```
-  Fast-forward not possible. Choose merge strategy:
-    1. Rebase onto [default-branch] then fast-forward
-    2. Merge commit (preserves branch history)
-  ```
+Show commit count, short log, files changed, and diff stat summary. Ask to proceed. Check fast-forward: `git merge-base --is-ancestor $DEFAULT_BRANCH [branch-name]`. If possible use `--ff-only`; otherwise offer rebase-then-ff or merge commit.
 
 ## Step 4: Merge Back
 
 ```bash
-# Switch to the base branch in the main checkout
 git checkout $DEFAULT_BRANCH
-
-# Merge the feature branch
 git merge --ff-only [branch-name]
-# Or, if user chose merge commit:
-git merge [branch-name] -m "Merge [branch-name] into $DEFAULT_BRANCH"
+# Or: git merge [branch-name] -m "Merge [branch-name] into $DEFAULT_BRANCH"
 ```
 
-If merge conflicts arise:
-```
-FORGE /finish — Merge conflict
-
-Conflicts in:
-  [list of conflicted files]
-
-Resolving conflicts...
-```
-
-Help resolve each conflict by reading both sides and producing the correct merge. After resolving:
-```bash
-git add [resolved files]
-git commit -m "Merge [branch-name] into $DEFAULT_BRANCH (conflicts resolved)"
-```
+On conflicts: list conflicted files, help resolve each by reading both sides, then `git add` and commit with "(conflicts resolved)" note.
 
 ## Step 5: Clean Up
 
-After a successful merge:
-
 ```bash
-# Remove the worktree
 git worktree remove .forge/worktrees/[branch-name]
-
-# Delete the feature branch (safe delete — refuses if unmerged)
 git branch -d [branch-name]
 ```
 
-If `git branch -d` fails (unmerged commits), warn the user:
-```
-FORGE /finish — Warning
-
-Branch [branch-name] has unmerged commits. This should not happen after a successful merge.
-Investigate before force-deleting.
-```
-
-Never use `git branch -D` (force delete) automatically.
+If `-d` fails (unmerged commits), warn and investigate — never use `-D` automatically.
 
 ## Step 6: Report
 
 ```
 FORGE /finish — Complete
-
 Branch [branch-name] merged into [default-branch].
-Worktree cleaned up.
-Files changed: [count]
-Commits merged: [count]
-
-Next: /ship to create a PR and deploy.
+Worktree cleaned up. Files changed: [count] | Commits merged: [count]
 ```
 
-### Telemetry
-```bash
-bash scripts/telemetry.sh finish completed
-```
+> **Next:** `/ship` to create a PR and deploy, or `/review` if code review hasn't been done yet.
 
-## Rules
+## Rules & Compliance
 
-- Never force-delete a branch with unmerged commits — use `-d` not `-D`
-- Always show the diff summary before merging — no silent merges
-- If merge conflicts arise, help resolve them — do not abort the merge
-- Clean up the worktree directory after a successful merge
-- If pre-checks fail and the user does not override, stop and explain what needs fixing
-- If not inside a worktree and no branch specified, list options — do not guess
+Never force-delete a branch (`-d` not `-D`). Always show diff summary before merging. Help resolve merge conflicts — never abort. If pre-checks fail without override, stop and explain. If no branch specified and not in a worktree, list options — don't guess.
+
+> **Compliance logging and telemetry:** follow `skills/shared/compliance-telemetry.md`. Log violations via `scripts/compliance-log.sh`. Keys: `force-delete-branch` (critical), `silent-merge` (major), `merge-despite-failure` (major). **General rules and error handling:** follow `skills/shared/rules.md`.

@@ -12,10 +12,11 @@ You are the FORGE verification agent. You verify the build output works by runni
 
 ## How to Start
 
-1. Read `.forge/build/report.md` — understand what was built and test framework in use
-2. Read `.forge/architecture/*.md` — verification targets
-3. Follow the `/verify` skill instructions exactly
-4. Write report to `.forge/verify/report.md`
+1. Resolve the feature name: `FEATURE_NAME=$(bash scripts/manifest.sh resolve-feature-name)`
+2. Read `.forge/build/${FEATURE_NAME}.md` — understand what was built and test framework in use
+3. Read `.forge/architecture/*.md` — verification targets
+4. Follow the `/verify` skill instructions exactly
+5. Write report to `.forge/verify/${FEATURE_NAME}.md`
 
 ## Constraints
 

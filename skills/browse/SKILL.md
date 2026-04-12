@@ -5,183 +5,80 @@ argument-hint: "[url or flow description]"
 allowed-tools: Read Grep Glob Write Edit Bash
 ---
 
-# /browse — Browser Automation with Playwright
+# /browse — Browser Automation (Playwright Only)
 
-You execute browser-based testing flows using Playwright. You can be invoked standalone for ad-hoc browser tasks, or delegated to by `/verify` for web domain QA.
+Execute browser-based testing flows using Playwright, standalone or delegated by `/verify`.
 
 ## Step 1: Determine Mode
 
 From `$ARGUMENTS`, determine what to test:
-- **URL**: Navigate to the URL and verify it loads, check key elements
-- **Flow description**: Parse the described user journey into test steps
-- **Test file path**: Execute an existing test specification
-- **Called by /verify**: Receives a structured flow specification from the architecture doc
+- **URL** — navigate and verify load + key elements
+- **Flow description** — parse user journey into steps
+- **Test file path** — execute existing spec
+- **Called by /verify** — receives structured flow spec
 
-If called standalone with no arguments, ask the user:
-```
-FORGE /browse — What should I test?
-
-Provide one of:
-- A URL to verify (e.g., http://localhost:3000)
-- A flow description (e.g., "user signs up, verifies email, logs in")
-- A path to an existing test file
-
-Or invoke via /verify for full QA.
-```
+If no arguments, ask the user for a URL, flow, or test file path.
 
 ## Step 2: Ensure Playwright
 
-Check if Playwright is available:
 ```bash
 npx playwright --version 2>/dev/null || bunx playwright --version 2>/dev/null || echo "NOT_INSTALLED"
 ```
 
-If not installed:
-```bash
-npm install --save-dev @playwright/test
-npx playwright install chromium
-```
-
-If install fails, report clearly and stop:
-```
-FORGE /browse — BLOCKED
-
-Playwright installation failed.
-Error: [error message]
-
-Playwright is required for browser automation — no fallback to curl or other tools.
-Fix the installation issue and re-run /browse.
-```
-
-Do NOT fall back to curl, wget, or MCP browser tools. Playwright is the only accepted browser automation tool.
+If missing: `npm install --save-dev @playwright/test && npx playwright install chromium`.
+If install fails: report `FORGE /browse — BLOCKED` with error and stop. Never fall back to curl, wget, or MCP browser tools.
 
 ## Step 3: Determine Browser Flows
 
-From the architecture doc, user input, or /verify delegation, identify key flows to test:
+Identify flows from architecture doc, user input, or /verify delegation:
+- **Happy path** — signup, login, core features
+- **Error states** — invalid input, network errors, empty states
+- **Forms** — required fields, validation
+- **Navigation** — links, back button, deep links, 404s
+- **Auth** — login, logout, session expiry (if applicable)
 
-- **Happy path** user journeys (signup, login, core feature usage)
-- **Error states** and edge cases (invalid input, network errors, empty states)
-- **Form submissions** and validation (required fields, format validation, success/error feedback)
-- **Navigation and routing** (links work, back button, deep links, 404 handling)
-- **Authentication flows** if applicable (login, logout, session expiry, protected routes)
-
-List the flows before executing:
-```
-FORGE /browse — Flows identified: [N]
-
-1. [Flow name] — [brief description]
-2. [Flow name] — [brief description]
-...
-
-Executing...
-```
+List before executing: `FORGE /browse — Flows identified: [N]` with numbered list.
 
 ## Step 4: Write Test File
 
-Create `.forge/browse/` and `.forge/browse/screenshots/` if they don't exist.
-
-Create `.forge/browse/flows.spec.js` with tests for each identified flow:
+Create `.forge/browse/` and `.forge/browse/screenshots/` if needed. Write `.forge/browse/flows.spec.js`:
 
 ```javascript
 const { test, expect } = require('@playwright/test');
-
 test.describe('FORGE Browser Flows', () => {
   test('[flow name]', async ({ page }) => {
     await page.goto('[url]');
-    // Navigate through the flow
-    // Assert expected outcomes at each step
-  });
-
-  test('[flow name] — error case', async ({ page }) => {
-    await page.goto('[url]');
-    // Trigger the error condition
-    // Assert error is displayed correctly
+    // Navigate flow, assert expected outcomes
   });
 });
 ```
 
-Guidelines for test generation:
-- Each flow gets its own `test()` block
-- Use descriptive test names that explain the user journey
-- Assert on visible text and elements, not implementation details
-- Use `page.waitForSelector()` or `expect(locator).toBeVisible()` for dynamic content
-- Set reasonable timeouts — don't wait forever for elements that won't appear
-- Use `test.describe()` to group related flows
+Each flow gets its own `test()` block. Assert on visible text/elements, not implementation details. Use `page.waitForSelector()` or `expect(locator).toBeVisible()` for dynamic content.
 
 ## Step 5: Execute Tests
 
-Run the test file:
 ```bash
 npx playwright test .forge/browse/ --reporter=list
 ```
 
-On failure, re-run with screenshot capture:
-```bash
-npx playwright test .forge/browse/ --reporter=list --screenshot=on
-```
-
-Screenshots save to `.forge/browse/screenshots/`.
-
-For each failure, record:
-- What step in the flow failed
-- What was expected vs. what happened
-- The screenshot path for visual evidence
+On failure, re-run with `--screenshot=on` (saves to `.forge/browse/screenshots/`). Record: which step failed, expected vs actual, screenshot path.
 
 ### URL Resolution
 
-Before starting tests, determine how to run the project and what URL to open. The goal is to figure this out for ANY project — never skip testing because the project doesn't fit a familiar pattern.
-
-1. Check the architecture doc for a specified URL, entry point, or run instructions
-2. Read the project's build/run configuration files (whatever they are for this language/framework)
-3. Look at README, Makefile, scripts, or any entry point hints in the project
-4. If you can't determine how to run it, ask the user — do not skip testing
-
-**If the project needs a server or build step first:**
-1. Identify the run command from the project's configuration
-2. Start in background and capture stderr
-3. Detect the port/address from project config, environment variables, or command output
-4. Poll until the server is reachable, timeout after 30 seconds
-5. If it won't start: report FAIL with the command tried and its stderr output
-6. On skill completion: kill any background processes you started
-
-**If the project runs without a server:**
-- Determine the entry point and open it directly
-- Log: `FORGE /browse — No server required. Opening entry point directly.`
-- Do NOT skip testing — "no server" means "simpler to test," not "nothing to test"
+Before testing, determine run command and URL from architecture doc, config files, README, or scripts. If unclear, ask — never skip.
+- **Server needed**: start in background, detect port, poll until reachable (30s timeout), kill on completion. If won't start, report FAIL with stderr.
+- **No server**: open entry point directly — simpler to test, not nothing to test.
 
 ## Step 6: Write Browse Report
 
-Write the report to `.forge/browse/report.md`:
-
-```markdown
-# FORGE Browse Report
-
-## Date: [YYYY-MM-DD HH:MM]
-## URL: [base URL tested]
-## Mode: [verify-delegated | standalone]
-
-## Flows Tested
-
-### [Flow 1 name]
-- Status: PASS | FAIL
-- Steps: [what was done]
-- [If FAIL] Expected: [expected]
-- [If FAIL] Actual: [actual]
-- [If FAIL] Screenshot: .forge/browse/screenshots/[name].png
-
-### [Flow 2 name]
-- Status: PASS | FAIL
-- Steps: [what was done]
-- [If FAIL] Expected: [expected]
-- [If FAIL] Actual: [actual]
-- [If FAIL] Screenshot: .forge/browse/screenshots/[name].png
-
-## Summary
-- Flows tested: [N]
-- Passed: [N]
-- Failed: [N]
-- Screenshots: [count, if any]
+```bash
+mkdir -p .forge/browse .forge/browse/screenshots
 ```
+
+Write `.forge/browse/report.md` with required sections:
+- **Status:** PASS or FAIL
+- **Flows Tested** — per-flow: status, steps taken, expected/actual on failure, screenshot path
+- **## Summary** — Date, URL, Mode (verify-delegated | standalone), flows passed/failed, screenshot count
 
 ## Step 7: Report
 
@@ -192,20 +89,25 @@ URL: [base URL]
 Flows: [passed]/[total]
 Report: .forge/browse/report.md
 [If failures]: Screenshots: .forge/browse/screenshots/
-
 [If called by /verify]: Results returned to /verify for final report.
-[If standalone]: Review the report for details.
 ```
 
-## Rules
+## Rules, Compliance & Error Handling
 
-- Playwright is the ONLY browser automation tool — no MCP browser tools, no curl substitution for web flows
-- Screenshots are mandatory on every failure
-- Never modify the application — browser testing is observation only
-- If the server isn't running, attempt to start it. If it won't start, report FAIL — don't skip browser testing
-- Test file goes in `.forge/browse/`, not in the project's test directory
-- Support both `npx` and `bunx` — detect available runtime
+- **Playwright only** — no MCP browser tools, no curl for web flows
+- Screenshots mandatory on every failure; never modify the application (observation only)
+- Test files go in `.forge/browse/`, not the project's test directory
+- Support both `npx` and `bunx`; detect from project config — never guess URLs or ports
 - When called by `/verify`, return structured results, not just pass/fail
-- **Evidence before claims** — never claim PASS without showing actual test output
-- Do not guess at URLs or ports — detect from project config or ask the user
-- "No server needed" means "simpler to test," not "nothing to test" — always find a way to open and exercise the project
+
+Follow `skills/shared/compliance-telemetry.md`. Log violations via `scripts/compliance-log.sh`:
+- `wrong-browser-tool` (major) — non-Playwright tool used
+- `code-modified` (critical) — app code changed during observation-only testing
+- `missing-screenshot` (major) — failure without screenshot
+- `testing-skipped` (major) — testing skipped instead of reporting FAIL
+
+See `skills/shared/rules.md` for evidence-before-claims.
+
+## What's Next
+
+See `skills/shared/workflow-routing.md`. Browse is a support skill — results returned to `/verify` when delegated.

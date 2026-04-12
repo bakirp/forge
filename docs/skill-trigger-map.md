@@ -120,13 +120,13 @@ forge-builder agent
 
 READS                                   WRITES
 ─────                                   ──────
-.forge/architecture/*.md                .forge/build/report.md
+.forge/architecture/*.md                .forge/build/[feature-name].md
 .forge/config.json                      .forge/context/task-{n}.md
-.forge/context/task-{n}.md
+.forge/context/task-{n}.md              .forge/compliance.jsonl
 
 SCRIPTS: quality-gate.sh (detect-runner, path-map, path-diff, reusability-search, coverage)
          context-prune.sh (clean, extract, conventions, estimate)
-         telemetry.sh, manifest.sh
+         telemetry.sh, manifest.sh, compliance-log.sh
 ```
 
 ### /review (code review)
@@ -141,11 +141,11 @@ forge-reviewer agent
 
 READS                                   WRITES
 ─────                                   ──────
-.forge/build/report.md                  .forge/review/report.md
-.forge/architecture/*.md
+.forge/build/[feature-name].md          .forge/review/[feature-name].md
+.forge/architecture/*.md                .forge/compliance.jsonl
 
 SCRIPTS: quality-gate.sh (dry-check, path-map, reusability-search, coverage)
-         telemetry.sh
+         telemetry.sh, compliance-log.sh
 ```
 
 ### /review adversarial
@@ -158,7 +158,7 @@ User (direct)    ───► (none)                      forge-adversarial-revi
 
 READS                                   WRITES
 ─────                                   ──────
-.forge/build/report.md                  .forge/review/adversarial.md
+.forge/build/[feature-name].md          .forge/review/adversarial.md
 .forge/architecture/*.md
 ```
 
@@ -174,11 +174,11 @@ forge-verifier agent
 
 READS                                   WRITES
 ─────                                   ──────
-.forge/build/report.md                  .forge/verify/report.md
-.forge/architecture/*.md
-.forge/browse/report.md
+.forge/build/[feature-name].md          .forge/verify/[feature-name].md
+.forge/architecture/*.md                .forge/compliance.jsonl
+.forge/browse/[feature-name].md
 
-SCRIPTS: quality-gate.sh (coverage), telemetry.sh
+SCRIPTS: quality-gate.sh (coverage), telemetry.sh, compliance-log.sh
 ```
 
 ### /ship
@@ -193,13 +193,13 @@ forge-shipper agent
 
 READS                                   WRITES
 ─────                                   ──────
-.forge/review/report.md (REQUIRED)      .forge/releases/v[ver]/summary.md
-.forge/verify/report.md (REQUIRED)      PR (via gh CLI)
-.forge/review/adversarial.md (optional)
-.forge/build/report.md
+.forge/review/[feature-name].md (REQUIRED)  .forge/releases/v[ver]/summary.md
+.forge/verify/[feature-name].md (REQUIRED)  PR (via gh CLI)
+.forge/review/adversarial.md (optional)     .forge/compliance.jsonl
+.forge/build/[feature-name].md
 .forge/architecture/*.md
 
-SCRIPTS: telemetry.sh
+SCRIPTS: telemetry.sh, compliance-log.sh
 ```
 
 ### /debug
@@ -294,12 +294,12 @@ User (direct)    ───► /think (classify only)      forge-builder (< 3 tas
 
 READS                                   WRITES
 ─────                                   ──────
-.forge/build/report.md                  .forge/autopilot/state.json
-.forge/review/report.md                 .forge/autopilot/future-enhancements.md
-.forge/verify/report.md                 ~/.forge/memory.jsonl
-.forge/architecture/*.md
+.forge/build/[feature-name].md          .forge/autopilot/state.json
+.forge/review/[feature-name].md         .forge/autopilot/future-enhancements.md
+.forge/verify/[feature-name].md         ~/.forge/memory.jsonl
+.forge/architecture/*.md                .forge/compliance.jsonl
 
-SCRIPTS: autopilot-guard.sh, manifest.sh, telemetry.sh
+SCRIPTS: autopilot-guard.sh, manifest.sh, telemetry.sh, compliance-log.sh
 ```
 
 ### /design (hub)
@@ -414,8 +414,8 @@ User (direct)    ───► (none)                      (none)
 
 READS                          WRITES
 ─────                          ──────
-.forge/review/report.md        (git merge, branch cleanup)
-.forge/verify/report.md
+.forge/review/[feature-name].md  (git merge, branch cleanup)
+.forge/verify/[feature-name].md
 ```
 
 ### /benchmark
@@ -484,7 +484,7 @@ Read-only overview skill. No artifacts.
 ```
 SPAWNED BY                MODEL    SKILLS        READS                          WRITES
 ──────────                ─────    ──────        ─────                          ──────
-/think (TINY)             opus     forge:build   .forge/architecture/*.md       .forge/build/report.md
+/think (TINY)             opus     forge:build   .forge/architecture/*.md       .forge/build/[feature-name].md
 /autopilot (< 3 tasks)                           .forge/config.json             .forge/context/task-{n}.md
 ```
 
@@ -493,7 +493,7 @@ SPAWNED BY                MODEL    SKILLS        READS                          
 ```
 SPAWNED BY                MODEL    SKILLS         READS                          WRITES
 ──────────                ─────    ──────         ─────                          ──────
-/think (--auto)           opus     forge:review   .forge/build/report.md         .forge/review/report.md
+/think (--auto)           opus     forge:review   .forge/build/[feature-name].md .forge/review/[feature-name].md
 /autopilot (Step 5)                               .forge/architecture/*.md
 ```
 
@@ -502,9 +502,9 @@ SPAWNED BY                MODEL    SKILLS         READS                         
 ```
 SPAWNED BY                MODEL    SKILLS         READS                          WRITES
 ──────────                ─────    ──────         ─────                          ──────
-/think (--auto)           opus     forge:verify   .forge/build/report.md         .forge/verify/report.md
-/autopilot (Step 6)                               .forge/architecture/*.md       .forge/browse/report.md
-                                                  .forge/review/report.md        .forge/browse/screenshots/
+/think (--auto)           opus     forge:verify   .forge/build/[feature-name].md .forge/verify/[feature-name].md
+/autopilot (Step 6)                               .forge/architecture/*.md       .forge/browse/[feature-name].md
+                                                  .forge/review/[feature-name].md .forge/browse/screenshots/
 ```
 
 ### forge-shipper
@@ -512,9 +512,9 @@ SPAWNED BY                MODEL    SKILLS         READS                         
 ```
 SPAWNED BY                MODEL    SKILLS       READS                          WRITES
 ──────────                ─────    ──────       ─────                          ──────
-/think (--auto)           opus     forge:ship   .forge/review/report.md        .forge/releases/v[ver]/summary.md
-/autopilot (Step 7)                             .forge/verify/report.md        PR (via gh)
-                                                .forge/build/report.md
+/think (--auto)           opus     forge:ship   .forge/review/[feature-name].md .forge/releases/v[ver]/summary.md
+/autopilot (Step 7)                             .forge/verify/[feature-name].md PR (via gh)
+                                                .forge/build/[feature-name].md
                                                 .forge/architecture/*.md
                                                 .forge/review/adversarial.md
 ```
@@ -524,7 +524,7 @@ SPAWNED BY                MODEL    SKILLS       READS                          W
 ```
 SPAWNED BY                MODEL    SKILLS         READS                          WRITES
 ──────────                ─────    ──────         ─────                          ──────
-/review adversarial       opus     forge:review   .forge/build/report.md         .forge/review/adversarial.md
+/review adversarial       opus     forge:review   .forge/build/[feature-name].md .forge/review/adversarial.md
                                                   .forge/architecture/*.md
 ```
 
@@ -561,23 +561,26 @@ SPAWNED BY                EXECUTION ORDER
                          ──read────► /build, /review, /verify, /ship, /retro
                                      forge-builder, forge-reviewer, forge-verifier, forge-shipper
 
-.forge/build/report.md ──written──► /build
-                       ──read────► /review, /verify, /ship, /autopilot, /finish
-                                   forge-reviewer, forge-verifier, forge-shipper
+.forge/build/[feature-name].md ──written──► /build
+                              ──read────► /review, /verify, /ship, /autopilot, /finish
+                                          forge-reviewer, forge-verifier, forge-shipper
 
-.forge/review/report.md ──written──► /review
-                        ──read────► /ship, /autopilot, /finish
-                                    forge-shipper
+.forge/review/[feature-name].md ──written──► /review
+                                ──read────► /ship, /autopilot, /finish
+                                            forge-shipper
 
 .forge/review/adversarial.md ──written──► /review adversarial
                              ──read────► /ship (advisory)
 
-.forge/verify/report.md ──written──► /verify
-                        ──read────► /ship, /autopilot, /finish
-                                    forge-shipper
+.forge/verify/[feature-name].md ──written──► /verify
+                                ──read────► /ship, /autopilot, /finish
+                                            forge-shipper
 
-.forge/browse/report.md ──written──► /browse
-                        ──read────► /verify
+.forge/compliance.jsonl ──written──► /build, /review, /ship, /verify, /autopilot (via compliance-log.sh)
+                        ──read────► /ship (audit trail), human review
+
+.forge/browse/[feature-name].md ──written──► /browse
+                                ──read────► /verify
 
 .forge/design/consult-*.md ──written──► /design consult
                            ──read────► /design polish
@@ -619,3 +622,4 @@ SPAWNED BY                EXECUTION ORDER
 | `scripts/autopilot-guard.sh` | `/autopilot` | Iteration limits, phase gating, failure tracking |
 | `scripts/manifest.sh` | `/autopilot`, `/build` | Run tracking, phase/artifact registration |
 | `scripts/telemetry.sh` | All core skills | Invocation logging to `~/.forge/telemetry.jsonl` |
+| `scripts/compliance-log.sh` | `/build`, `/review`, `/ship`, `/verify`, `/autopilot` | Logs rule violations to `.forge/compliance.jsonl` |

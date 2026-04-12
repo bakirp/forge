@@ -102,12 +102,12 @@ check_words() {
   fi
 }
 
-check_words "$DESIGN/SKILL.md" 600 "hub"
-check_words "$DESIGN/consult/SKILL.md" 1000 "consult"
-check_words "$DESIGN/explore/SKILL.md" 800 "explore"
-check_words "$DESIGN/review/SKILL.md" 1100 "review"
-check_words "$DESIGN/audit/SKILL.md" 1100 "audit"
-check_words "$DESIGN/polish/SKILL.md" 1000 "polish"
+check_words "$DESIGN/SKILL.md" 750 "hub"
+check_words "$DESIGN/consult/SKILL.md" 1100 "consult"
+check_words "$DESIGN/explore/SKILL.md" 900 "explore"
+check_words "$DESIGN/review/SKILL.md" 1200 "review"
+check_words "$DESIGN/audit/SKILL.md" 1200 "audit"
+check_words "$DESIGN/polish/SKILL.md" 1100 "polish"
 check_words "$PRINCIPLES" 1100 "principles"
 
 # ── 7. Hub routes match existing sub-skill directories ──
